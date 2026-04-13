@@ -18,7 +18,8 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "paykitjs": "^0.0.2"
+    "@birrjs/core": "workspace:*",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "tsdown": "^0.21.1",
