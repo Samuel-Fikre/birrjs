@@ -1,5 +1,5 @@
 {
-  "name": "birrjs",
+  "name": "@birrjs/core",
   "version": "0.0.1",
   "description": "Ethiopian payment distribution of PayKit",
   "license": "MIT",
