@@ -57,6 +57,36 @@ export interface ChapaCallbackResponse {
 }
 
 /**
+ * Chapa transaction verification response
+ */
+export interface ChapaVerifyResponse {
+  message: string;
+  status: ChapaTransactionStatus;
+  data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    currency: string;
+    amount: number;
+    charge: number;
+    mode: string;
+    method: string;
+    type: string;
+    status: ChapaTransactionStatus;
+    reference: string;
+    tx_ref: string;
+    customization: {
+      title: string | null;
+      description: string | null;
+      logo: string | null;
+    } | null;
+    meta: unknown | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
+}
+
+/**
  * Chapa webhook event structure
  */
 export interface ChapaWebhookEvent {

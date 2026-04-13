@@ -35,9 +35,12 @@ importers:
 
   packages/chapa:
     dependencies:
-      paykitjs:
-        specifier: ^0.0.2
-        version: 0.0.2(@types/node@25.6.0)
+      '@birrjs/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: ^4.0.0
+        version: 4.3.6
     devDependencies:
       tsdown:
         specifier: ^0.21.1
