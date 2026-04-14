@@ -1,4 +1,18 @@
 /**
+ * Convert minor units to decimal string format for provider APIs
+ */
+export function toDecimalAmount(amount: number): string {
+  return (amount / 100).toFixed(2);
+}
+
+/**
+ * Convert decimal string from provider to minor units
+ */
+export function fromDecimalAmount(amount: string): number {
+  return Math.round(parseFloat(amount) * 100);
+}
+
+/**
  * Payment provider configuration
  */
 export interface PaymentProviderConfig {
