@@ -23,9 +23,15 @@ export function calculateExpiresAt(startDate: Date, interval: PlanInterval): Dat
       }
       break;
     }
-    case "yearly":
+    case "yearly": {
+      const originalMonth = expiresAt.getUTCMonth();
       expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
+      // Clamp to last day of target month if overflow occurred (leap year → non-leap year)
+      if (expiresAt.getUTCMonth() !== originalMonth) {
+        expiresAt.setUTCDate(0);
+      }
       break;
+    }
     default:
       throw new Error(`Invalid interval: ${interval}`);
   }
@@ -128,7 +134,15 @@ export interface CancelSubscriptionResult {
 export function cancelSubscription(input: CancelSubscriptionInput): CancelSubscriptionResult {
   const now = new Date();
 
-  if (input.cancelAtPeriodEnd && input.currentPeriodEndAt) {
+  // Validate that cancellation is allowed from current status
+  if (!canTransitionStatus(input.currentStatus, "canceled")) {
+    throw new Error(`Cannot cancel subscription with status: ${input.currentStatus}`);
+  }
+
+  if (input.cancelAtPeriodEnd) {
+    if (!input.currentPeriodEndAt) {
+      throw new Error("Cannot cancel at period end: currentPeriodEndAt is required");
+    }
     // Cancel at period end
     return {
       status: "active",
