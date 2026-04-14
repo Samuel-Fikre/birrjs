@@ -26,7 +26,7 @@ export interface PlanWithFeatures {
   id: string;
   name: string;
   priceAmount: number | null;
-  priceInterval: string | null;
+  priceInterval: PlanInterval | null;
   currency: string;
   features: Record<string, unknown> | null;
   isDefault: boolean;
