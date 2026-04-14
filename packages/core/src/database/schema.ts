@@ -61,7 +61,7 @@ export const subscription = pgTable(
       .references(() => plan.id),
     status: text("status").notNull(),
     startedAt: timestamp("started_at"),
-    expiresAt: timestamp("expires_at").notNull(),
+    expiresAt: timestamp("expires_at"),
     canceledAt: timestamp("canceled_at"),
     endedAt: timestamp("ended_at"),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
