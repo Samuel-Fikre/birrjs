@@ -18,10 +18,12 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "paykitjs": "^0.0.2",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.20.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.5",
     "tsdown": "^0.21.1",
     "typescript": "5.9.2"
   }
