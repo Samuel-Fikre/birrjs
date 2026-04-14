@@ -30,7 +30,6 @@ export const customer = pgTable(
     createdAt,
     updatedAt,
   },
-  // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [index("birrjs_customer_deleted_at_idx").on(table.deletedAt)],
 );
 
@@ -47,7 +46,6 @@ export const plan = pgTable(
     createdAt,
     updatedAt,
   },
-  // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [index("birrjs_plan_default_idx").on(table.isDefault)],
 );
 
@@ -71,7 +69,6 @@ export const subscription = pgTable(
     createdAt,
     updatedAt,
   },
-  // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [
     index("birrjs_subscription_customer_status_idx").on(
       table.customerId,
@@ -100,7 +97,6 @@ export const invoice = pgTable(
     createdAt,
     updatedAt,
   },
-  // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [
     index("birrjs_invoice_customer_idx").on(table.customerId, table.createdAt),
     index("birrjs_invoice_subscription_idx").on(table.subscriptionId),
@@ -121,7 +117,6 @@ export const webhookEvent = pgTable(
     receivedAt: timestamp("received_at").notNull(),
     processedAt: timestamp("processed_at"),
   },
-  // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [
     uniqueIndex("birrjs_webhook_event_provider_unique").on(
       table.providerId,
