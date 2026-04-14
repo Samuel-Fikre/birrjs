@@ -121,8 +121,18 @@ export interface ChapaProviderConfig {
   id: string;
   kind: "chapa";
   secretKey: string;
-  webhookSecret: string;
+  webhookSecret?: string;
+  callbackUrl: string;
   currency?: string;
+  /**
+   * Temporary workaround: Default customer details used when PayKit doesn't pass customer data.
+   * TODO: Remove once PayKit adds customer data to createSubscriptionCheckout interface.
+   */
+  fallbackCustomer?: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
   /**
    * Internal test hook so repo tests can stub the Chapa runtime without a network client.
    */

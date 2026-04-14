@@ -1,7 +1,2 @@
-export function chapa() {
-  // Placeholder for Chapa provider implementation
-  return {
-    id: "chapa",
-    kind: "chapa",
-  };
-}
+export { chapa, createChapaProvider } from "./chapa-provider";
+export type { ChapaProviderConfig, ChapaRuntime } from "./types";

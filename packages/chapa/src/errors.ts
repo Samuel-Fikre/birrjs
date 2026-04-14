@@ -1,0 +1,25 @@
+export const CHAPA_ERROR_CODES = {
+  TEST_CLOCK_NOT_SUPPORTED: "CHAPA_TEST_CLOCK_NOT_SUPPORTED",
+  PAYMENT_METHOD_NOT_SUPPORTED: "CHAPA_PAYMENT_METHOD_NOT_SUPPORTED",
+  SUBSCRIPTION_NOT_SUPPORTED: "CHAPA_SUBSCRIPTION_NOT_SUPPORTED",
+  SUBSCRIPTION_UPDATE_NOT_SUPPORTED: "CHAPA_SUBSCRIPTION_UPDATE_NOT_SUPPORTED",
+  SUBSCRIPTION_SCHEDULE_NOT_SUPPORTED: "CHAPA_SUBSCRIPTION_SCHEDULE_NOT_SUPPORTED",
+  PORTAL_NOT_SUPPORTED: "CHAPA_PORTAL_NOT_SUPPORTED",
+  CHECKOUT_SESSION_FAILED: "CHAPA_CHECKOUT_SESSION_FAILED",
+  INVOICE_FAILED: "CHAPA_INVOICE_FAILED",
+  AMOUNT_REQUIRED: "CHAPA_AMOUNT_REQUIRED",
+} as const;
+
+export class ChapaError extends Error {
+  code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.code = code;
+    this.name = "ChapaError";
+  }
+
+  static from(message: string, code: string): ChapaError {
+    return new ChapaError(message, code);
+  }
+}
