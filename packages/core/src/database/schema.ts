@@ -112,7 +112,7 @@ export const webhookEvent = pgTable(
   {
     id: text("id").primaryKey(),
     providerId: text("provider_id").notNull(),
-    providerEventId: text("provider_event_id").notNull(),
+    providerReferenceId: text("provider_reference_id").notNull(),
     type: text("type").notNull(),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
     status: text("status").notNull(),
@@ -123,7 +123,10 @@ export const webhookEvent = pgTable(
   },
   // @ts-expect-error drizzle-orm pgTableCreator type definition lags behind pgTable
   (table) => [
-    uniqueIndex("birrjs_webhook_event_provider_unique").on(table.providerId, table.providerEventId),
+    uniqueIndex("birrjs_webhook_event_provider_unique").on(
+      table.providerId,
+      table.providerReferenceId,
+    ),
     index("birrjs_webhook_event_status_idx").on(table.providerId, table.status),
   ],
 );
