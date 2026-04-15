@@ -234,55 +234,61 @@ export function createChapaProvider(
         // Extract tx_ref from webhook
         const txRef = event.tx_ref;
 
+        // tx_ref is required for verification
+        if (!txRef) {
+          throw new ChapaError(
+            "Missing tx_ref in webhook payload",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
         // Verify transaction with Chapa API before processing (as per Chapa docs)
-        if (txRef) {
-          const verification = await this.verifyTransaction(txRef);
-          if (!verification.success) {
-            throw new ChapaError(
-              "Webhook transaction verification failed",
-              CHAPA_ERROR_CODES.VERIFICATION_FAILED,
-            );
-          }
+        const verification = await this.verifyTransaction(txRef);
+        if (!verification.success) {
+          throw new ChapaError(
+            "Webhook transaction verification failed",
+            CHAPA_ERROR_CODES.VERIFICATION_FAILED,
+          );
+        }
 
-          // Verify critical fields match webhook values
-          if (verification.status !== event.status) {
-            throw new ChapaError(
-              "Webhook status mismatch with Chapa API",
-              CHAPA_ERROR_CODES.INVALID_WEBHOOK,
-            );
-          }
+        // Verify critical fields match webhook values
+        if (verification.status !== event.status) {
+          throw new ChapaError(
+            "Webhook status mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
 
-          if (verification.amount && verification.amount !== fromDecimalAmount(event.amount)) {
-            throw new ChapaError(
-              "Webhook amount mismatch with Chapa API",
-              CHAPA_ERROR_CODES.INVALID_WEBHOOK,
-            );
-          }
+        if (verification.amount && verification.amount !== fromDecimalAmount(event.amount)) {
+          throw new ChapaError(
+            "Webhook amount mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
 
-          if (verification.currency && verification.currency !== event.currency) {
-            throw new ChapaError(
-              "Webhook currency mismatch with Chapa API",
-              CHAPA_ERROR_CODES.INVALID_WEBHOOK,
-            );
-          }
+        if (verification.currency && verification.currency !== event.currency) {
+          throw new ChapaError(
+            "Webhook currency mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
 
-          if (verification.txRef && verification.txRef !== event.tx_ref) {
-            throw new ChapaError(
-              "Webhook tx_ref mismatch with Chapa API",
-              CHAPA_ERROR_CODES.INVALID_WEBHOOK,
-            );
-          }
+        if (verification.txRef && verification.txRef !== event.tx_ref) {
+          throw new ChapaError(
+            "Webhook tx_ref mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
 
-          if (verification.mode && verification.mode !== event.mode) {
-            throw new ChapaError(
-              "Webhook mode mismatch with Chapa API",
-              CHAPA_ERROR_CODES.INVALID_WEBHOOK,
-            );
-          }
+        if (verification.mode && verification.mode !== event.mode) {
+          throw new ChapaError(
+            "Webhook mode mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
         }
 
         return {
-          providerReferenceId: txRef || "",
+          providerReferenceId: txRef,
           type: event.event,
           payload: event as unknown as Record<string, unknown>,
         };
