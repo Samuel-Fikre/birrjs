@@ -4,6 +4,7 @@ import type {
   ChapaTransactionResponse,
   ChapaVerifyResponse,
 } from "./types";
+import { ChapaApiError } from "./errors";
 
 const CHAPA_API_BASE_URL = "https://api.chapa.co/v1";
 
@@ -28,7 +29,17 @@ export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Chapa API error: ${response.status} - ${errorText}`);
+        let errorBody: unknown;
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch {
+          errorBody = errorText;
+        }
+        throw new ChapaApiError(
+          `Chapa API error: ${response.status} - ${errorText}`,
+          response.status,
+          errorBody,
+        );
       }
 
       const result = (await response.json()) as ChapaTransactionResponse;
@@ -43,7 +54,17 @@ export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Chapa API error: ${response.status} - ${errorText}`);
+        let errorBody: unknown;
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch {
+          errorBody = errorText;
+        }
+        throw new ChapaApiError(
+          `Chapa API error: ${response.status} - ${errorText}`,
+          response.status,
+          errorBody,
+        );
       }
 
       const result = (await response.json()) as ChapaVerifyResponse;

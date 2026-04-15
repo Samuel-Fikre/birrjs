@@ -60,6 +60,7 @@ export interface VerificationResponse {
   email?: string;
   txRef?: string;
   providerTxRef?: string;
+  mode?: string;
   error?: string;
 }
 
@@ -79,7 +80,11 @@ export interface WebhookEvent {
 export interface PaymentProvider {
   initializeTransaction(request: TransactionRequest): Promise<TransactionResponse>;
   verifyTransaction(txRef: string): Promise<VerificationResponse>;
-  handleWebhook(payload: unknown, headers: Record<string, string>): Promise<WebhookEvent>;
+  handleWebhook(
+    payload: unknown,
+    rawBody: string | Buffer,
+    headers: Record<string, string>,
+  ): Promise<WebhookEvent>;
 }
 
 /**
