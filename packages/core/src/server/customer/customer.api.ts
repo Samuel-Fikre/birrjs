@@ -66,7 +66,7 @@ export const updateCustomer = defineBirrJSMethod(
       .limit(1);
     const customerRecord = customers[0];
     if (!customerRecord) {
-      throw BirrJSError.from("BAD_REQUEST", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
     }
 
     const updateData: any = {
@@ -131,7 +131,7 @@ export const getCustomer = defineBirrJSMethod(
       .limit(1);
     const customerRecord = customers[0];
     if (!customerRecord) {
-      throw BirrJSError.from("BAD_REQUEST", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
     }
 
     return {

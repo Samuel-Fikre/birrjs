@@ -34,7 +34,7 @@ export const subscribe = defineBirrJSMethod(
     const plans = await database.select().from(plan).where(eq(plan.id, planId)).limit(1);
     const planRecord = plans[0];
     if (!planRecord) {
-      throw BirrJSError.from("BAD_REQUEST", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);
     }
 
     // Find or create customer
@@ -173,7 +173,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
-      throw BirrJSError.from("BAD_REQUEST", BIRRJS_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
     }
 
     const result = cancelSubscriptionLogic({
@@ -225,7 +225,7 @@ export const getSubscription = defineBirrJSMethod(
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
-      throw BirrJSError.from("BAD_REQUEST", BIRRJS_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
     }
 
     return {
