@@ -24,7 +24,7 @@ export const createCustomer = defineBirrJSMethod(
     const { database } = ctx.birrjs;
     const { email, name, metadata } = ctx.input as z.infer<typeof CreateCustomerRequestSchema>;
 
-    const customerId = `cus_${Date.now()}`;
+    const customerId = `cus_${crypto.randomUUID()}`;
     const newCustomer: Customer = {
       id: customerId,
       email,

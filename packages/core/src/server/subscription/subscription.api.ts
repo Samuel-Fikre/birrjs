@@ -47,7 +47,7 @@ export const subscribe = defineBirrJSMethod(
 
     if (!customerRecord) {
       // Create new customer
-      const customerId = `cus_${Date.now()}`;
+      const customerId = `cus_${crypto.randomUUID()}`;
       const newCustomer = {
         id: customerId,
         email,
@@ -62,7 +62,7 @@ export const subscribe = defineBirrJSMethod(
     }
 
     // Create subscription
-    const subscriptionId = `sub_${Date.now()}`;
+    const subscriptionId = `sub_${crypto.randomUUID()}`;
     const subscriptionResult = createSubscription({
       id: subscriptionId,
       customerId: customerRecord!.id,
@@ -89,7 +89,7 @@ export const subscribe = defineBirrJSMethod(
     await database.insert(subscription).values(newSubscription);
 
     // Initialize payment with provider
-    const txRef = `tx_${Date.now()}`;
+    const txRef = `tx_${crypto.randomUUID()}`;
     const transactionRequest: TransactionRequest = {
       amount: planRecord.priceAmount || 0,
       currency: planRecord.currency || "ETB",
