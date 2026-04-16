@@ -6,8 +6,9 @@ import {
   GetCustomerRequestSchema,
 } from "../../api/schemas";
 import { customer } from "../../database/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
+import * as z from "zod";
 
 /**
  * Create customer
@@ -94,6 +95,10 @@ export const updateCustomer = defineBirrJSMethod(
  */
 export const listCustomers = defineBirrJSMethod(
   {
+    input: z.object({
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0),
+    }),
     route: {
       method: "GET",
       path: "/customers",
@@ -101,10 +106,23 @@ export const listCustomers = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const customers = await database.select().from(customer);
+    const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
+
+    const customers = await database
+      .select()
+      .from(customer)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(customer.createdAt));
+
+    const totalResult = await database.select({ value: count() }).from(customer);
+    const total = totalResult[0]?.value || 0;
+
     return {
       customers: customers as Customer[],
-      total: customers.length,
+      total,
+      limit,
+      offset,
     };
   },
 );

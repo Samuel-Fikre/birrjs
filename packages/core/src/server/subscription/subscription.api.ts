@@ -10,9 +10,10 @@ import {
   GetSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { plan, subscription, customer } from "../../database/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import type { TransactionRequest } from "../../provider";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
+import * as z from "zod";
 
 /**
  * Subscribe to a plan
@@ -134,6 +135,10 @@ export const subscribe = defineBirrJSMethod(
  */
 export const listSubscriptions = defineBirrJSMethod(
   {
+    input: z.object({
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0),
+    }),
     route: {
       method: "GET",
       path: "/subscriptions",
@@ -141,10 +146,23 @@ export const listSubscriptions = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const subscriptions = await database.select().from(subscription);
+    const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
+
+    const subscriptions = await database
+      .select()
+      .from(subscription)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(subscription.createdAt));
+
+    const totalResult = await database.select({ value: count() }).from(subscription);
+    const total = totalResult[0]?.value || 0;
+
     return {
       subscriptions: subscriptions as Subscription[],
-      total: subscriptions.length,
+      total,
+      limit,
+      offset,
     };
   },
 );
