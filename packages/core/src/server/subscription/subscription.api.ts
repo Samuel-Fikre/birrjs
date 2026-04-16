@@ -101,11 +101,10 @@ export const subscribe = defineBirrJSMethod(
     let transaction;
     try {
       transaction = await provider.initializeTransaction(transactionRequest);
-      // Update subscription to active on success
+
       await database
         .update(subscription)
         .set({
-          status: "active",
           providerTxRef: txRef,
           updatedAt: new Date(),
         })
