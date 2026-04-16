@@ -1,4 +1,4 @@
-import type { NormalizedWebhookEvent } from "@birrjs/core";
+import type { WebhookEvent } from "@birrjs/core";
 
 /**
  * Chapa transaction status
@@ -341,10 +341,7 @@ export interface ChapaRuntime {
     existingProviderPriceId?: string | null;
   }): Promise<{ providerProductId: string; providerPriceId: string }>;
 
-  handleWebhook(data: {
-    body: string;
-    headers: Record<string, string>;
-  }): Promise<NormalizedWebhookEvent[]>;
+  handleWebhook(data: { body: string; headers: Record<string, string> }): Promise<WebhookEvent[]>;
 
   createPortalSession(data: {
     providerCustomerId: string;
