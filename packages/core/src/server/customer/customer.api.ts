@@ -7,7 +7,6 @@ import {
 } from "../../api/schemas";
 import { customer } from "../../database/schema";
 import { eq } from "drizzle-orm";
-import * as z from "zod";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 
 /**
@@ -15,6 +14,7 @@ import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
  */
 export const createCustomer = defineBirrJSMethod(
   {
+    input: CreateCustomerRequestSchema,
     route: {
       method: "POST",
       path: "/customers",
@@ -22,7 +22,7 @@ export const createCustomer = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { email, name, metadata } = ctx.input as z.infer<typeof CreateCustomerRequestSchema>;
+    const { email, name, metadata } = ctx.input;
 
     const customerId = `cus_${crypto.randomUUID()}`;
     const newCustomer: Customer = {
@@ -48,6 +48,7 @@ export const createCustomer = defineBirrJSMethod(
  */
 export const updateCustomer = defineBirrJSMethod(
   {
+    input: UpdateCustomerRequestSchema,
     route: {
       method: "PATCH",
       path: "/customers/:customerId",
@@ -55,9 +56,7 @@ export const updateCustomer = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { customerId, email, name, metadata } = ctx.input as z.infer<
-      typeof UpdateCustomerRequestSchema
-    >;
+    const { customerId, email, name, metadata } = ctx.input;
 
     const customers = await database
       .select()
@@ -115,6 +114,7 @@ export const listCustomers = defineBirrJSMethod(
  */
 export const getCustomer = defineBirrJSMethod(
   {
+    input: GetCustomerRequestSchema,
     route: {
       method: "GET",
       path: "/customers/:customerId",
@@ -122,7 +122,7 @@ export const getCustomer = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { customerId } = ctx.input as z.infer<typeof GetCustomerRequestSchema>;
+    const { customerId } = ctx.input;
 
     const customers = await database
       .select()

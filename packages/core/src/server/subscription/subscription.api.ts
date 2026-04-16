@@ -11,7 +11,6 @@ import {
 } from "../../api/schemas";
 import { plan, subscription, customer } from "../../database/schema";
 import { eq } from "drizzle-orm";
-import * as z from "zod";
 import type { TransactionRequest } from "../../provider";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 
@@ -155,6 +154,7 @@ export const listSubscriptions = defineBirrJSMethod(
  */
 export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   {
+    input: CancelSubscriptionRequestSchema,
     route: {
       method: "POST",
       path: "/subscriptions/cancel",
@@ -162,9 +162,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { subscriptionId, cancelAtPeriodEnd = false } = ctx.input as z.infer<
-      typeof CancelSubscriptionRequestSchema
-    >;
+    const { subscriptionId, cancelAtPeriodEnd = false } = ctx.input;
 
     const subscriptions = await database
       .select()
@@ -209,6 +207,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
  */
 export const getSubscription = defineBirrJSMethod(
   {
+    input: GetSubscriptionRequestSchema,
     route: {
       method: "GET",
       path: "/subscriptions/:subscriptionId",
@@ -216,7 +215,7 @@ export const getSubscription = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { subscriptionId } = ctx.input as z.infer<typeof GetSubscriptionRequestSchema>;
+    const { subscriptionId } = ctx.input;
 
     const subscriptions = await database
       .select()
