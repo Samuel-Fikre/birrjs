@@ -10,5 +10,6 @@ export interface BirrJSLoggingOptions {
 export interface BirrJSOptions {
   provider: PaymentProvider;
   database: string | Pool;
+  callbackUrl: string;
   logging?: BirrJSLoggingOptions;
 }
