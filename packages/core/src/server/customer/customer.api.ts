@@ -69,12 +69,12 @@ export const updateCustomer = defineBirrJSMethod(
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
     }
 
-    const updateData: any = {
+    const updateData: Partial<Customer> = {
       updatedAt: new Date(),
     };
-    if (email) updateData.email = email;
-    if (name) updateData.name = name;
-    if (metadata) updateData.metadata = metadata as Record<string, string>;
+    if (email !== undefined) updateData.email = email;
+    if (name !== undefined) updateData.name = name;
+    if (metadata !== undefined) updateData.metadata = metadata as Record<string, string>;
 
     await database.update(customer).set(updateData).where(eq(customer.id, customerId));
 
