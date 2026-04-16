@@ -37,6 +37,10 @@ export interface TransactionRequest {
   callbackUrl: string;
   returnUrl?: string;
   metadata?: Record<string, string>;
+  customization?: {
+    title?: string;
+    description?: string;
+  };
 }
 
 /**
