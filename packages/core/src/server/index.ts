@@ -1,5 +1,15 @@
+import type { BirrJSContext } from "../context";
+import type {
+  SubscribeRequest,
+  CancelSubscriptionRequest,
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  GetSubscriptionRequest,
+  GetCustomerRequest,
+} from "../index";
+
 // Subscription methods
-export {
+import {
   subscribe,
   listSubscriptions,
   cancelSubscriptionEndpoint,
@@ -7,7 +17,7 @@ export {
 } from "./subscription/subscription.api";
 
 // Customer methods
-export {
+import {
   createCustomer,
   updateCustomer,
   listCustomers,
@@ -15,4 +25,32 @@ export {
 } from "./customer/customer.api";
 
 // Plan methods
-export { listPlans } from "./plan/plan.api";
+import { listPlans } from "./plan/plan.api";
+
+// Type-safe API helper
+export function getApi(getContext: () => Promise<BirrJSContext>) {
+  return {
+    subscribe: (input: SubscribeRequest) => getContext().then((ctx) => subscribe(ctx, input)),
+    listSubscriptions: (input?: { limit?: number; offset?: number }) => {
+      const { limit = 20, offset = 0 } = input || {};
+      return getContext().then((ctx) => listSubscriptions(ctx, { limit, offset }));
+    },
+    cancelSubscription: (input: CancelSubscriptionRequest) =>
+      getContext().then((ctx) => cancelSubscriptionEndpoint(ctx, input)),
+    createCustomer: (input: CreateCustomerRequest) =>
+      getContext().then((ctx) => createCustomer(ctx, input)),
+    updateCustomer: (input: UpdateCustomerRequest) =>
+      getContext().then((ctx) => updateCustomer(ctx, input)),
+    listCustomers: (input?: { limit?: number; offset?: number }) => {
+      const { limit = 20, offset = 0 } = input || {};
+      return getContext().then((ctx) => listCustomers(ctx, { limit, offset }));
+    },
+    listPlans: (input?: { limit?: number; offset?: number }) => {
+      const { limit = 20, offset = 0 } = input || {};
+      return getContext().then((ctx) => listPlans(ctx, { limit, offset }));
+    },
+    getSubscription: (input: GetSubscriptionRequest) =>
+      getContext().then((ctx) => getSubscription(ctx, input)),
+    getCustomer: (input: GetCustomerRequest) => getContext().then((ctx) => getCustomer(ctx, input)),
+  };
+}
