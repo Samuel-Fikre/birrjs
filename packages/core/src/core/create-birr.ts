@@ -38,6 +38,7 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   getSubscription: (input: GetSubscriptionRequest) => Promise<GetSubscriptionResponse>;
   getCustomer: (input: GetCustomerRequest) => Promise<GetCustomerResponse>;
   $context: Promise<BirrJSContext>;
+  close: () => Promise<void>;
 }
 
 export function isBirrInstance<TOptions extends BirrJSOptions = BirrJSOptions>(
@@ -74,6 +75,10 @@ export function createBirr<TOptions extends BirrJSOptions>(
     ...api,
     get $context() {
       return getContext();
+    },
+    close: async () => {
+      const ctx = await getContext();
+      await ctx.destroy();
     },
   };
 
