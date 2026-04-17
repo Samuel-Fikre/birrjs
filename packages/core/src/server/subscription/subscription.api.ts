@@ -203,6 +203,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
         status: result.status as string,
         canceledAt: result.canceledAt,
         endedAt: result.endedAt,
+        cancelAtPeriodEnd,
         updatedAt: new Date(),
       })
       .where(eq(subscription.id, subscriptionId));
