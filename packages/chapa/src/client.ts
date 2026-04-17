@@ -1,9 +1,9 @@
 import type {
-  ChapaProviderConfig,
   ChapaTransactionRequest,
   ChapaTransactionResponse,
   ChapaVerifyResponse,
 } from "./types";
+import type { PaymentProviderConfig } from "@birrjs/core";
 import { ChapaApiError } from "./errors";
 
 const CHAPA_API_BASE_URL = "https://api.chapa.co/v1";
@@ -13,7 +13,7 @@ export interface ChapaClient {
   verifyTransaction: (txRef: string) => Promise<ChapaVerifyResponse>;
 }
 
-export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
+export function createChapaClient(config: PaymentProviderConfig): ChapaClient {
   const headers = {
     Authorization: `Bearer ${config.secretKey}`,
     "Content-Type": "application/json",

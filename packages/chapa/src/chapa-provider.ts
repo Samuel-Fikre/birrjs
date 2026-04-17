@@ -1,9 +1,9 @@
 import type { ChapaClient } from "./client";
+import { createChapaClient } from "./client";
 import type {
   ChapaTransactionRequest,
   ChapaTransactionResponse,
   ChapaVerifyResponse,
-  ChapaWebhookEvent,
 } from "./types";
 import type {
   PaymentProvider,
@@ -331,7 +331,11 @@ export interface ChapaProviderConfig extends PaymentProviderConfig {}
  * Create Chapa provider configuration
  */
 export function chapa(config: ChapaProviderConfig): ChapaProviderConfig {
+  const client = createChapaClient(config);
+  const runtime = createChapaProvider(client, config);
+
   return {
     ...config,
+    runtime,
   };
 }
