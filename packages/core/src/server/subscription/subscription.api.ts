@@ -28,7 +28,7 @@ export const subscribe = defineBirrJSMethod(
   },
   async (ctx) => {
     const { planId, email, name, metadata } = ctx.input;
-    const { database, provider } = ctx.birrjs;
+    const { database, runtime } = ctx.birrjs;
 
     // Check if plan exists
     const plans = await database.select().from(plan).where(eq(plan.id, planId)).limit(1);
@@ -100,7 +100,7 @@ export const subscribe = defineBirrJSMethod(
 
     let transaction;
     try {
-      transaction = await provider.initializeTransaction(transactionRequest);
+      transaction = await runtime.initializeTransaction(transactionRequest);
 
       await database
         .update(subscription)
