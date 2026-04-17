@@ -21,6 +21,7 @@ export interface PaymentProviderConfig {
   callbackUrl: string;
   currency?: string;
   testMode?: boolean;
+  runtime?: PaymentProvider;
 }
 
 /**
