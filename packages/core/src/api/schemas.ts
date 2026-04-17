@@ -158,3 +158,53 @@ export const GetCustomerResponseSchema = z.object({
 
 export type GetCustomerRequest = z.infer<typeof GetCustomerRequestSchema>;
 export type GetCustomerResponse = z.infer<typeof GetCustomerResponseSchema>;
+
+// Webhook schemas
+export const WebhookEventSchema = z.enum([
+  "charge.success",
+  "charge.failed/cancelled",
+  "charge.reversed",
+  "charge.refunded",
+]);
+
+export const WebhookPayloadSchema = z.object({
+  event: WebhookEventSchema,
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  email: z.string().nullable().optional(),
+  mobile: z.string().optional(),
+  currency: z.string(),
+  amount: z.string(),
+  charge: z.string(),
+  status: z.string(),
+  mode: z.enum(["test", "live"]),
+  reference: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  type: z.enum(["API", "Payment Link", "Event", "Donation"]),
+  tx_ref: z.string(),
+  payment_method: z.string().optional(),
+  customization: z
+    .object({
+      title: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+      logo: z.string().nullable().optional(),
+    })
+    .optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+export const WebhookRequestSchema = z.object({
+  payload: WebhookPayloadSchema,
+  rawBody: z.string(),
+  headers: z.looseObject({}), // Allow any string keys and values
+});
+
+export const WebhookResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
+export type WebhookRequest = z.infer<typeof WebhookRequestSchema>;
+export type WebhookResponse = z.infer<typeof WebhookResponseSchema>;

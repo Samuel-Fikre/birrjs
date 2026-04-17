@@ -6,6 +6,7 @@ import type {
   UpdateCustomerRequest,
   GetSubscriptionRequest,
   GetCustomerRequest,
+  WebhookRequest,
 } from "../index";
 
 // Subscription methods
@@ -26,6 +27,12 @@ import {
 
 // Plan methods
 import { listPlans } from "./plan/plan.api";
+
+// Webhook methods
+import { handleWebhook } from "./webhook/webhook.api";
+
+// Cron methods
+import { checkPendingSubscriptions, checkExpiredSubscriptions } from "./cron/cron.api";
 
 // Type-safe API helper
 export function getApi(getContext: () => Promise<BirrJSContext>) {
@@ -52,5 +59,8 @@ export function getApi(getContext: () => Promise<BirrJSContext>) {
     getSubscription: (input: GetSubscriptionRequest) =>
       getContext().then((ctx) => getSubscription(ctx, input)),
     getCustomer: (input: GetCustomerRequest) => getContext().then((ctx) => getCustomer(ctx, input)),
+    handleWebhook: (input: WebhookRequest) => getContext().then((ctx) => handleWebhook(ctx, input)),
+    checkPendingSubscriptions: () => getContext().then((ctx) => checkPendingSubscriptions(ctx)),
+    checkExpiredSubscriptions: () => getContext().then((ctx) => checkExpiredSubscriptions(ctx)),
   };
 }

@@ -17,6 +17,8 @@ import type {
   GetSubscriptionResponse,
   GetCustomerRequest,
   GetCustomerResponse,
+  WebhookRequest,
+  WebhookResponse,
 } from "../index";
 import { createContext } from "../context";
 import { getApi } from "../server";
@@ -37,6 +39,9 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   listPlans: (input?: { limit?: number; offset?: number }) => Promise<ListPlansResponse>;
   getSubscription: (input: GetSubscriptionRequest) => Promise<GetSubscriptionResponse>;
   getCustomer: (input: GetCustomerRequest) => Promise<GetCustomerResponse>;
+  handleWebhook: (input: WebhookRequest) => Promise<WebhookResponse>;
+  checkPendingSubscriptions: () => Promise<{ checked: number; updated: number }>;
+  checkExpiredSubscriptions: () => Promise<{ checked: number; updated: number }>;
   $context: Promise<BirrJSContext>;
   close: () => Promise<void>;
 }
