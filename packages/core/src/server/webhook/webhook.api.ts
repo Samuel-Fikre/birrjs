@@ -70,6 +70,15 @@ export const handleWebhook = defineBirrJSMethod(
         return { success: true, message: "Unknown event ignored" };
     }
 
+    // Skip update if status unchanged (idempotency)
+    if (subscriptionRecord.status === newStatus) {
+      logger.info(
+        { subscriptionId: subscriptionRecord.id, status: newStatus },
+        "Webhook received but status already matches",
+      );
+      return { success: true, message: "Webhook processed (no status change)" };
+    }
+
     // Update subscription status
     await database
       .update(subscription)
