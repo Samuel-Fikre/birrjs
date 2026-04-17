@@ -1,4 +1,4 @@
-import type { PaymentProvider } from "../provider";
+import type { PaymentProviderConfig } from "../provider";
 import type { Pool } from "pg";
 import type { LevelWithSilent, Logger } from "pino";
 
@@ -8,7 +8,7 @@ export interface BirrJSLoggingOptions {
 }
 
 export interface BirrJSOptions {
-  provider: PaymentProvider;
+  provider: PaymentProviderConfig;
   database: string | Pool;
   callbackUrl: string;
   logging?: BirrJSLoggingOptions;
