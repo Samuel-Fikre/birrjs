@@ -44,7 +44,10 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
     birrjs: BirrJSContext,
     input: InferInput<TConfig["input"]>,
   ): Promise<TResult> => {
-    return handler({ birrjs, input });
+    const validatedInput = config.input
+      ? (config.input.parse(input) as InferInput<TConfig["input"]>)
+      : input;
+    return handler({ birrjs, input: validatedInput });
   };
 
   if (config.route) {
