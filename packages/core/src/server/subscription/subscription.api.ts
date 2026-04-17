@@ -63,37 +63,30 @@ export const subscribe = defineBirrJSMethod(
 
     // Create subscription
     const subscriptionId = `sub_${crypto.randomUUID()}`;
-    const subscriptionResult = createSubscription({
-      id: subscriptionId,
-      customerId: customerRecord!.id,
-      planId: planRecord.id,
-      interval:
-        (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
-    });
+
+    // Initialize payment with provider
+    const txRef = `tx_${crypto.randomUUID()}`;
 
     // Store subscription in database with status "pending"
-    const newSubscription: Subscription = {
-      id: subscriptionId,
-      customerId: customerRecord!.id,
-      planId: planRecord.id,
-      status: subscriptionResult.status,
-      startedAt: subscriptionResult.startedAt,
-      expiresAt: subscriptionResult.expiresAt,
-      canceledAt: subscriptionResult.canceledAt,
-      endedAt: subscriptionResult.endedAt,
+    const newSubscription = {
+      ...createSubscription({
+        id: subscriptionId,
+        customerId: customerRecord!.id,
+        planId: planRecord.id,
+        interval:
+          (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
+      }),
       cancelAtPeriodEnd: false,
-      providerTxRef: null,
+      providerTxRef: txRef,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     await database.insert(subscription).values(newSubscription);
 
-    // Initialize payment with provider
-    const txRef = `tx_${crypto.randomUUID()}`;
     const transactionRequest: TransactionRequest = {
       amount: planRecord.priceAmount || 0,
       currency: planRecord.currency || "ETB",
-      email: customerRecord!.email || "",
+      email: email,
       txRef,
       callbackUrl: ctx.birrjs.options.callbackUrl,
     };
@@ -101,14 +94,6 @@ export const subscribe = defineBirrJSMethod(
     let transaction;
     try {
       transaction = await runtime.initializeTransaction(transactionRequest);
-
-      await database
-        .update(subscription)
-        .set({
-          providerTxRef: txRef,
-          updatedAt: new Date(),
-        })
-        .where(eq(subscription.id, subscriptionId));
     } catch (error) {
       // Update subscription to failed on error
       await database
