@@ -143,11 +143,15 @@ export function cancelSubscription(input: CancelSubscriptionInput): CancelSubscr
     if (!input.currentPeriodEndAt) {
       throw new Error("Cannot cancel at period end: currentPeriodEndAt is required");
     }
+    // Prevent cancel-at-period-end for subscriptions without an active period
+    if (input.currentStatus !== "active") {
+      throw new Error("Cannot cancel at period end: subscription must be active");
+    }
     // Cancel at period end
     return {
       status: "active",
       canceledAt: now,
-      endedAt: null,
+      endedAt: input.currentPeriodEndAt,
     };
   }
 
