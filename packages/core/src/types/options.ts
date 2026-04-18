@@ -7,9 +7,20 @@ export interface BirrJSLoggingOptions {
   logger?: Logger;
 }
 
+export type SchedulerMode = "auto" | "external" | "manual";
+
+export interface BirrJSSchedulingOptions {
+  mode?: SchedulerMode;
+  cronSecret?: string;
+  pendingTimeoutMinutes?: number;
+  pendingSweepCron?: string;
+  expirySweepCron?: string;
+}
+
 export interface BirrJSOptions {
   provider: PaymentProviderConfig;
   database: string | Pool;
   callbackUrl: string;
   logging?: BirrJSLoggingOptions;
+  scheduling?: BirrJSSchedulingOptions;
 }

@@ -3,11 +3,13 @@ import {
   createSubscription,
   cancelSubscription as cancelSubscriptionLogic,
 } from "../../subscription";
+import { getEffectiveStatus } from "../../subscription/effective-status";
 import { defineBirrJSMethod } from "../../api/endpoint";
 import {
   SubscribeRequestSchema,
   CancelSubscriptionRequestSchema,
   GetSubscriptionRequestSchema,
+  CheckSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { plan, subscription, customer } from "../../database/schema";
 import { eq, desc, count } from "drizzle-orm";
@@ -129,7 +131,7 @@ export const listSubscriptions = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { database } = ctx.birrjs;
+    const { database, options } = ctx.birrjs;
     const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
 
     const subscriptions = await database
@@ -142,8 +144,17 @@ export const listSubscriptions = defineBirrJSMethod(
     const totalResult = await database.select({ value: count() }).from(subscription);
     const total = totalResult[0]?.value || 0;
 
+    const subscriptionsWithEffectiveStatus = subscriptions.map((sub) => ({
+      ...sub,
+      effectiveStatus: getEffectiveStatus(sub, {
+        pendingTimeoutMinutes: options.scheduling?.pendingTimeoutMinutes,
+      }),
+    }));
+
     return {
-      subscriptions: subscriptions as Subscription[],
+      subscriptions: subscriptionsWithEffectiveStatus as (Subscription & {
+        effectiveStatus: string;
+      })[],
       total,
       limit,
       offset,
@@ -217,7 +228,7 @@ export const getSubscription = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { database } = ctx.birrjs;
+    const { database, options } = ctx.birrjs;
     const { subscriptionId } = ctx.input;
 
     const subscriptions = await database
@@ -230,8 +241,60 @@ export const getSubscription = defineBirrJSMethod(
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
     }
 
+    const effectiveStatus = getEffectiveStatus(subscriptionRecord, {
+      pendingTimeoutMinutes: options.scheduling?.pendingTimeoutMinutes,
+    });
+
     return {
-      subscription: subscriptionRecord as Subscription,
+      subscription: {
+        ...subscriptionRecord,
+        effectiveStatus,
+      } as Subscription & { effectiveStatus: string },
+    };
+  },
+);
+
+export const checkSubscription = defineBirrJSMethod(
+  {
+    input: CheckSubscriptionRequestSchema,
+    route: {
+      method: "POST",
+      path: "/subscriptions/check",
+    },
+  },
+  async (ctx) => {
+    const { database, options } = ctx.birrjs;
+    const { customerId } = ctx.input;
+
+    // Get the most recent subscription for the customer
+    const subscriptions = await database
+      .select()
+      .from(subscription)
+      .where(eq(subscription.customerId, customerId))
+      .orderBy(desc(subscription.createdAt))
+      .limit(1);
+
+    const subscriptionRecord = subscriptions[0];
+
+    // If no subscription, not allowed
+    if (!subscriptionRecord) {
+      return {
+        allowed: false,
+        effectiveStatus: "pending" as const,
+      };
+    }
+
+    // Compute effective status
+    const effectiveStatus = getEffectiveStatus(subscriptionRecord, {
+      pendingTimeoutMinutes: options.scheduling?.pendingTimeoutMinutes,
+    });
+
+    // Allowed only if effective status is active
+    const allowed = effectiveStatus === "active";
+
+    return {
+      allowed,
+      effectiveStatus,
     };
   },
 );

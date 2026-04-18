@@ -147,6 +147,19 @@ export const GetSubscriptionResponseSchema = z.object({
 export type GetSubscriptionRequest = z.infer<typeof GetSubscriptionRequestSchema>;
 export type GetSubscriptionResponse = z.infer<typeof GetSubscriptionResponseSchema>;
 
+// Check subscription access
+export const CheckSubscriptionRequestSchema = z.object({
+  customerId: z.string().min(1),
+});
+
+export const CheckSubscriptionResponseSchema = z.object({
+  allowed: z.boolean(),
+  effectiveStatus: z.enum(["pending", "active", "canceled", "failed", "expired"]),
+});
+
+export type CheckSubscriptionRequest = z.infer<typeof CheckSubscriptionRequestSchema>;
+export type CheckSubscriptionResponse = z.infer<typeof CheckSubscriptionResponseSchema>;
+
 // Get single customer
 export const GetCustomerRequestSchema = z.object({
   customerId: z.string().min(1),

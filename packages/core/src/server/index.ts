@@ -5,6 +5,7 @@ import type {
   CreateCustomerRequest,
   UpdateCustomerRequest,
   GetSubscriptionRequest,
+  CheckSubscriptionRequest,
   GetCustomerRequest,
   WebhookRequest,
 } from "../index";
@@ -15,6 +16,7 @@ import {
   listSubscriptions,
   cancelSubscriptionEndpoint,
   getSubscription,
+  checkSubscription,
 } from "./subscription/subscription.api";
 
 // Customer methods
@@ -58,6 +60,8 @@ export function getApi(getContext: () => Promise<BirrJSContext>) {
     },
     getSubscription: (input: GetSubscriptionRequest) =>
       getContext().then((ctx) => getSubscription(ctx, input)),
+    checkSubscription: (input: CheckSubscriptionRequest) =>
+      getContext().then((ctx) => checkSubscription(ctx, input)),
     getCustomer: (input: GetCustomerRequest) => getContext().then((ctx) => getCustomer(ctx, input)),
     handleWebhook: (input: WebhookRequest) => getContext().then((ctx) => handleWebhook(ctx, input)),
     checkPendingSubscriptions: () => getContext().then((ctx) => checkPendingSubscriptions(ctx)),

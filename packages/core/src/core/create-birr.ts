@@ -15,6 +15,8 @@ import type {
   ListPlansResponse,
   GetSubscriptionRequest,
   GetSubscriptionResponse,
+  CheckSubscriptionRequest,
+  CheckSubscriptionResponse,
   GetCustomerRequest,
   GetCustomerResponse,
   WebhookRequest,
@@ -38,6 +40,7 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   listCustomers: (input?: { limit?: number; offset?: number }) => Promise<ListCustomersResponse>;
   listPlans: (input?: { limit?: number; offset?: number }) => Promise<ListPlansResponse>;
   getSubscription: (input: GetSubscriptionRequest) => Promise<GetSubscriptionResponse>;
+  checkSubscription: (input: CheckSubscriptionRequest) => Promise<CheckSubscriptionResponse>;
   getCustomer: (input: GetCustomerRequest) => Promise<GetCustomerResponse>;
   handleWebhook: (input: WebhookRequest) => Promise<WebhookResponse>;
   checkPendingSubscriptions: () => Promise<{ checked: number; updated: number }>;
