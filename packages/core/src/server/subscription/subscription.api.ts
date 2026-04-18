@@ -280,7 +280,7 @@ export const checkSubscription = defineBirrJSMethod(
     if (!subscriptionRecord) {
       return {
         allowed: false,
-        effectiveStatus: "pending" as const,
+        effectiveStatus: "none" as const,
       };
     }
 

@@ -1,6 +1,6 @@
 import type { Subscription } from "../types/models";
 
-export type SubscriptionStatus = "pending" | "active" | "canceled" | "failed" | "expired";
+export type SubscriptionStatus = "pending" | "active" | "canceled" | "failed" | "expired" | "none";
 
 export interface GetEffectiveStatusOptions {
   pendingTimeoutMinutes?: number;

@@ -154,7 +154,7 @@ export const CheckSubscriptionRequestSchema = z.object({
 
 export const CheckSubscriptionResponseSchema = z.object({
   allowed: z.boolean(),
-  effectiveStatus: z.enum(["pending", "active", "canceled", "failed", "expired"]),
+  effectiveStatus: z.enum(["pending", "active", "canceled", "failed", "expired", "none"]),
 });
 
 export type CheckSubscriptionRequest = z.infer<typeof CheckSubscriptionRequestSchema>;
