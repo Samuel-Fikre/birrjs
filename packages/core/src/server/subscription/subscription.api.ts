@@ -40,28 +40,29 @@ export const subscribe = defineBirrJSMethod(
     }
 
     // Find or create customer
+    // Create customer with upsert pattern to prevent race conditions
+    const customerId = `cus_${crypto.randomUUID()}`;
+    const newCustomer = {
+      id: customerId,
+      email,
+      name: name || null,
+      metadata: (metadata as Record<string, string>) || null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await database
+      .insert(customer)
+      .values(newCustomer)
+      .onConflictDoNothing({ target: customer.email });
+
     const customers = await database
       .select()
       .from(customer)
       .where(eq(customer.email, email))
       .limit(1);
-    let customerRecord = customers[0];
-
-    if (!customerRecord) {
-      // Create new customer
-      const customerId = `cus_${crypto.randomUUID()}`;
-      const newCustomer = {
-        id: customerId,
-        email,
-        name: name || null,
-        metadata: (metadata as Record<string, string>) || null,
-        deletedAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await database.insert(customer).values(newCustomer);
-      customerRecord = newCustomer;
-    }
+    const customerRecord = customers[0];
 
     // Create subscription
     const subscriptionId = `sub_${crypto.randomUUID()}`;
@@ -108,8 +109,15 @@ export const subscribe = defineBirrJSMethod(
       throw error;
     }
 
+    if (!transaction.checkoutUrl) {
+      throw BirrJSError.from(
+        "INTERNAL_SERVER_ERROR",
+        BIRRJS_ERROR_CODES.TRANSACTION_INVALID_RESPONSE,
+      );
+    }
+
     return {
-      checkoutUrl: transaction.checkoutUrl ?? "",
+      checkoutUrl: transaction.checkoutUrl,
       subscriptionId,
       customerId: customerRecord!.id,
     };

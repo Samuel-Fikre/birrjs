@@ -84,6 +84,7 @@ export const BIRRJS_ERROR_CODES = defineErrorCodes({
   PROVIDER_TRANSACTION_FAILED: "Provider transaction failed",
   PROVIDER_VERIFICATION_FAILED: "Provider verification failed",
   PROVIDER_WEBHOOK_INVALID: "Provider webhook payload is invalid",
+  TRANSACTION_INVALID_RESPONSE: "Provider returned invalid transaction response",
 
   DATABASE_ERROR: "Database error",
   INVALID_INPUT: "Invalid input",
