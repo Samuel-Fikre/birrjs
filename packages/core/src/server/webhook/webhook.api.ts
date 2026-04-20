@@ -51,10 +51,15 @@ export const handleWebhook = defineBirrJSMethod(
     // Map webhook event type to subscription status
     const eventType = webhookEvent.type;
     let newStatus: string;
+    let updateFields: { status: string; updatedAt: Date; lastPaymentAt?: Date } = {
+      status: "",
+      updatedAt: new Date(),
+    };
 
     switch (eventType) {
       case "charge.success":
         newStatus = "active";
+        updateFields.lastPaymentAt = new Date();
         break;
       case "charge.failed/cancelled":
         newStatus = "failed";
@@ -70,6 +75,8 @@ export const handleWebhook = defineBirrJSMethod(
         return { success: true, message: "Unknown event ignored" };
     }
 
+    updateFields.status = newStatus;
+
     // Skip update if status unchanged (idempotency)
     if (subscriptionRecord.status === newStatus) {
       logger.info(
@@ -82,10 +89,7 @@ export const handleWebhook = defineBirrJSMethod(
     // Update subscription status
     await database
       .update(subscription)
-      .set({
-        status: newStatus,
-        updatedAt: new Date(),
-      })
+      .set(updateFields)
       .where(eq(subscription.id, subscriptionRecord.id));
 
     logger.info(
