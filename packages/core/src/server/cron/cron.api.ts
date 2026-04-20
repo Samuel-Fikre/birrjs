@@ -13,24 +13,18 @@ export async function checkPendingSubscriptions(ctx: BirrJSContext) {
   const pendingTimeoutMs = pendingTimeoutMinutes * 60 * 1000;
   const timeoutAgo = new Date(Date.now() - pendingTimeoutMs);
 
-  const stuckSubscriptions = await database
-    .select()
-    .from(subscription)
-    .where(and(eq(subscription.status, "pending"), lt(subscription.createdAt, timeoutAgo)));
-
-  logger.info(`Found ${stuckSubscriptions.length} stuck pending subscriptions`);
-
-  // Mark them as failed in a single bulk update
-  await database
+  // Mark stuck subscriptions as failed and get the updated rows
+  const updatedSubscriptions = await database
     .update(subscription)
     .set({ status: "failed", updatedAt: new Date() })
-    .where(and(eq(subscription.status, "pending"), lt(subscription.createdAt, timeoutAgo)));
+    .where(and(eq(subscription.status, "pending"), lt(subscription.createdAt, timeoutAgo)))
+    .returning();
 
-  logger.warn(`Marked ${stuckSubscriptions.length} subscriptions as failed (stuck in pending)`);
+  logger.info(`Marked ${updatedSubscriptions.length} subscriptions as failed (stuck in pending)`);
 
   return {
-    checked: stuckSubscriptions.length,
-    updated: stuckSubscriptions.length,
+    checked: updatedSubscriptions.length,
+    updated: updatedSubscriptions.length,
   };
 }
 
@@ -43,23 +37,17 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
   // Find active subscriptions that have passed their endedAt
   const now = new Date();
 
-  const expiredSubscriptions = await database
-    .select()
-    .from(subscription)
-    .where(and(eq(subscription.status, "active"), lt(subscription.endedAt, now)));
-
-  logger.info(`Found ${expiredSubscriptions.length} expired subscriptions`);
-
-  // Mark them as expired in a single bulk update
-  await database
+  // Mark expired subscriptions and get the updated rows
+  const updatedSubscriptions = await database
     .update(subscription)
     .set({ status: "expired", updatedAt: new Date() })
-    .where(and(eq(subscription.status, "active"), lt(subscription.endedAt, now)));
+    .where(and(eq(subscription.status, "active"), lt(subscription.endedAt, now)))
+    .returning();
 
-  logger.warn(`Marked ${expiredSubscriptions.length} subscriptions as expired`);
+  logger.info(`Marked ${updatedSubscriptions.length} subscriptions as expired`);
 
   return {
-    checked: expiredSubscriptions.length,
-    updated: expiredSubscriptions.length,
+    checked: updatedSubscriptions.length,
+    updated: updatedSubscriptions.length,
   };
 }
