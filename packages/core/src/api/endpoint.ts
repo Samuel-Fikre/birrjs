@@ -26,6 +26,7 @@ export interface BirrJSMethodConfig {
   input?: z.ZodType;
   route?: BirrJSMethodRouteConfig;
   requireCustomer?: boolean;
+  resolveServerCustomerId?: (input: unknown) => string | undefined;
 }
 
 type InferInput<TInput> = TInput extends z.ZodType ? z.infer<TInput> : TInput;
@@ -102,7 +103,9 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
       ? (config.input.parse(input) as InferInput<TConfig["input"]>)
       : input;
 
-    const customer = config.requireCustomer ? await resolveCustomer(birrjs, request) : undefined;
+    const customer = config.requireCustomer
+      ? await resolveCustomer(birrjs, request, config.resolveServerCustomerId?.(input))
+      : undefined;
 
     return handler({
       birrjs,
@@ -125,7 +128,11 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
         const input = ctx.body as InferInput<TConfig["input"]>;
 
         const customer = config.requireCustomer
-          ? await resolveCustomer(ctx.context, ctx.request)
+          ? await resolveCustomer(
+              ctx.context,
+              ctx.request,
+              config.resolveServerCustomerId?.(ctx.body),
+            )
           : undefined;
 
         return handler({
