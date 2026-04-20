@@ -2,6 +2,7 @@ import { eq, and, lt } from "drizzle-orm";
 import { subscription } from "../../database/schema";
 import type { BirrJSContext } from "../../context";
 import { defineBirrJSMethod } from "../../api/endpoint";
+import { APIError } from "better-call";
 import * as z from "zod";
 
 /**
@@ -72,19 +73,25 @@ export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
     // Validate Authorization header
     const auth = ctx.headers?.get("authorization");
     if (!auth?.startsWith("Bearer ")) {
-      return { success: false, message: "Unauthorized: Missing or invalid Authorization header" };
+      throw new APIError("UNAUTHORIZED", {
+        message: "Missing or invalid Authorization header",
+      });
     }
 
     const token = auth.slice(7);
     const cronSecret = options.scheduling?.cronSecret;
 
     if (!cronSecret || token !== cronSecret) {
-      return { success: false, message: "Unauthorized: Invalid cron secret" };
+      throw new APIError("UNAUTHORIZED", {
+        message: "Invalid cron secret",
+      });
     }
 
     // Check if scheduling is enabled
     if (options.scheduling?.mode === "manual") {
-      return { success: false, message: "Scheduler is in manual mode" };
+      throw new APIError("FORBIDDEN", {
+        message: "Scheduler is in manual mode",
+      });
     }
 
     const result = await checkPendingSubscriptions(ctx.birrjs);
@@ -114,19 +121,25 @@ export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
     // Validate Authorization header
     const auth = ctx.headers?.get("authorization");
     if (!auth?.startsWith("Bearer ")) {
-      return { success: false, message: "Unauthorized: Missing or invalid Authorization header" };
+      throw new APIError("UNAUTHORIZED", {
+        message: "Missing or invalid Authorization header",
+      });
     }
 
     const token = auth.slice(7);
     const cronSecret = options.scheduling?.cronSecret;
 
     if (!cronSecret || token !== cronSecret) {
-      return { success: false, message: "Unauthorized: Invalid cron secret" };
+      throw new APIError("UNAUTHORIZED", {
+        message: "Invalid cron secret",
+      });
     }
 
     // Check if scheduling is enabled
     if (options.scheduling?.mode === "manual") {
-      return { success: false, message: "Scheduler is in manual mode" };
+      throw new APIError("FORBIDDEN", {
+        message: "Scheduler is in manual mode",
+      });
     }
 
     const result = await checkExpiredSubscriptions(ctx.birrjs);
