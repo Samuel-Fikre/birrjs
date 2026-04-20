@@ -34,7 +34,12 @@ import { listPlans } from "./plan/plan.api";
 import { handleWebhook } from "./webhook/webhook.api";
 
 // Cron methods
-import { checkPendingSubscriptions, checkExpiredSubscriptions } from "./cron/cron.api";
+import {
+  checkPendingSubscriptions,
+  checkExpiredSubscriptions,
+  checkPendingSubscriptionsEndpoint,
+  checkExpiredSubscriptionsEndpoint,
+} from "./cron/cron.api";
 
 // Type-safe API helper
 export function getApi(getContext: () => Promise<BirrJSContext>) {
@@ -66,5 +71,9 @@ export function getApi(getContext: () => Promise<BirrJSContext>) {
     handleWebhook: (input: WebhookRequest) => getContext().then((ctx) => handleWebhook(ctx, input)),
     checkPendingSubscriptions: () => getContext().then((ctx) => checkPendingSubscriptions(ctx)),
     checkExpiredSubscriptions: () => getContext().then((ctx) => checkExpiredSubscriptions(ctx)),
+    checkPendingSubscriptionsEndpoint: () =>
+      getContext().then((ctx) => checkPendingSubscriptionsEndpoint(ctx, {})),
+    checkExpiredSubscriptionsEndpoint: () =>
+      getContext().then((ctx) => checkExpiredSubscriptionsEndpoint(ctx, {})),
   };
 }

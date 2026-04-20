@@ -1,6 +1,8 @@
 import { eq, and, lt } from "drizzle-orm";
 import { subscription } from "../../database/schema";
 import type { BirrJSContext } from "../../context";
+import { defineBirrJSMethod } from "../../api/endpoint";
+import * as z from "zod";
 
 /**
  * Check subscriptions stuck in pending status
@@ -51,3 +53,87 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
     updated: updatedSubscriptions.length,
   };
 }
+
+/**
+ * HTTP endpoint to check pending subscriptions (requires cronSecret)
+ */
+export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
+  {
+    input: z.object({}),
+    route: {
+      method: "POST",
+      path: "/cron/check-pending",
+      requireHeaders: true,
+    },
+  },
+  async (ctx) => {
+    const { options } = ctx.birrjs;
+
+    // Validate Authorization header
+    const auth = ctx.headers?.get("authorization");
+    if (!auth?.startsWith("Bearer ")) {
+      return { success: false, message: "Unauthorized: Missing or invalid Authorization header" };
+    }
+
+    const token = auth.slice(7);
+    const cronSecret = options.scheduling?.cronSecret;
+
+    if (!cronSecret || token !== cronSecret) {
+      return { success: false, message: "Unauthorized: Invalid cron secret" };
+    }
+
+    // Check if scheduling is enabled
+    if (options.scheduling?.mode === "manual") {
+      return { success: false, message: "Scheduler is in manual mode" };
+    }
+
+    const result = await checkPendingSubscriptions(ctx.birrjs);
+
+    return {
+      success: true,
+      ...result,
+    };
+  },
+);
+
+/**
+ * HTTP endpoint to check expired subscriptions (requires cronSecret)
+ */
+export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
+  {
+    input: z.object({}),
+    route: {
+      method: "POST",
+      path: "/cron/check-expired",
+      requireHeaders: true,
+    },
+  },
+  async (ctx) => {
+    const { options } = ctx.birrjs;
+
+    // Validate Authorization header
+    const auth = ctx.headers?.get("authorization");
+    if (!auth?.startsWith("Bearer ")) {
+      return { success: false, message: "Unauthorized: Missing or invalid Authorization header" };
+    }
+
+    const token = auth.slice(7);
+    const cronSecret = options.scheduling?.cronSecret;
+
+    if (!cronSecret || token !== cronSecret) {
+      return { success: false, message: "Unauthorized: Invalid cron secret" };
+    }
+
+    // Check if scheduling is enabled
+    if (options.scheduling?.mode === "manual") {
+      return { success: false, message: "Scheduler is in manual mode" };
+    }
+
+    const result = await checkExpiredSubscriptions(ctx.birrjs);
+
+    return {
+      success: true,
+      ...result,
+    };
+  },
+);

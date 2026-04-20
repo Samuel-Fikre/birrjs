@@ -40,9 +40,7 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   listCustomers: (input?: { limit?: number; offset?: number }) => Promise<ListCustomersResponse>;
   listPlans: (input?: { limit?: number; offset?: number }) => Promise<ListPlansResponse>;
   getSubscription: (input: GetSubscriptionRequest) => Promise<GetSubscriptionResponse>;
-  checkSubscription: (
-    input: CheckSubscriptionRequest,
-  ) => Promise<{
+  checkSubscription: (input: CheckSubscriptionRequest) => Promise<{
     allowed: boolean;
     effectiveStatus: "pending" | "active" | "canceled" | "failed" | "expired" | "none";
   }>;
@@ -50,6 +48,18 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   handleWebhook: (input: WebhookRequest) => Promise<WebhookResponse>;
   checkPendingSubscriptions: () => Promise<{ checked: number; updated: number }>;
   checkExpiredSubscriptions: () => Promise<{ checked: number; updated: number }>;
+  checkPendingSubscriptionsEndpoint: () => Promise<{
+    success: boolean;
+    checked?: number;
+    updated?: number;
+    message?: string;
+  }>;
+  checkExpiredSubscriptionsEndpoint: () => Promise<{
+    success: boolean;
+    checked?: number;
+    updated?: number;
+    message?: string;
+  }>;
   $context: Promise<BirrJSContext>;
   close: () => Promise<void>;
 }

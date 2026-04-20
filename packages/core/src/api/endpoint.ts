@@ -17,6 +17,8 @@ type BetterCallOptions = Parameters<typeof createBirrJSEndpoint>[1];
 export interface BirrJSMethodRouteConfig {
   method: NonNullable<BetterCallOptions["method"]>;
   path: string;
+  requireHeaders?: boolean;
+  use?: ReturnType<typeof createMiddleware>[];
 }
 
 export interface BirrJSMethodConfig {
@@ -29,6 +31,8 @@ type InferInput<TInput> = TInput extends z.ZodType ? z.infer<TInput> : TInput;
 export type BirrJSMethodContext<TInput> = {
   birrjs: BirrJSContext;
   input: InferInput<TInput>;
+  headers?: Headers;
+  request?: Request;
 };
 
 export type BirrJSMethod<TInput, TResult> = {
@@ -56,10 +60,17 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
       {
         body: config.input,
         method: config.route.method,
+        requireHeaders: config.route.requireHeaders,
+        use: config.route.use,
       },
       async (ctx) => {
         const input = ctx.body as InferInput<TConfig["input"]>;
-        return handler({ birrjs: ctx.context, input });
+        return handler({
+          birrjs: ctx.context,
+          input,
+          headers: ctx.headers,
+          request: ctx.request,
+        });
       },
     );
 

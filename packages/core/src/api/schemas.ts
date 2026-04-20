@@ -160,6 +160,15 @@ export const CheckSubscriptionResponseSchema = z.object({
 export type CheckSubscriptionRequest = z.infer<typeof CheckSubscriptionRequestSchema>;
 export type CheckSubscriptionResponse = z.infer<typeof CheckSubscriptionResponseSchema>;
 
+export const CronResponseSchema = z.object({
+  success: z.boolean(),
+  checked: z.number().optional(),
+  updated: z.number().optional(),
+  message: z.string().optional(),
+});
+
+export type CronResponse = z.infer<typeof CronResponseSchema>;
+
 // Get single customer
 export const GetCustomerRequestSchema = z.object({
   customerId: z.string().min(1),
