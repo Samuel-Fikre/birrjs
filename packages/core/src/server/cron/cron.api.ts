@@ -1,9 +1,17 @@
 import { eq, and, lt } from "drizzle-orm";
 import { subscription } from "../../database/schema";
+import { timingSafeEqual } from "crypto";
 import type { BirrJSContext } from "../../context";
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { APIError } from "better-call";
 import * as z from "zod";
+
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /**
  * Check subscriptions stuck in pending status
@@ -81,7 +89,7 @@ export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
     const token = auth.slice(7);
     const cronSecret = options.scheduling?.cronSecret;
 
-    if (!cronSecret || token !== cronSecret) {
+    if (!cronSecret || !safeCompare(token, cronSecret)) {
       throw new APIError("UNAUTHORIZED", {
         message: "Invalid cron secret",
       });
@@ -129,7 +137,7 @@ export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
     const token = auth.slice(7);
     const cronSecret = options.scheduling?.cronSecret;
 
-    if (!cronSecret || token !== cronSecret) {
+    if (!cronSecret || !safeCompare(token, cronSecret)) {
       throw new APIError("UNAUTHORIZED", {
         message: "Invalid cron secret",
       });
