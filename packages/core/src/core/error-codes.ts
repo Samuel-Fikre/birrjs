@@ -88,6 +88,8 @@ export const BIRRJS_ERROR_CODES = defineErrorCodes({
 
   DATABASE_ERROR: "Database error",
   INVALID_INPUT: "Invalid input",
+  IDENTIFY_REQUIRED: "Customer identification required",
+  CUSTOMER_ID_MISMATCH: "Customer ID mismatch",
 });
 
 export type BirrJSErrorCode = keyof typeof BIRRJS_ERROR_CODES;

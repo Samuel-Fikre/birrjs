@@ -23,5 +23,5 @@ export interface BirrJSOptions {
   callbackUrl: string;
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
-  identify?: (request: Request) => { customerId?: string } | null;
+  identify?: (request: Request) => Promise<{ customerId?: string } | null>;
 }

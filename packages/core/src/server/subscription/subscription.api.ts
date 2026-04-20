@@ -12,7 +12,7 @@ import {
   CheckSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { plan, subscription, customer } from "../../database/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and } from "drizzle-orm";
 import type { TransactionRequest } from "../../provider";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import * as z from "zod";
@@ -133,6 +133,7 @@ export const listSubscriptions = defineBirrJSMethod(
       limit: z.number().min(1).max(100).default(20),
       offset: z.number().min(0).default(0),
     }),
+    requireCustomer: true,
     route: {
       method: "GET",
       path: "/subscriptions",
@@ -141,15 +142,20 @@ export const listSubscriptions = defineBirrJSMethod(
   async (ctx) => {
     const { database, options } = ctx.birrjs;
     const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
+    const { customerId } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
+      .where(eq(subscription.customerId, customerId))
       .limit(limit)
       .offset(offset)
       .orderBy(desc(subscription.createdAt));
 
-    const totalResult = await database.select({ value: count() }).from(subscription);
+    const totalResult = await database
+      .select({ value: count() })
+      .from(subscription)
+      .where(eq(subscription.customerId, customerId));
     const total = totalResult[0]?.value || 0;
 
     const subscriptionsWithEffectiveStatus = subscriptions.map((sub) => ({
@@ -176,6 +182,7 @@ export const listSubscriptions = defineBirrJSMethod(
 export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   {
     input: CancelSubscriptionRequestSchema,
+    requireCustomer: true,
     route: {
       method: "POST",
       path: "/subscriptions/cancel",
@@ -184,11 +191,12 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   async (ctx) => {
     const { database } = ctx.birrjs;
     const { subscriptionId, cancelAtPeriodEnd = false } = ctx.input;
+    const { customerId } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(eq(subscription.id, subscriptionId))
+      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customerId)))
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
@@ -230,6 +238,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
 export const getSubscription = defineBirrJSMethod(
   {
     input: GetSubscriptionRequestSchema,
+    requireCustomer: true,
     route: {
       method: "GET",
       path: "/subscriptions/:subscriptionId",
@@ -238,11 +247,12 @@ export const getSubscription = defineBirrJSMethod(
   async (ctx) => {
     const { database, options } = ctx.birrjs;
     const { subscriptionId } = ctx.input;
+    const { customerId } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(eq(subscription.id, subscriptionId))
+      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customerId)))
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
