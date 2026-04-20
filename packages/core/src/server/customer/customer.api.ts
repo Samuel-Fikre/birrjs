@@ -6,7 +6,7 @@ import {
   GetCustomerRequestSchema,
 } from "../../api/schemas";
 import { customer } from "../../database/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and, isNull } from "drizzle-orm";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import * as z from "zod";
 
@@ -62,7 +62,7 @@ export const updateCustomer = defineBirrJSMethod(
     const customers = await database
       .select()
       .from(customer)
-      .where(eq(customer.id, customerId))
+      .where(and(eq(customer.id, customerId), isNull(customer.deletedAt)))
       .limit(1);
     const customerRecord = customers[0];
     if (!customerRecord) {
@@ -111,11 +111,15 @@ export const listCustomers = defineBirrJSMethod(
     const customers = await database
       .select()
       .from(customer)
+      .where(isNull(customer.deletedAt))
       .limit(limit)
       .offset(offset)
       .orderBy(desc(customer.createdAt));
 
-    const totalResult = await database.select({ value: count() }).from(customer);
+    const totalResult = await database
+      .select({ value: count() })
+      .from(customer)
+      .where(isNull(customer.deletedAt));
     const total = totalResult[0]?.value || 0;
 
     return {
@@ -145,7 +149,7 @@ export const getCustomer = defineBirrJSMethod(
     const customers = await database
       .select()
       .from(customer)
-      .where(eq(customer.id, customerId))
+      .where(and(eq(customer.id, customerId), isNull(customer.deletedAt)))
       .limit(1);
     const customerRecord = customers[0];
     if (!customerRecord) {
