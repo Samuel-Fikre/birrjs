@@ -9,7 +9,11 @@ export function toDecimalAmount(amount: number): string {
  * Convert decimal string from provider to minor units
  */
 export function fromDecimalAmount(amount: string): number {
-  return Math.round(parseFloat(amount) * 100);
+  const parsed = parseFloat(amount);
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Invalid decimal amount: ${amount}`);
+  }
+  return Math.round(parsed * 100);
 }
 
 /**
