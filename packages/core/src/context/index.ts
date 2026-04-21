@@ -65,8 +65,13 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
   if (options.scheduling?.mode === "auto") {
     const pendingCron = options.scheduling.pendingSweepCron || "*/5 * * * *";
     const expiryCron = options.scheduling.expirySweepCron || "*/10 * * * *";
-    startScheduler(ctx, pendingCron, expiryCron);
-    logger.info("Scheduler started in auto mode");
+    try {
+      startScheduler(ctx, pendingCron, expiryCron);
+      logger.info("Scheduler started in auto mode");
+    } catch (error) {
+      await ctx.destroy();
+      throw error;
+    }
   }
 
   return ctx;
