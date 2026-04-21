@@ -21,6 +21,7 @@ export interface BirrJSOptions {
   provider: PaymentProviderConfig;
   database: string | Pool;
   callbackUrl: string;
+  basePath?: string;
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
   identify?: (request: Request) => Promise<{ customerId?: string } | null>;

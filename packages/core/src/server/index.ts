@@ -1,4 +1,6 @@
+import { createRouter, type Endpoint } from "better-call";
 import type { BirrJSContext } from "../context";
+import type { BirrJSOptions } from "../types";
 import type {
   SubscribeRequest,
   CancelSubscriptionRequest,
@@ -76,4 +78,42 @@ export function getApi(getContext: () => Promise<BirrJSContext>) {
     checkExpiredSubscriptionsEndpoint: () =>
       getContext().then((ctx) => checkExpiredSubscriptionsEndpoint(ctx, {})),
   };
+}
+
+function getRouteEndpoints<TMethods extends Record<string, { endpoint?: Endpoint }>>(
+  source: TMethods,
+): Record<string, Endpoint> {
+  return Object.fromEntries(
+    (Object.entries(source) as Array<[keyof TMethods, TMethods[keyof TMethods]]>).flatMap(
+      ([key, method]) => (method.endpoint ? [[key, method.endpoint]] : []),
+    ),
+  ) as Record<string, Endpoint>;
+}
+
+export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
+  const methods = {
+    subscribe,
+    listSubscriptions,
+    cancelSubscription: cancelSubscriptionEndpoint,
+    createCustomer,
+    updateCustomer,
+    listCustomers,
+    getCustomer,
+    listPlans,
+    getSubscription,
+    checkSubscription,
+    handleWebhook,
+    checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
+    checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
+  };
+
+  const routeEndpoints = getRouteEndpoints(methods as Record<string, { endpoint?: Endpoint }>);
+
+  return createRouter(routeEndpoints, {
+    basePath: options.basePath ?? "/api",
+    routerContext: ctx,
+    onError(error) {
+      ctx.logger.error({ err: error }, "API error");
+    },
+  });
 }

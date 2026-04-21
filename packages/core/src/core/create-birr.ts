@@ -23,7 +23,7 @@ import type {
   WebhookResponse,
 } from "../index";
 import { createContext } from "../context";
-import { getApi } from "../server";
+import { getApi, createBirrJSRouter } from "../server";
 
 const birrInstanceSymbol = Symbol.for("birr.instance");
 
@@ -57,6 +57,7 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
     updated?: number;
     message?: string;
   }>;
+  handler: (request: Request) => Promise<Response>;
   $context: Promise<BirrJSContext>;
   close: () => Promise<void>;
 }
@@ -93,6 +94,11 @@ export function createBirr<TOptions extends BirrJSOptions>(
   const birr: BirrInstance = {
     options,
     ...api,
+    async handler(request: Request) {
+      const ctx = await getContext();
+      const router = createBirrJSRouter(ctx, options);
+      return router.handler(request);
+    },
     get $context() {
       return getContext();
     },
