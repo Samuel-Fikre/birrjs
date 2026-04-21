@@ -5,6 +5,7 @@ export * from "./provider";
 export * from "./api/schemas";
 export * from "./server";
 export * from "./handlers/next";
+export * from "./client";
 export * from "./context";
 export * from "./core/logger";
 export * from "./core/error-codes";

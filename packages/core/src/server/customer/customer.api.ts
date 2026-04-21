@@ -18,7 +18,7 @@ export const createCustomer = defineBirrJSMethod(
     input: CreateCustomerRequestSchema,
     route: {
       method: "POST",
-      path: "/customers",
+      path: "/create-customer",
     },
   },
   async (ctx) => {
@@ -101,7 +101,7 @@ export const listCustomers = defineBirrJSMethod(
     }),
     route: {
       method: "GET",
-      path: "/customers",
+      path: "/list-customers",
     },
   },
   async (ctx) => {
@@ -139,7 +139,7 @@ export const getCustomer = defineBirrJSMethod(
     input: GetCustomerRequestSchema,
     route: {
       method: "GET",
-      path: "/customers/:customerId",
+      path: "/get-customer",
     },
   },
   async (ctx) => {

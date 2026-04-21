@@ -15,7 +15,7 @@ export const listPlans = defineBirrJSMethod(
     }),
     route: {
       method: "GET",
-      path: "/plans",
+      path: "/list-plans",
     },
   },
   async (ctx) => {

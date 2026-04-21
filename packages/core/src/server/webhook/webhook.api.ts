@@ -9,7 +9,7 @@ export const handleWebhook = defineBirrJSMethod(
     input: WebhookRequestSchema,
     route: {
       method: "POST",
-      path: "/webhook",
+      path: "/handle-webhook",
     },
   },
   async (ctx) => {

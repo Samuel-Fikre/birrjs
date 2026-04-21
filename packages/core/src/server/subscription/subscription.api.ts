@@ -136,7 +136,7 @@ export const listSubscriptions = defineBirrJSMethod(
     requireCustomer: true,
     route: {
       method: "GET",
-      path: "/subscriptions",
+      path: "/list-subscriptions",
     },
   },
   async (ctx) => {
@@ -185,7 +185,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
     requireCustomer: true,
     route: {
       method: "POST",
-      path: "/subscriptions/cancel",
+      path: "/cancel-subscription",
     },
   },
   async (ctx) => {
@@ -241,7 +241,7 @@ export const getSubscription = defineBirrJSMethod(
     requireCustomer: true,
     route: {
       method: "GET",
-      path: "/subscriptions/:subscriptionId",
+      path: "/get-subscription",
     },
   },
   async (ctx) => {
@@ -277,7 +277,7 @@ export const checkSubscription = defineBirrJSMethod(
     input: CheckSubscriptionRequestSchema,
     route: {
       method: "POST",
-      path: "/subscriptions/check",
+      path: "/check-subscription",
     },
   },
   async (ctx) => {

@@ -70,7 +70,7 @@ export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
     input: z.object({}),
     route: {
       method: "POST",
-      path: "/cron/check-pending",
+      path: "/check-pending-subscriptions",
       requireHeaders: true,
     },
   },
@@ -118,7 +118,7 @@ export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
     input: z.object({}),
     route: {
       method: "POST",
-      path: "/cron/check-expired",
+      path: "/check-expired-subscriptions",
       requireHeaders: true,
     },
   },
