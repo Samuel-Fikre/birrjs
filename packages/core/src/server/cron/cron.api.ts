@@ -1,16 +1,15 @@
 import { eq, and, lt } from "drizzle-orm";
 import { subscription } from "../../database/schema";
-import { timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import type { BirrJSContext } from "../../context";
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { APIError } from "better-call";
 import * as z from "zod";
 
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 }
 
 /**
