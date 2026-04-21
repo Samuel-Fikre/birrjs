@@ -4,6 +4,7 @@ import type { BirrJSOptions } from "../types";
 import { createDatabase, type BirrJSDatabase } from "../database";
 import { createBirrJSLogger, type BirrJSInternalLogger } from "../core/logger";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
+import { startScheduler, stopScheduler } from "../scheduler";
 
 export interface BirrJSContext {
   options: BirrJSOptions;
@@ -38,7 +39,7 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
     );
   }
 
-  return {
+  const ctx = {
     options,
     database,
     provider: options.provider,
@@ -48,9 +49,25 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
       if (destroyed) return;
       destroyed = true;
 
+      // Stop scheduler if running
+      if (options.scheduling?.mode === "auto") {
+        stopScheduler();
+        logger.info("Scheduler stopped");
+      }
+
       if (poolCreatedInternally) {
         await pool.end();
       }
     },
   };
+
+  // Start scheduler if mode is auto
+  if (options.scheduling?.mode === "auto") {
+    const pendingCron = options.scheduling.pendingSweepCron || "*/5 * * * *";
+    const expiryCron = options.scheduling.expirySweepCron || "*/10 * * * *";
+    startScheduler(ctx, pendingCron, expiryCron);
+    logger.info("Scheduler started in auto mode");
+  }
+
+  return ctx;
 }
