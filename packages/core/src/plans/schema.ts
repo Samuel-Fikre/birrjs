@@ -85,12 +85,6 @@ export type MeteredFeatureDefinition<TId extends string = string> = FeatureDefin
   "metered"
 >;
 
-export interface BooleanFeatureIncludeConfig {
-  undefined: undefined;
-}
-
-export type FeatureIncludeConfig = MeteredFeatureConfig | BooleanFeatureIncludeConfig;
-
 export type BooleanFeatureInclude<
   TFeature extends BooleanFeatureDefinition = BooleanFeatureDefinition,
 > = Readonly<{
@@ -173,9 +167,10 @@ export function normalizePlan(plan: BirrJSPlan, currency: string): NormalizedPla
 type BooleanFeatureCallable<TFeature extends BooleanFeatureDefinition> =
   (() => BooleanFeatureInclude<TFeature>) & Readonly<TFeature>;
 
-type MeteredFeatureCallable<TFeature extends MeteredFeatureDefinition> = (
+type MeteredFeatureCallable<TFeature extends MeteredFeatureDefinition> = ((
   config: MeteredFeatureConfig,
-) => MeteredFeatureInclude<TFeature> & Readonly<TFeature>;
+) => MeteredFeatureInclude<TFeature>) &
+  Readonly<TFeature>;
 
 export type Feature<TFeature extends FeatureDefinition = FeatureDefinition> =
   TFeature extends BooleanFeatureDefinition
