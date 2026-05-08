@@ -91,7 +91,10 @@ async function getLatestPlanSnapshot(
   return { plan, features };
 }
 
-async function insertPlanVersion(database: BirrJSDatabase, input: NewPlan) {
+async function insertPlanVersion(
+  database: BirrJSDatabase,
+  input: Omit<NewPlan, "internalId" | "provider">,
+) {
   const now = new Date();
   const internalId = generateId("plan");
   return await database
@@ -107,7 +110,7 @@ async function insertPlanVersion(database: BirrJSDatabase, input: NewPlan) {
       priceAmount: input.priceAmount,
       priceInterval: input.priceInterval,
       currency: input.currency,
-      provider: input.provider,
+      provider: {},
       version: input.version,
     })
     .returning();
@@ -144,11 +147,9 @@ async function updatePlanName(database: BirrJSDatabase, planId: string, name: st
 }
 
 async function upsertPlanVersion(database: BirrJSDatabase, plan: NormalizedPlan, version: number) {
-  const internalId = generateId("plan");
   const inserted = await insertPlanVersion(database, {
-    group: plan.group,
+    group: plan.group ?? undefined,
     id: plan.id,
-    internalId,
     isDefault: plan.isDefault,
     name: plan.name,
     priceAmount: plan.priceAmount,
