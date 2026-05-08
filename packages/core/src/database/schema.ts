@@ -9,6 +9,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { ProviderProductMap } from "../provider";
+
 const pgTable = pgTableCreator((name) => `birrjs_${name}`);
 
 const createTimestampColumns = () => ({
@@ -37,16 +39,46 @@ export const customer = pgTable(
 export const plan = pgTable(
   "plan",
   {
-    id: text("id").primaryKey(),
+    id: text("id").notNull(),
+    internalId: text("internal_id").primaryKey(),
     name: text("name").notNull(),
+    group: text("group").notNull().default(""),
     priceAmount: integer("price_amount"),
     priceInterval: text("price_interval"),
     currency: text("currency").default("ETB"),
     features: jsonb("features").$type<Record<string, unknown> | null>(),
+    provider: jsonb("provider").$type<ProviderProductMap>().notNull().default({}),
     isDefault: boolean("is_default").notNull().default(false),
+    version: integer("version").notNull().default(1),
     ...createTimestampColumns(),
   },
-  (table) => [index("birrjs_plan_default_idx").on(table.isDefault)],
+  (table) => [
+    index("birrjs_plan_default_idx").on(table.isDefault),
+    uniqueIndex("birrjs_plan_id_version_unique").on(table.id, table.version),
+  ],
+);
+
+export const feature = pgTable("feature", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  ...createTimestampColumns(),
+});
+
+export const planFeature = pgTable(
+  "plan_feature",
+  {
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plan.internalId, { onDelete: "cascade" }),
+    featureId: text("feature_id")
+      .notNull()
+      .references(() => feature.id, { onDelete: "cascade" }),
+    limit: integer("limit"),
+    resetInterval: text("reset_interval"),
+    config: jsonb("config").$type<Record<string, unknown> | null>(),
+    ...createTimestampColumns(),
+  },
+  (table) => [index("birrjs_plan_feature_plan_idx").on(table.planId)],
 );
 
 export const subscription = pgTable(
@@ -58,7 +90,7 @@ export const subscription = pgTable(
       .references(() => customer.id, { onDelete: "cascade" }),
     planId: text("plan_id")
       .notNull()
-      .references(() => plan.id, { onDelete: "restrict" }),
+      .references(() => plan.internalId, { onDelete: "restrict" }),
     status: text("status").notNull(),
     startedAt: timestamp("started_at"),
     expiresAt: timestamp("expires_at"),

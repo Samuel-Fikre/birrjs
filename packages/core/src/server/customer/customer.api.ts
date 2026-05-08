@@ -1,14 +1,15 @@
-import type { Customer } from "../../types/models";
+import { eq, desc, count, and, isNull } from "drizzle-orm";
+import * as z from "zod";
+
 import { defineBirrJSMethod } from "../../api/endpoint";
 import {
   CreateCustomerRequestSchema,
   UpdateCustomerRequestSchema,
   GetCustomerRequestSchema,
 } from "../../api/schemas";
-import { customer } from "../../database/schema";
-import { eq, desc, count, and, isNull } from "drizzle-orm";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
-import * as z from "zod";
+import { customer } from "../../database/schema";
+import type { Customer } from "../../types/models";
 
 /**
  * Create customer

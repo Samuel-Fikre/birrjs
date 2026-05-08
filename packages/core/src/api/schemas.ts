@@ -1,5 +1,6 @@
-import * as z from "zod";
 import { createSelectSchema } from "drizzle-zod";
+import * as z from "zod";
+
 import { subscription, customer, plan } from "../database/schema";
 
 export const SubscriptionSchema = createSelectSchema(subscription);

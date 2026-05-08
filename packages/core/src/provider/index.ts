@@ -16,10 +16,20 @@ export function fromDecimalAmount(amount: string): number {
   return Math.round(parsed * 100);
 }
 
+export interface ProviderMetadata {
+  // subAccountId?: string;
+  // splitCode?: string;
+  [key: string]: unknown;
+}
+
+export type ProviderProductMap = Record<string, ProviderMetadata>;
+
 /**
  * Payment provider configuration
  */
 export interface PaymentProviderConfig {
+  id: string;
+  kind: string;
   secretKey: string;
   webhookSecret?: string;
   callbackUrl: string;

@@ -1,9 +1,6 @@
-import type { Subscription } from "../../types/models";
-import {
-  createSubscription,
-  cancelSubscription as cancelSubscriptionLogic,
-} from "../../subscription";
-import { getEffectiveStatus } from "../../subscription/effective-status";
+import { eq, desc, count, and } from "drizzle-orm";
+import * as z from "zod";
+
 import { defineBirrJSMethod } from "../../api/endpoint";
 import {
   SubscribeRequestSchema,
@@ -11,11 +8,15 @@ import {
   GetSubscriptionRequestSchema,
   CheckSubscriptionRequestSchema,
 } from "../../api/schemas";
-import { plan, subscription, customer } from "../../database/schema";
-import { eq, desc, count, and } from "drizzle-orm";
-import type { TransactionRequest } from "../../provider";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
-import * as z from "zod";
+import { plan, subscription, customer } from "../../database/schema";
+import type { TransactionRequest } from "../../provider";
+import {
+  createSubscription,
+  cancelSubscription as cancelSubscriptionLogic,
+} from "../../subscription";
+import { getEffectiveStatus } from "../../subscription/effective-status";
+import type { Subscription } from "../../types/models";
 
 /**
  * Subscribe to a plan

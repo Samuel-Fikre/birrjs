@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
+
 import { defineBirrJSMethod } from "../../api/endpoint";
-import { subscription } from "../../database/schema";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
+import { subscription } from "../../database/schema";
 
 export const handleWebhook = defineBirrJSMethod(
   {
@@ -51,7 +52,7 @@ export const handleWebhook = defineBirrJSMethod(
     // Map webhook event type to subscription status
     const eventType = webhookEvent.type;
     let newStatus: string;
-    let updateFields: { status: string; updatedAt: Date; lastPaymentAt?: Date } = {
+    const updateFields: { status: string; updatedAt: Date; lastPaymentAt?: Date } = {
       status: "",
       updatedAt: new Date(),
     };

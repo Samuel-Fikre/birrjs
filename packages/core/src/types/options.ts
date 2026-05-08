@@ -1,6 +1,8 @@
-import type { PaymentProviderConfig } from "../provider";
 import type { Pool } from "pg";
 import type { LevelWithSilent, Logger } from "pino";
+
+import type { BirrJSPlan } from "../plans/index";
+import type { PaymentProviderConfig } from "../provider";
 
 export interface BirrJSLoggingOptions {
   level?: LevelWithSilent;
@@ -25,4 +27,5 @@ export interface BirrJSOptions {
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
   identify?: (request: Request) => Promise<{ customerId?: string } | null>;
+  plans?: BirrJSPlan[];
 }

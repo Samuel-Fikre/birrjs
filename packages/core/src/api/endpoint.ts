@@ -1,6 +1,7 @@
 import { createEndpoint, createMiddleware } from "better-call";
-import type { BirrJSContext } from "../context";
 import type { z } from "zod";
+
+import type { BirrJSContext } from "../context";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
 
 const birrjsMiddleware = createMiddleware(async () => {

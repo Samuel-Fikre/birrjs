@@ -22,6 +22,7 @@
     "better-call": "^2.0.2",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
+    "nanoid": "^5.0.9",
     "node-cron": "^4.2.1",
     "pg": "^8.20.0",
     "pino": "^9.0.0",

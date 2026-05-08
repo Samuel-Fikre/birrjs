@@ -1,10 +1,11 @@
+import type { PaymentProviderConfig } from "@birrjs/core";
+
+import { ChapaApiError } from "./errors";
 import type {
   ChapaTransactionRequest,
   ChapaTransactionResponse,
   ChapaVerifyResponse,
 } from "./types";
-import type { PaymentProviderConfig } from "@birrjs/core";
-import { ChapaApiError } from "./errors";
 
 const CHAPA_API_BASE_URL = "https://api.chapa.co/v1";
 

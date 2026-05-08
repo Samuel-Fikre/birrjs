@@ -1,10 +1,12 @@
-import { eq, and, lt } from "drizzle-orm";
-import { subscription } from "../../database/schema";
 import { createHash, timingSafeEqual } from "crypto";
-import type { BirrJSContext } from "../../context";
-import { defineBirrJSMethod } from "../../api/endpoint";
+
 import { APIError } from "better-call";
+import { eq, and, lt } from "drizzle-orm";
 import * as z from "zod";
+
+import { defineBirrJSMethod } from "../../api/endpoint";
+import type { BirrJSContext } from "../../context";
+import { subscription } from "../../database/schema";
 
 function safeCompare(a: string, b: string): boolean {
   const hashA = createHash("sha256").update(a).digest();

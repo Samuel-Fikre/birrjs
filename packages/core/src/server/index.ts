@@ -1,6 +1,6 @@
 import { createRouter, type Endpoint } from "better-call";
+
 import type { BirrJSContext } from "../context";
-import type { BirrJSOptions } from "../types";
 import type {
   SubscribeRequest,
   CancelSubscriptionRequest,
@@ -11,7 +11,23 @@ import type {
   GetCustomerRequest,
   WebhookRequest,
 } from "../index";
-
+import type { BirrJSOptions } from "../types";
+// Cron methods
+import {
+  checkPendingSubscriptions,
+  checkExpiredSubscriptions,
+  checkPendingSubscriptionsEndpoint,
+  checkExpiredSubscriptionsEndpoint,
+} from "./cron/cron.api";
+// Customer methods
+import {
+  createCustomer,
+  updateCustomer,
+  listCustomers,
+  getCustomer,
+} from "./customer/customer.api";
+// Plan methods
+import { listPlans } from "./plan/plan.api";
 // Subscription methods
 import {
   subscribe,
@@ -20,28 +36,8 @@ import {
   getSubscription,
   checkSubscription,
 } from "./subscription/subscription.api";
-
-// Customer methods
-import {
-  createCustomer,
-  updateCustomer,
-  listCustomers,
-  getCustomer,
-} from "./customer/customer.api";
-
-// Plan methods
-import { listPlans } from "./plan/plan.api";
-
 // Webhook methods
 import { handleWebhook } from "./webhook/webhook.api";
-
-// Cron methods
-import {
-  checkPendingSubscriptions,
-  checkExpiredSubscriptions,
-  checkPendingSubscriptionsEndpoint,
-  checkExpiredSubscriptionsEndpoint,
-} from "./cron/cron.api";
 
 // Type-safe API helper
 export function getApi(getContext: () => Promise<BirrJSContext>) {

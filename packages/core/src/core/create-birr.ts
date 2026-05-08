@@ -1,6 +1,7 @@
 import { Pool } from "pg";
+
 import type { BirrJSContext } from "../context";
-import type { BirrJSOptions } from "../types";
+import { createContext } from "../context";
 import type {
   SubscribeRequest,
   SubscribeResponse,
@@ -22,8 +23,10 @@ import type {
   WebhookRequest,
   WebhookResponse,
 } from "../index";
-import { createContext } from "../context";
+import type { PlanIdFromOptions, FeatureIdFromOptions } from "../plans/schema";
+import { syncPlans } from "../plans/sync";
 import { getApi, createBirrJSRouter } from "../server";
+import type { BirrJSOptions } from "../types";
 
 const birrInstanceSymbol = Symbol.for("birr.instance");
 
@@ -59,6 +62,10 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
   }>;
   handler: (request: Request) => Promise<Response>;
   $context: Promise<BirrJSContext>;
+  $infer: {
+    planId: PlanIdFromOptions<TOptions>;
+    featureId: FeatureIdFromOptions<TOptions>;
+  };
   close: () => Promise<void>;
 }
 
@@ -91,7 +98,16 @@ export function createBirr<TOptions extends BirrJSOptions>(
 
   const api = getApi(getContext);
 
-  const birr: BirrInstance = {
+  // Sync code-first plans to database
+  if (options.plans && options.plans.length > 0) {
+    getContext()
+      .then((ctx) => syncPlans(ctx, options.plans!))
+      .catch((err) => {
+        console.warn("BirrJS: Plan sync failed on startup.", err);
+      });
+  }
+
+  const birr: BirrInstance<TOptions> = {
     options,
     ...api,
     async handler(request: Request) {
@@ -102,6 +118,7 @@ export function createBirr<TOptions extends BirrJSOptions>(
     get $context() {
       return getContext();
     },
+    $infer: undefined as never,
     close: async () => {
       const ctx = await getContext();
       await ctx.destroy();

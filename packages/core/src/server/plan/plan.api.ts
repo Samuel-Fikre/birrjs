@@ -1,8 +1,8 @@
-import type { Plan } from "../../types/models";
-import { defineBirrJSMethod } from "../../api/endpoint";
-import { plan } from "../../database/schema";
 import { desc, count } from "drizzle-orm";
 import * as z from "zod";
+
+import { defineBirrJSMethod } from "../../api/endpoint";
+import { plan } from "../../database/schema";
 
 /**
  * List plans
@@ -20,20 +20,20 @@ export const listPlans = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
-
-    const plans = await database
-      .select()
-      .from(plan)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(plan.createdAt));
-
-    const totalResult = await database.select({ value: count() }).from(plan);
-    const total = totalResult[0]?.value || 0;
+    const { limit = 20, offset = 0 } = ctx.input;
+    // Run count and plans queries in parallel
+    const [[totalResult], plans] = await Promise.all([
+      database.select({ count: count() }).from(plan),
+      database.query.plan.findMany({
+        orderBy: [desc(plan.version)],
+        limit,
+        offset,
+      }),
+    ]);
+    const total = totalResult?.count ?? 0;
 
     return {
-      plans: plans as Plan[],
+      plans,
       total,
       limit,
       offset,

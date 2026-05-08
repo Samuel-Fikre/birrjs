@@ -1,10 +1,3 @@
-import type { ChapaClient } from "./client";
-import { createChapaClient } from "./client";
-import type {
-  ChapaTransactionRequest,
-  ChapaTransactionResponse,
-  ChapaVerifyResponse,
-} from "./types";
 import type {
   PaymentProvider,
   PaymentProviderConfig,
@@ -14,7 +7,15 @@ import type {
   WebhookEvent,
 } from "@birrjs/core";
 import { toDecimalAmount, fromDecimalAmount } from "@birrjs/core";
+
+import type { ChapaClient } from "./client";
+import { createChapaClient } from "./client";
 import { ChapaError, CHAPA_ERROR_CODES, ChapaApiError } from "./errors";
+import type {
+  ChapaTransactionRequest,
+  ChapaTransactionResponse,
+  ChapaVerifyResponse,
+} from "./types";
 import { isChapaWebhookEvent } from "./validation";
 
 /**
@@ -336,6 +337,8 @@ export function chapa(config: ChapaProviderConfig): ChapaProviderConfig {
 
   return {
     ...config,
+    id: "chapa",
+    kind: "chapa",
     runtime,
   };
 }

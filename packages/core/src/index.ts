@@ -9,4 +9,6 @@ export * from "./client";
 export * from "./context";
 export * from "./core/logger";
 export * from "./core/error-codes";
+export { feature, plan } from "./plans";
+export * from "./plans/schema";
 export { createBirr, isBirrInstance, type BirrInstance } from "./core/create-birr";

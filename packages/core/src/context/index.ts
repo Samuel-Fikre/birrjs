@@ -1,10 +1,11 @@
 import { Pool } from "pg";
-import type { PaymentProvider, PaymentProviderConfig } from "../provider";
-import type { BirrJSOptions } from "../types";
-import { createDatabase, type BirrJSDatabase } from "../database";
-import { createBirrJSLogger, type BirrJSInternalLogger } from "../core/logger";
+
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
+import { createBirrJSLogger, type BirrJSInternalLogger } from "../core/logger";
+import { createDatabase, type BirrJSDatabase } from "../database";
+import type { PaymentProvider, PaymentProviderConfig } from "../provider";
 import { startScheduler, stopScheduler } from "../scheduler";
+import type { BirrJSOptions } from "../types";
 
 export interface BirrJSContext {
   options: BirrJSOptions;
