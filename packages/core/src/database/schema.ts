@@ -1,9 +1,12 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
   pgTableCreator,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -55,6 +58,7 @@ export const plan = pgTable(
   (table) => [
     index("birrjs_plan_default_idx").on(table.isDefault),
     uniqueIndex("birrjs_plan_id_version_unique").on(table.id, table.version),
+    check("birrjs_plan_price_amount_non_negative", sql`price_amount IS NULL OR price_amount >= 0`),
   ],
 );
 
@@ -78,7 +82,10 @@ export const planFeature = pgTable(
     config: jsonb("config").$type<Record<string, unknown> | null>(),
     ...createTimestampColumns(),
   },
-  (table) => [index("birrjs_plan_feature_plan_idx").on(table.planId)],
+  (table) => [
+    index("birrjs_plan_feature_plan_idx").on(table.planId),
+    primaryKey({ columns: [table.planId, table.featureId] }),
+  ],
 );
 
 export const subscription = pgTable(
@@ -135,6 +142,7 @@ export const invoice = pgTable(
   (table) => [
     index("birrjs_invoice_customer_idx").on(table.customerId, table.createdAt),
     index("birrjs_invoice_subscription_idx").on(table.subscriptionId),
+    check("birrjs_invoice_amount_non_negative", sql`amount >= 0`),
   ],
 );
 

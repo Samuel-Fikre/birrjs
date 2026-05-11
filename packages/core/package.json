@@ -15,7 +15,10 @@
   },
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@better-fetch/fetch": "^1.1.21",
