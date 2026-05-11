@@ -4,7 +4,7 @@
     "correctness": "warn",
     "suspicious": "warn"
   },
-  "plugins": ["typescript", "import", "node"],
+  "plugins": ["eslint", "typescript", "import", "node"],
   "rules": {
     "eslint/no-unused-vars": "warn",
     "eslint/no-debugger": "error",
