@@ -168,3 +168,26 @@ export const webhookEvent = pgTable(
     index("birrjs_webhook_event_status_idx").on(table.providerId, table.status),
   ],
 );
+
+export const entitlement = pgTable(
+  "entitlement",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id").references(() => subscription.id),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customer.id),
+    featureId: text("feature_id")
+      .notNull()
+      .references(() => feature.id),
+    limit: integer("limit"),
+    balance: integer("balance"),
+    nextResetAt: timestamp("next_reset_at"),
+    ...createTimestampColumns(),
+  },
+  (table) => [
+    index("birrjs_entitlement_subscription_idx").on(table.subscriptionId),
+    index("birrjs_entitlement_customer_feature_idx").on(table.customerId, table.featureId),
+    index("birrjs_entitlement_next_reset_idx").on(table.nextResetAt),
+  ],
+);

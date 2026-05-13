@@ -1,0 +1,42 @@
+import { z } from "zod";
+
+import { defineBirrJSMethod } from "../../api/endpoint";
+import { checkEntitlement, reportEntitlement } from "../../entitlement";
+
+const entitlementCheckSchema = z.object({
+  featureId: z.string(),
+  required: z.number().positive().optional(),
+});
+
+const entitlementReportSchema = z.object({
+  featureId: z.string(),
+  amount: z.number().positive().optional(),
+});
+
+export const check = defineBirrJSMethod(
+  {
+    input: entitlementCheckSchema,
+    requireCustomer: true,
+  },
+  async (ctx) =>
+    checkEntitlement(ctx.birrjs.database, {
+      customerId: ctx.customerId,
+      featureId: ctx.input.featureId,
+      now: new Date(),
+      required: ctx.input.required,
+    }),
+);
+
+export const report = defineBirrJSMethod(
+  {
+    input: entitlementReportSchema,
+    requireCustomer: true,
+  },
+  async (ctx) =>
+    reportEntitlement(ctx.birrjs.database, {
+      amount: ctx.input.amount,
+      customerId: ctx.customerId,
+      featureId: ctx.input.featureId,
+      now: new Date(),
+    }),
+);

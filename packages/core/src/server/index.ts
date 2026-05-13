@@ -26,6 +26,11 @@ import {
   listCustomers,
   getCustomer,
 } from "./customer/customer.api";
+// Entitlement methods
+import {
+  check as checkEntitlement,
+  report as reportEntitlement,
+} from "./entitlement/entitlement.api";
 // Plan methods
 import { listPlans } from "./plan/plan.api";
 // Subscription methods
@@ -66,6 +71,10 @@ export function getApi(getContext: () => Promise<BirrJSContext>) {
     checkSubscription: (input: CheckSubscriptionRequest) =>
       getContext().then((ctx) => checkSubscription(ctx, input)),
     getCustomer: (input: GetCustomerRequest) => getContext().then((ctx) => getCustomer(ctx, input)),
+    checkEntitlement: (input: { featureId: string; required?: number }) =>
+      getContext().then((ctx) => checkEntitlement(ctx, input)),
+    reportEntitlement: (input: { featureId: string; amount?: number }) =>
+      getContext().then((ctx) => reportEntitlement(ctx, input)),
     handleWebhook: (input: WebhookRequest) => getContext().then((ctx) => handleWebhook(ctx, input)),
     checkPendingSubscriptions: () => getContext().then((ctx) => checkPendingSubscriptions(ctx)),
     checkExpiredSubscriptions: () => getContext().then((ctx) => checkExpiredSubscriptions(ctx)),
@@ -98,6 +107,8 @@ export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
     listPlans,
     getSubscription,
     checkSubscription,
+    checkEntitlement,
+    reportEntitlement,
     handleWebhook,
     checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
     checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
