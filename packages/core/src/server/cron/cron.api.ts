@@ -28,7 +28,7 @@ export async function checkPendingSubscriptions(ctx: BirrJSContext) {
   // Mark stuck subscriptions as failed and get the updated rows
   const updatedSubscriptions = await database
     .update(subscription)
-    .set({ status: "failed", failedAt: new Date(), updatedAt: new Date() })
+    .set({ status: "failed", endedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(subscription.status, "pending"), lt(subscription.createdAt, timeoutAgo)))
     .returning();
 
@@ -52,7 +52,7 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
   // Mark expired subscriptions and get the updated rows
   const updatedSubscriptions = await database
     .update(subscription)
-    .set({ status: "expired", expiredAt: new Date(), updatedAt: new Date() })
+    .set({ status: "expired", endedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(subscription.status, "active"), lt(subscription.endedAt, now)))
     .returning();
 

@@ -17,10 +17,10 @@ import type { ProviderProductMap } from "../provider";
 const pgTable = pgTableCreator((name) => `birrjs_${name}`);
 
 const createTimestampColumns = () => ({
-  createdAt: timestamp("created_at")
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),
-  updatedAt: timestamp("updated_at")
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date())
     .$onUpdateFn(() => new Date()),
@@ -33,7 +33,7 @@ export const customer = pgTable(
     email: text("email"),
     name: text("name"),
     metadata: jsonb("metadata").$type<Record<string, string> | null>(),
-    deletedAt: timestamp("deleted_at"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...createTimestampColumns(),
   },
   (table) => [index("birrjs_customer_deleted_at_idx").on(table.deletedAt)],
@@ -56,7 +56,9 @@ export const plan = pgTable(
     ...createTimestampColumns(),
   },
   (table) => [
-    index("birrjs_plan_default_idx").on(table.isDefault),
+    uniqueIndex("birrjs_plan_single_default")
+      .on(table.isDefault)
+      .where(sql`${table.isDefault} = true`),
     uniqueIndex("birrjs_plan_id_version_unique").on(table.id, table.version),
     check("birrjs_plan_price_amount_non_negative", sql`price_amount IS NULL OR price_amount >= 0`),
   ],
@@ -99,13 +101,11 @@ export const subscription = pgTable(
       .notNull()
       .references(() => plan.internalId, { onDelete: "restrict" }),
     status: text("status").notNull(),
-    startedAt: timestamp("started_at"),
-    expiresAt: timestamp("expires_at"),
-    canceledAt: timestamp("canceled_at"),
-    endedAt: timestamp("ended_at"),
-    failedAt: timestamp("failed_at"),
-    expiredAt: timestamp("expired_at"),
-    lastPaymentAt: timestamp("last_payment_at"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    lastPaymentAt: timestamp("last_payment_at", { withTimezone: true }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
     providerTxRef: text("provider_tx_ref"),
     ...createTimestampColumns(),
@@ -135,8 +135,8 @@ export const invoice = pgTable(
     status: text("status").notNull(),
     providerTxRef: text("provider_tx_ref"),
     description: text("description"),
-    periodStartAt: timestamp("period_start_at"),
-    periodEndAt: timestamp("period_end_at"),
+    periodStartAt: timestamp("period_start_at", { withTimezone: true }),
+    periodEndAt: timestamp("period_end_at", { withTimezone: true }),
     ...createTimestampColumns(),
   },
   (table) => [
@@ -157,8 +157,8 @@ export const webhookEvent = pgTable(
     status: text("status").notNull(),
     error: text("error"),
     traceId: text("trace_id"),
-    receivedAt: timestamp("received_at").notNull(),
-    processedAt: timestamp("processed_at"),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("birrjs_webhook_event_provider_unique").on(
@@ -182,7 +182,7 @@ export const entitlement = pgTable(
       .references(() => feature.id),
     limit: integer("limit"),
     balance: integer("balance"),
-    nextResetAt: timestamp("next_reset_at"),
+    nextResetAt: timestamp("next_reset_at", { withTimezone: true }),
     ...createTimestampColumns(),
   },
   (table) => [
