@@ -9,7 +9,10 @@ import {
   CheckSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
-import { plan, subscription, customer } from "../../database/schema";
+import { generateId } from "../../core/utils";
+import { plan, subscription, customer, planFeature, entitlement } from "../../database/schema";
+import { addResetInterval } from "../../entitlement/entitlement.service";
+import type { ResetInterval } from "../../plans/schema";
 import type { TransactionRequest } from "../../provider";
 import {
   createSubscription,
@@ -66,7 +69,7 @@ export const subscribe = defineBirrJSMethod(
     const customerRecord = customers[0];
 
     // Create subscription
-    const subscriptionId = `sub_${crypto.randomUUID()}`;
+    const subscriptionId = generateId("sub");
 
     // Initialize payment with provider
     const txRef = `tx_${crypto.randomUUID()}`;
@@ -86,6 +89,26 @@ export const subscribe = defineBirrJSMethod(
       updatedAt: new Date(),
     };
     await database.insert(subscription).values(newSubscription);
+
+    // Create entitlement records for each plan feature
+    const planFeatures = await database
+      .select()
+      .from(planFeature)
+      .where(eq(planFeature.planId, planRecord.internalId));
+
+    for (const pf of planFeatures) {
+      await database.insert(entitlement).values({
+        id: generateId("ent"),
+        subscriptionId: subscriptionId,
+        customerId: customerRecord!.id,
+        featureId: pf.featureId,
+        limit: pf.limit,
+        balance: pf.limit,
+        nextResetAt: pf.resetInterval
+          ? addResetInterval(new Date(), pf.resetInterval as ResetInterval)
+          : null,
+      });
+    }
 
     const transactionRequest: TransactionRequest = {
       amount: planRecord.priceAmount || 0,

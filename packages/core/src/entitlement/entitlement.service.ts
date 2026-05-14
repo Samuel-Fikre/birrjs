@@ -14,7 +14,7 @@ import type {
   ReportResult,
 } from "./entitlement.types";
 
-function addResetInterval(date: Date, resetInterval: ResetInterval): Date {
+export function addResetInterval(date: Date, resetInterval: ResetInterval): Date {
   const next = new Date(date);
 
   switch (resetInterval) {
