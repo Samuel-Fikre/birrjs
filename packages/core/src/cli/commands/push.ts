@@ -22,6 +22,7 @@ async function pushAction(options: { config?: string; cwd: string; yes?: boolean
   const deps = await loadCliDeps();
   const config = await deps.getBirrJSConfig({ configPath: options.config, cwd });
   const database = createPool(deps, config.options.database);
+  let syncCtx: BirrJSContext | undefined;
 
   try {
     const connStr = deps.getConnectionString(database as never);
@@ -44,7 +45,6 @@ async function pushAction(options: { config?: string; cwd: string; yes?: boolean
     s.message("Checking plans");
     const plans = config.options.plans ?? [];
     let diffs: PlanDiff[] = [];
-    let syncCtx: BirrJSContext | undefined;
 
     if (plans.length > 0) {
       const { ctx, diffs: planDiffs } = await loadPlanDiffs(config, deps);
@@ -100,16 +100,12 @@ async function pushAction(options: { config?: string; cwd: string; yes?: boolean
 
     if (changeCount > 0 && plans.length > 0 && syncCtx) {
       s.start("Syncing plans");
-      try {
-        const results = await deps.syncPlans(syncCtx, plans);
-        const syncedCount = results.filter((r) => r.action !== "unchanged").length;
-        s.stop("");
-        p.outro(
-          `Done ${picocolors.dim("·")} synced ${String(syncedCount)} plan${syncedCount === 1 ? "" : "s"}`,
-        );
-      } finally {
-        await syncCtx.destroy();
-      }
+      const results = await deps.syncPlans(syncCtx, plans);
+      const syncedCount = results.filter((r) => r.action !== "unchanged").length;
+      s.stop("");
+      p.outro(
+        `Done ${picocolors.dim("·")} synced ${String(syncedCount)} plan${syncedCount === 1 ? "" : "s"}`,
+      );
     }
   } catch (error) {
     s.stop("");
@@ -118,6 +114,7 @@ async function pushAction(options: { config?: string; cwd: string; yes?: boolean
     p.cancel("Push failed");
     process.exit(1);
   } finally {
+    await syncCtx?.destroy();
     await database.end();
   }
 }
