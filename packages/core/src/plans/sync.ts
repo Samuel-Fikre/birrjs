@@ -220,6 +220,37 @@ export async function syncPlans(
   return results;
 }
 
+export async function dryRunSyncPlans(
+  ctx: BirrJSContext,
+  plans: BirrJSPlan[],
+): Promise<SyncPlanResult[]> {
+  const { database, provider } = ctx;
+  const currency = provider.currency ?? "ETB";
+  const results: SyncPlanResult[] = [];
+
+  for (const plan of plans) {
+    const existing = await getLatestPlanSnapshot(database, plan.id);
+    const normalizedPlan = normalizePlan(plan, currency);
+    let action: SyncPlanResult["action"] = "unchanged";
+
+    if (!existing) {
+      action = "created";
+    } else if (planChanged(existing, normalizedPlan)) {
+      action = "created";
+    } else if (existing.plan.name !== plan.name) {
+      action = "updated";
+    }
+
+    results.push({
+      id: plan.id,
+      version: existing?.plan.version ?? 1,
+      action,
+    });
+  }
+
+  return results;
+}
+
 /**
  * Get plans from code-first definition
  */
