@@ -19,13 +19,20 @@ switch (commandName) {
     program.addCommand(pushCommand);
     break;
   }
+  case "init": {
+    const { initCommand } = await import("./commands/init");
+    program.addCommand(initCommand);
+    break;
+  }
   default: {
-    const [{ statusCommand }, { pushCommand }] = await Promise.all([
+    const [{ statusCommand }, { pushCommand }, { initCommand }] = await Promise.all([
       import("./commands/status"),
       import("./commands/push"),
+      import("./commands/init"),
     ]);
     program.addCommand(statusCommand);
     program.addCommand(pushCommand);
+    program.addCommand(initCommand);
   }
 }
 

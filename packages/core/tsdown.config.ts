@@ -13,6 +13,8 @@ export default defineConfig(
     entry: {
       index: "src/index.ts",
       "cli/index": "src/cli/index.ts",
+      "handlers/next": "src/handlers/next.ts",
+      "client/index": "src/client/index.ts",
     },
   }),
 );
