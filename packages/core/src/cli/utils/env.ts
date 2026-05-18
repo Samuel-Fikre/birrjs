@@ -15,7 +15,12 @@ export function getEnvFiles(cwd: string): string[] {
 export function parseEnvFiles(envFiles: string[]): Map<string, string[]> {
   const result = new Map<string, string[]>();
   for (const file of envFiles) {
-    const content = fs.readFileSync(file, "utf-8");
+    let content: string;
+    try {
+      content = fs.readFileSync(file, "utf-8");
+    } catch {
+      continue;
+    }
     const existingVars = content
       .split("\n")
       .filter((line) => line.trim())
@@ -44,16 +49,31 @@ export function getMissingEnvVars(
 
 export function updateEnvFiles(envFiles: string[], lines: string[]): void {
   for (const file of envFiles) {
-    let content = fs.readFileSync(file, "utf-8");
+    let content: string;
+    try {
+      content = fs.readFileSync(file, "utf-8");
+    } catch {
+      continue;
+    }
     if (content.length > 0 && !content.endsWith("\n")) {
       content += "\n";
     }
     content += lines.join("\n") + "\n";
-    fs.writeFileSync(file, content);
+    try {
+      fs.writeFileSync(file, content);
+    } catch {
+      // Skip files we can't write to
+    }
   }
 }
 
 export function createEnvFile(cwd: string, lines: string[]): void {
   const envFile = path.join(cwd, ".env");
-  fs.writeFileSync(envFile, lines.join("\n") + "\n");
+  try {
+    fs.writeFileSync(envFile, lines.join("\n") + "\n");
+  } catch (error) {
+    throw new Error(`Failed to create .env file at ${envFile}: ${(error as Error).message}`, {
+      cause: error,
+    });
+  }
 }
