@@ -14,7 +14,8 @@ export const listPlans = defineBirrJSMethod(
       offset: z.number().min(0).default(0),
     }),
     route: {
-      method: "GET",
+      client: true,
+      method: "POST",
       path: "/list-plans",
     },
   },

@@ -52,6 +52,7 @@ export const plan = pgTable(
     features: jsonb("features").$type<Record<string, unknown> | null>(),
     provider: jsonb("provider").$type<ProviderProductMap>().notNull().default({}),
     isDefault: boolean("is_default").notNull().default(false),
+    hash: text("hash"),
     version: integer("version").notNull().default(1),
     ...createTimestampColumns(),
   },

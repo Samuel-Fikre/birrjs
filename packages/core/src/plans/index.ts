@@ -22,6 +22,8 @@ import {
   birrjsPlanSymbol,
 } from "./schema";
 
+export { syncPlans } from "./sync";
+
 export type {
   FeatureType,
   ResetInterval,

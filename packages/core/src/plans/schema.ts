@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import * as z from "zod";
 
 export const birrjsFeatureSymbol = Symbol.for("birrjs.feature");
@@ -118,6 +120,24 @@ export interface NormalizedPlan {
   priceAmount: number | null;
   priceInterval: PriceInterval | null;
   currency: string;
+  hash: string;
+}
+
+export function computePlanHash(plan: Omit<NormalizedPlan, "hash">): string {
+  const payload = JSON.stringify({
+    group: plan.group,
+    isDefault: plan.isDefault,
+    priceAmount: plan.priceAmount,
+    priceInterval: plan.priceInterval,
+    features: plan.includes.map((f) => ({
+      id: f.id,
+      limit: f.limit,
+      resetInterval: f.resetInterval,
+      config: f.config,
+    })),
+  });
+
+  return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }
 
 export function normalizeFeature(include: FeatureInclude): NormalizedPlanFeature {
@@ -152,7 +172,7 @@ export function normalizePlan(plan: BirrJSPlan, currency: string): NormalizedPla
     left.id.localeCompare(right.id),
   );
 
-  return {
+  const planData = {
     group: plan.group ?? null,
     id: plan.id,
     includes: sortedIncludes,
@@ -161,7 +181,9 @@ export function normalizePlan(plan: BirrJSPlan, currency: string): NormalizedPla
     priceAmount: plan.price?.amount ?? null,
     priceInterval: plan.price?.interval ?? null,
     currency: plan.price?.currency ?? currency,
-  } satisfies NormalizedPlan;
+  };
+
+  return { ...planData, hash: computePlanHash(planData) };
 }
 
 type BooleanFeatureCallable<TFeature extends BooleanFeatureDefinition> =

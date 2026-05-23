@@ -1,21 +1,10 @@
 import { createRouter, type Endpoint } from "better-call";
 
 import type { BirrJSContext } from "../context";
-import type {
-  SubscribeRequest,
-  CancelSubscriptionRequest,
-  CreateCustomerRequest,
-  UpdateCustomerRequest,
-  GetSubscriptionRequest,
-  CheckSubscriptionRequest,
-  GetCustomerRequest,
-  WebhookRequest,
-} from "../index";
 import type { BirrJSOptions } from "../types";
+import type { BirrJSClientMethods, GenerateBirrJSAPI } from "../types/instance";
 // Cron methods
 import {
-  checkPendingSubscriptions,
-  checkExpiredSubscriptions,
   checkPendingSubscriptionsEndpoint,
   checkExpiredSubscriptionsEndpoint,
 } from "./cron/cron.api";
@@ -44,45 +33,57 @@ import {
 // Webhook methods
 import { handleWebhook } from "./webhook/webhook.api";
 
+export const methods = {
+  subscribe,
+  listSubscriptions,
+  cancelSubscription: cancelSubscriptionEndpoint,
+  createCustomer,
+  updateCustomer,
+  listCustomers,
+  getCustomer,
+  listPlans,
+  getSubscription,
+  checkSubscription,
+  checkEntitlement,
+  reportEntitlement,
+  handleWebhook,
+  checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
+  checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
+} as const;
+
+export type Methods = typeof methods;
+
+export type BirrJSClientAPI<TOptions extends BirrJSOptions = BirrJSOptions> = BirrJSClientMethods<
+  Methods,
+  TOptions
+>;
+
+export type BirrJSAPI<TOptions extends BirrJSOptions = BirrJSOptions> = GenerateBirrJSAPI<
+  Methods,
+  TOptions
+>;
+
+function wrapMethods<TMethods extends Record<string, unknown>>(
+  source: TMethods,
+  ctx: BirrJSContext | Promise<BirrJSContext>,
+): GenerateBirrJSAPI<TMethods, BirrJSOptions> {
+  const wrapped = Object.fromEntries(
+    (Object.entries(source) as Array<[keyof TMethods, TMethods[keyof TMethods]]>).map(
+      ([key, method]) => {
+        const fn = async (input: unknown) => {
+          const resolved = await ctx;
+          return (method as unknown as (...args: unknown[]) => Promise<unknown>)(resolved, input);
+        };
+        return [key, fn];
+      },
+    ),
+  );
+  return wrapped as GenerateBirrJSAPI<TMethods>;
+}
+
 // Type-safe API helper
 export function getApi(getContext: () => Promise<BirrJSContext>) {
-  return {
-    subscribe: (input: SubscribeRequest) => getContext().then((ctx) => subscribe(ctx, input)),
-    listSubscriptions: (input?: { limit?: number; offset?: number }) => {
-      const { limit = 20, offset = 0 } = input || {};
-      return getContext().then((ctx) => listSubscriptions(ctx, { limit, offset }));
-    },
-    cancelSubscription: (input: CancelSubscriptionRequest) =>
-      getContext().then((ctx) => cancelSubscriptionEndpoint(ctx, input)),
-    createCustomer: (input: CreateCustomerRequest) =>
-      getContext().then((ctx) => createCustomer(ctx, input)),
-    updateCustomer: (input: UpdateCustomerRequest) =>
-      getContext().then((ctx) => updateCustomer(ctx, input)),
-    listCustomers: (input?: { limit?: number; offset?: number }) => {
-      const { limit = 20, offset = 0 } = input || {};
-      return getContext().then((ctx) => listCustomers(ctx, { limit, offset }));
-    },
-    listPlans: (input?: { limit?: number; offset?: number }) => {
-      const { limit = 20, offset = 0 } = input || {};
-      return getContext().then((ctx) => listPlans(ctx, { limit, offset }));
-    },
-    getSubscription: (input: GetSubscriptionRequest) =>
-      getContext().then((ctx) => getSubscription(ctx, input)),
-    checkSubscription: (input: CheckSubscriptionRequest) =>
-      getContext().then((ctx) => checkSubscription(ctx, input)),
-    getCustomer: (input: GetCustomerRequest) => getContext().then((ctx) => getCustomer(ctx, input)),
-    checkEntitlement: (input: { featureId: string; required?: number }) =>
-      getContext().then((ctx) => checkEntitlement(ctx, input)),
-    reportEntitlement: (input: { featureId: string; amount?: number }) =>
-      getContext().then((ctx) => reportEntitlement(ctx, input)),
-    handleWebhook: (input: WebhookRequest) => getContext().then((ctx) => handleWebhook(ctx, input)),
-    checkPendingSubscriptions: () => getContext().then((ctx) => checkPendingSubscriptions(ctx)),
-    checkExpiredSubscriptions: () => getContext().then((ctx) => checkExpiredSubscriptions(ctx)),
-    checkPendingSubscriptionsEndpoint: () =>
-      getContext().then((ctx) => checkPendingSubscriptionsEndpoint(ctx, {})),
-    checkExpiredSubscriptionsEndpoint: () =>
-      getContext().then((ctx) => checkExpiredSubscriptionsEndpoint(ctx, {})),
-  };
+  return wrapMethods(methods, getContext());
 }
 
 function getRouteEndpoints<TMethods extends Record<string, { endpoint?: Endpoint }>>(
@@ -96,24 +97,6 @@ function getRouteEndpoints<TMethods extends Record<string, { endpoint?: Endpoint
 }
 
 export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
-  const methods = {
-    subscribe,
-    listSubscriptions,
-    cancelSubscription: cancelSubscriptionEndpoint,
-    createCustomer,
-    updateCustomer,
-    listCustomers,
-    getCustomer,
-    listPlans,
-    getSubscription,
-    checkSubscription,
-    checkEntitlement,
-    reportEntitlement,
-    handleWebhook,
-    checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
-    checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
-  };
-
   const routeEndpoints = getRouteEndpoints(methods as Record<string, { endpoint?: Endpoint }>);
 
   return createRouter(routeEndpoints, {

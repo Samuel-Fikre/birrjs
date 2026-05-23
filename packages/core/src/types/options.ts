@@ -27,5 +27,5 @@ export interface BirrJSOptions {
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
   identify?: (request: Request) => Promise<{ customerId?: string } | null>;
-  plans?: BirrJSPlan[];
+  plans?: readonly BirrJSPlan[];
 }

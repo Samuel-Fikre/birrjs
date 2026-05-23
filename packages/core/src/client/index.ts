@@ -1,10 +1,19 @@
 import { createFetch } from "@better-fetch/fetch";
 
+import type { BirrJSClientApiCarrier } from "../types/instance";
+
 export interface BirrJSClientOptions {
   baseURL?: string;
 }
 
-export function createBirrJSClient(options?: BirrJSClientOptions) {
+type InferClientAPI<TInstance> =
+  TInstance extends BirrJSClientApiCarrier<infer TClientApi>
+    ? TClientApi
+    : Record<string, (input: unknown) => Promise<unknown>>;
+
+export function createBirrJSClient<TInstance>(
+  options?: BirrJSClientOptions,
+): InferClientAPI<TInstance> {
   const baseURL = options?.baseURL ?? "/api";
   const isCredentialsSupported =
     typeof globalThis.Request !== "undefined" && "credentials" in Request.prototype;
@@ -35,5 +44,5 @@ export function createBirrJSClient(options?: BirrJSClientOptions) {
     });
   }
 
-  return createProxy();
+  return createProxy() as InferClientAPI<TInstance>;
 }

@@ -5,12 +5,29 @@ import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
 import { subscription } from "../../database/schema";
 
+function headersToRecord(headers: Headers): Record<string, string> {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+}
+
 export const handleWebhook = defineBirrJSMethod(
   {
     input: WebhookRequestSchema,
     route: {
+      disableBody: true,
       method: "POST",
       path: "/handle-webhook",
+      requireHeaders: true,
+      requireRequest: true,
+      resolveInput: async (ctx) => {
+        const rawBody = await ctx.request!.text();
+        const headers = headersToRecord(ctx.headers ?? new Headers());
+        const payload = JSON.parse(rawBody);
+        return { payload, rawBody, headers };
+      },
     },
   },
   async (ctx) => {

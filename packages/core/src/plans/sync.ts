@@ -3,42 +3,31 @@ import { eq } from "drizzle-orm";
 import type { BirrJSContext } from "../context";
 import { generateId } from "../core/utils";
 import type { BirrJSDatabase } from "../database";
-import { plan, planFeature } from "../database/schema";
+import { feature, plan, planFeature } from "../database/schema";
 import type { NewPlan, StoredPlan, PlanFeature, StoredPlanSnapshot } from "../types/models";
 import type { BirrJSPlan, NormalizedPlan, NormalizedPlanFeature } from "./schema";
 import { normalizePlan } from "./schema";
+
+function validateFeatureTypes(plans: readonly BirrJSPlan[]): void {
+  const seen = new Map<string, string>();
+
+  for (const p of plans) {
+    for (const include of p.includes ?? []) {
+      const existingType = seen.get(include.feature.id);
+      if (existingType && existingType !== include.feature.type) {
+        throw new Error(
+          `Feature "${include.feature.id}" has conflicting types: "${existingType}" in one plan and "${include.feature.type}" in plan "${p.id}".`,
+        );
+      }
+      seen.set(include.feature.id, include.feature.type);
+    }
+  }
+}
 
 export interface SyncPlanResult {
   id: string;
   version: number;
   action: "created" | "updated" | "unchanged";
-}
-
-function serializeFeatureConfig(config: Record<string, unknown> | null): string {
-  return JSON.stringify(config ?? null);
-}
-
-function featuresChanged(
-  existing: readonly PlanFeature[],
-  next: readonly NormalizedPlanFeature[],
-): boolean {
-  if (existing.length !== next.length) {
-    return true;
-  }
-
-  return existing.some((storedFeature, index) => {
-    const nextFeature = next[index];
-    if (!nextFeature) {
-      return true;
-    }
-
-    return (
-      storedFeature.featureId !== nextFeature.id ||
-      storedFeature.limit !== nextFeature.limit ||
-      storedFeature.resetInterval !== nextFeature.resetInterval ||
-      serializeFeatureConfig(storedFeature.config) !== serializeFeatureConfig(nextFeature.config)
-    );
-  });
 }
 
 function planChanged(
@@ -49,13 +38,7 @@ function planChanged(
     return true;
   }
 
-  return (
-    existing.plan.group !== next.group ||
-    existing.plan.isDefault !== next.isDefault ||
-    existing.plan.priceAmount !== next.priceAmount ||
-    existing.plan.priceInterval !== next.priceInterval ||
-    featuresChanged(existing.features, next.includes)
-  );
+  return existing.plan.hash !== next.hash;
 }
 
 async function getLatestPlan(database: BirrJSDatabase, planId: string): Promise<StoredPlan | null> {
@@ -110,6 +93,7 @@ async function insertPlanVersion(
       priceAmount: input.priceAmount,
       priceInterval: input.priceInterval,
       currency: input.currency,
+      hash: input.hash,
       provider: {},
       version: input.version,
     })
@@ -128,6 +112,7 @@ async function replacePlanFeatures(
     }
 
     const now = new Date();
+
     const featureValues = params.features.map((feature) => ({
       planId: params.planId,
       featureId: feature.id,
@@ -149,6 +134,7 @@ async function updatePlanName(database: BirrJSDatabase, planId: string, name: st
 async function upsertPlanVersion(database: BirrJSDatabase, plan: NormalizedPlan, version: number) {
   const inserted = await insertPlanVersion(database, {
     group: plan.group ?? undefined,
+    hash: plan.hash,
     id: plan.id,
     isDefault: plan.isDefault,
     name: plan.name,
@@ -176,11 +162,30 @@ async function upsertPlanVersion(database: BirrJSDatabase, plan: NormalizedPlan,
  */
 export async function syncPlans(
   ctx: BirrJSContext,
-  plans: BirrJSPlan[],
+  plans: readonly BirrJSPlan[],
 ): Promise<SyncPlanResult[]> {
+  validateFeatureTypes(plans);
   const { database, logger, provider } = ctx;
   const currency = provider.currency ?? "ETB";
   const results: SyncPlanResult[] = [];
+
+  // Upsert all features in a single pass before processing plans
+  const allFeatures = new Map<string, string>();
+  for (const p of plans) {
+    for (const include of p.includes ?? []) {
+      allFeatures.set(include.feature.id, include.feature.type);
+    }
+  }
+  const featureUpsertNow = new Date();
+  for (const [id, type] of allFeatures) {
+    await database
+      .insert(feature)
+      .values({ id, type, createdAt: featureUpsertNow, updatedAt: featureUpsertNow })
+      .onConflictDoUpdate({
+        target: feature.id,
+        set: { type, updatedAt: featureUpsertNow },
+      });
+  }
 
   for (const plan of plans) {
     const existing = await getLatestPlanSnapshot(database, plan.id);
@@ -222,8 +227,9 @@ export async function syncPlans(
 
 export async function dryRunSyncPlans(
   ctx: BirrJSContext,
-  plans: BirrJSPlan[],
+  plans: readonly BirrJSPlan[],
 ): Promise<SyncPlanResult[]> {
+  validateFeatureTypes(plans);
   const { database, provider } = ctx;
   const currency = provider.currency ?? "ETB";
   const results: SyncPlanResult[] = [];

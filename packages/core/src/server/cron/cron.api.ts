@@ -2,7 +2,6 @@ import { createHash, timingSafeEqual } from "crypto";
 
 import { APIError } from "better-call";
 import { eq, and, lt } from "drizzle-orm";
-import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import type { BirrJSContext } from "../../context";
@@ -69,7 +68,6 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
  */
 export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
   {
-    input: z.object({}),
     route: {
       method: "POST",
       path: "/check-pending-subscriptions",
@@ -117,7 +115,6 @@ export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
  */
 export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
   {
-    input: z.object({}),
     route: {
       method: "POST",
       path: "/check-expired-subscriptions",

@@ -28,6 +28,7 @@ export const subscribe = defineBirrJSMethod(
   {
     input: SubscribeRequestSchema,
     route: {
+      client: true,
       method: "POST",
       path: "/subscribe",
     },
@@ -159,7 +160,8 @@ export const listSubscriptions = defineBirrJSMethod(
     }),
     requireCustomer: true,
     route: {
-      method: "GET",
+      client: true,
+      method: "POST",
       path: "/list-subscriptions",
     },
   },
@@ -208,6 +210,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
     input: CancelSubscriptionRequestSchema,
     requireCustomer: true,
     route: {
+      client: true,
       method: "POST",
       path: "/cancel-subscription",
     },
@@ -264,7 +267,8 @@ export const getSubscription = defineBirrJSMethod(
     input: GetSubscriptionRequestSchema,
     requireCustomer: true,
     route: {
-      method: "GET",
+      client: true,
+      method: "POST",
       path: "/get-subscription",
     },
   },

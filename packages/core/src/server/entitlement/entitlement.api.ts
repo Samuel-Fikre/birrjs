@@ -17,6 +17,11 @@ export const check = defineBirrJSMethod(
   {
     input: entitlementCheckSchema,
     requireCustomer: true,
+    route: {
+      client: true,
+      method: "POST",
+      path: "/check-entitlement",
+    },
   },
   async (ctx) =>
     checkEntitlement(ctx.birrjs.database, {
@@ -31,6 +36,11 @@ export const report = defineBirrJSMethod(
   {
     input: entitlementReportSchema,
     requireCustomer: true,
+    route: {
+      client: true,
+      method: "POST",
+      path: "/report-entitlement",
+    },
   },
   async (ctx) =>
     reportEntitlement(ctx.birrjs.database, {

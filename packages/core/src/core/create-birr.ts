@@ -4,31 +4,12 @@ import picocolors from "picocolors";
 import type { BirrJSContext } from "../context";
 import { createContext } from "../context";
 import { getPendingMigrationCount } from "../database/migrate";
-import type {
-  SubscribeRequest,
-  SubscribeResponse,
-  ListSubscriptionsResponse,
-  CancelSubscriptionRequest,
-  CancelSubscriptionResponse,
-  CreateCustomerRequest,
-  CreateCustomerResponse,
-  UpdateCustomerRequest,
-  UpdateCustomerResponse,
-  ListCustomersResponse,
-  ListPlansResponse,
-  GetSubscriptionRequest,
-  GetSubscriptionResponse,
-  CheckSubscriptionRequest,
-  CheckSubscriptionResponse,
-  GetCustomerRequest,
-  GetCustomerResponse,
-  WebhookRequest,
-  WebhookResponse,
-} from "../index";
 import type { PlanIdFromOptions, FeatureIdFromOptions } from "../plans/schema";
 import { dryRunSyncPlans, syncPlans } from "../plans/sync";
 import { getApi, createBirrJSRouter } from "../server";
+import type { BirrJSClientAPI, BirrJSAPI } from "../server/index";
 import type { BirrJSOptions } from "../types";
+import type { BirrJSClientApiCarrier } from "../types/instance";
 
 const birrInstanceSymbol = Symbol.for("birr.instance");
 
@@ -60,36 +41,10 @@ async function runDevChecks(ctx: BirrJSContext, pool: Pool): Promise<void> {
   ]);
 }
 
-export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
+export type BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> = BirrJSClientApiCarrier<
+  BirrJSClientAPI<TOptions>
+> & {
   options: TOptions;
-  subscribe: (input: SubscribeRequest) => Promise<SubscribeResponse>;
-  listSubscriptions: (input?: {
-    limit?: number;
-    offset?: number;
-  }) => Promise<ListSubscriptionsResponse>;
-  cancelSubscription: (input: CancelSubscriptionRequest) => Promise<CancelSubscriptionResponse>;
-  createCustomer: (input: CreateCustomerRequest) => Promise<CreateCustomerResponse>;
-  updateCustomer: (input: UpdateCustomerRequest) => Promise<UpdateCustomerResponse>;
-  listCustomers: (input?: { limit?: number; offset?: number }) => Promise<ListCustomersResponse>;
-  listPlans: (input?: { limit?: number; offset?: number }) => Promise<ListPlansResponse>;
-  getSubscription: (input: GetSubscriptionRequest) => Promise<GetSubscriptionResponse>;
-  checkSubscription: (input: CheckSubscriptionRequest) => Promise<CheckSubscriptionResponse>;
-  getCustomer: (input: GetCustomerRequest) => Promise<GetCustomerResponse>;
-  handleWebhook: (input: WebhookRequest) => Promise<WebhookResponse>;
-  checkPendingSubscriptions: () => Promise<{ checked: number; updated: number }>;
-  checkExpiredSubscriptions: () => Promise<{ checked: number; updated: number }>;
-  checkPendingSubscriptionsEndpoint: () => Promise<{
-    success: boolean;
-    checked?: number;
-    updated?: number;
-    message?: string;
-  }>;
-  checkExpiredSubscriptionsEndpoint: () => Promise<{
-    success: boolean;
-    checked?: number;
-    updated?: number;
-    message?: string;
-  }>;
   handler: (request: Request) => Promise<Response>;
   $context: Promise<BirrJSContext>;
   $infer: {
@@ -97,7 +52,7 @@ export interface BirrInstance<TOptions extends BirrJSOptions = BirrJSOptions> {
     featureId: FeatureIdFromOptions<TOptions>;
   };
   close: () => Promise<void>;
-}
+} & BirrJSAPI<TOptions>;
 
 export function isBirrInstance<TOptions extends BirrJSOptions = BirrJSOptions>(
   value: unknown,

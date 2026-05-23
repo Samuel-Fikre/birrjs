@@ -133,7 +133,7 @@ function generateClientFile(
   return `import { createBirrJSClient } from "@birrjs/core";
 import type { birrjs } from "${importPath}";
 
-export const birrjsClient = createBirrJSClient();
+export const birrjsClient = createBirrJSClient<typeof birrjs>();
 `;
 }
 
