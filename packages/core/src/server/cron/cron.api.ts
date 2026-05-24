@@ -13,6 +13,35 @@ function safeCompare(a: string, b: string): boolean {
   return timingSafeEqual(hashA, hashB);
 }
 
+function validateCronAuth(ctx: {
+  birrjs: { options: { scheduling?: { cronSecret?: string; mode?: string } } };
+  headers?: Headers;
+}): void {
+  const { options } = ctx.birrjs;
+
+  const auth = ctx.headers?.get("authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    throw new APIError("UNAUTHORIZED", {
+      message: "Missing or invalid Authorization header",
+    });
+  }
+
+  const token = auth.slice(7);
+  const cronSecret = options.scheduling?.cronSecret;
+
+  if (!cronSecret || !safeCompare(token, cronSecret)) {
+    throw new APIError("UNAUTHORIZED", {
+      message: "Invalid cron secret",
+    });
+  }
+
+  if (options.scheduling?.mode === "manual") {
+    throw new APIError("FORBIDDEN", {
+      message: "Scheduler is in manual mode",
+    });
+  }
+}
+
 /**
  * Check subscriptions stuck in pending status
  */
@@ -75,31 +104,7 @@ export const checkPendingSubscriptionsEndpoint = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { options } = ctx.birrjs;
-
-    // Validate Authorization header
-    const auth = ctx.headers?.get("authorization");
-    if (!auth?.startsWith("Bearer ")) {
-      throw new APIError("UNAUTHORIZED", {
-        message: "Missing or invalid Authorization header",
-      });
-    }
-
-    const token = auth.slice(7);
-    const cronSecret = options.scheduling?.cronSecret;
-
-    if (!cronSecret || !safeCompare(token, cronSecret)) {
-      throw new APIError("UNAUTHORIZED", {
-        message: "Invalid cron secret",
-      });
-    }
-
-    // Check if scheduling is enabled
-    if (options.scheduling?.mode === "manual") {
-      throw new APIError("FORBIDDEN", {
-        message: "Scheduler is in manual mode",
-      });
-    }
+    validateCronAuth(ctx);
 
     const result = await checkPendingSubscriptions(ctx.birrjs);
 
@@ -122,31 +127,7 @@ export const checkExpiredSubscriptionsEndpoint = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { options } = ctx.birrjs;
-
-    // Validate Authorization header
-    const auth = ctx.headers?.get("authorization");
-    if (!auth?.startsWith("Bearer ")) {
-      throw new APIError("UNAUTHORIZED", {
-        message: "Missing or invalid Authorization header",
-      });
-    }
-
-    const token = auth.slice(7);
-    const cronSecret = options.scheduling?.cronSecret;
-
-    if (!cronSecret || !safeCompare(token, cronSecret)) {
-      throw new APIError("UNAUTHORIZED", {
-        message: "Invalid cron secret",
-      });
-    }
-
-    // Check if scheduling is enabled
-    if (options.scheduling?.mode === "manual") {
-      throw new APIError("FORBIDDEN", {
-        message: "Scheduler is in manual mode",
-      });
-    }
+    validateCronAuth(ctx);
 
     const result = await checkExpiredSubscriptions(ctx.birrjs);
 

@@ -1,3 +1,4 @@
+import { APIError } from "better-call";
 import { eq } from "drizzle-orm";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
@@ -25,7 +26,14 @@ export const handleWebhook = defineBirrJSMethod(
       resolveInput: async (ctx) => {
         const rawBody = await ctx.request!.text();
         const headers = headersToRecord(ctx.headers ?? new Headers());
-        const payload = JSON.parse(rawBody);
+        let payload;
+        try {
+          payload = JSON.parse(rawBody);
+        } catch {
+          throw new APIError("BAD_REQUEST", {
+            message: "Invalid JSON in webhook payload",
+          });
+        }
         return { payload, rawBody, headers };
       },
     },
