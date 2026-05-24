@@ -5,6 +5,8 @@ import { defineBirrJSMethod } from "../../api/endpoint";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
 import { subscription } from "../../database/schema";
+import { calculateExpiresAt } from "../../subscription";
+import type { PlanInterval } from "../../types";
 
 function headersToRecord(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
@@ -77,7 +79,13 @@ export const handleWebhook = defineBirrJSMethod(
     // Map webhook event type to subscription status
     const eventType = webhookEvent.type;
     let newStatus: string;
-    const updateFields: { status: string; updatedAt: Date; lastPaymentAt?: Date } = {
+    const updateFields: {
+      status: string;
+      updatedAt: Date;
+      lastPaymentAt?: Date;
+      startedAt?: Date;
+      expiresAt?: Date;
+    } = {
       status: "",
       updatedAt: new Date(),
     };
@@ -86,6 +94,13 @@ export const handleWebhook = defineBirrJSMethod(
       case "charge.success":
         newStatus = "active";
         updateFields.lastPaymentAt = new Date();
+        updateFields.startedAt = new Date();
+        if (subscriptionRecord.interval) {
+          updateFields.expiresAt = calculateExpiresAt(
+            updateFields.startedAt,
+            subscriptionRecord.interval as PlanInterval,
+          );
+        }
         break;
       case "charge.failed/cancelled":
         newStatus = "failed";

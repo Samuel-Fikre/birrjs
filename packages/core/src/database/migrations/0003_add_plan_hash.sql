@@ -1,1 +1,0 @@
-ALTER TABLE "birrjs_plan" ADD COLUMN "hash" text;--> statement-breakpoint

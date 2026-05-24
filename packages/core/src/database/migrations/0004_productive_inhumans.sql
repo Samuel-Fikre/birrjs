@@ -1,0 +1,1 @@
+ALTER TABLE "birrjs_subscription" ADD COLUMN "interval" text;

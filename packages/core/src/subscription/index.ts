@@ -82,6 +82,7 @@ export interface CreateSubscriptionResult {
   customerId: string;
   planId: string;
   status: SubscriptionStatus;
+  interval: PlanInterval;
   startedAt: Date | null;
   expiresAt: Date | null;
   canceledAt: Date | null;
@@ -94,6 +95,7 @@ export function createSubscription(input: CreateSubscriptionInput): CreateSubscr
     customerId: input.customerId,
     planId: input.planId,
     status: "pending",
+    interval: input.interval,
     startedAt: null,
     expiresAt: null,
     canceledAt: null,

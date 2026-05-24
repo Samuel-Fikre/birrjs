@@ -102,6 +102,7 @@ export const subscription = pgTable(
       .notNull()
       .references(() => plan.internalId, { onDelete: "restrict" }),
     status: text("status").notNull(),
+    interval: text("interval"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     canceledAt: timestamp("canceled_at", { withTimezone: true }),

@@ -74,14 +74,14 @@ export async function checkPendingSubscriptions(ctx: BirrJSContext) {
 export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
   const { database, logger } = ctx;
 
-  // Find active subscriptions that have passed their endedAt
+  // Find active subscriptions that have passed their expiresAt
   const now = new Date();
 
   // Mark expired subscriptions and get the updated rows
   const updatedSubscriptions = await database
     .update(subscription)
     .set({ status: "expired", endedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(subscription.status, "active"), lt(subscription.endedAt, now)))
+    .where(and(eq(subscription.status, "active"), lt(subscription.expiresAt, now)))
     .returning();
 
   logger.info(`Marked ${updatedSubscriptions.length} subscriptions as expired`);
