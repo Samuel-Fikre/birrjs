@@ -4,13 +4,15 @@ export type SubscriptionStatus = "pending" | "active" | "canceled" | "failed" | 
 
 export interface GetEffectiveStatusOptions {
   pendingTimeoutMinutes?: number;
+  _now?: Date | number;
 }
 
 export function getEffectiveStatus(
   subscription: Subscription,
   options?: GetEffectiveStatusOptions,
 ): SubscriptionStatus {
-  const now = Date.now();
+  const now =
+    options?._now instanceof Date ? options._now.getTime() : (options?._now ?? Date.now());
   const pendingTimeoutMinutes = options?.pendingTimeoutMinutes ?? 60;
   const pendingTimeoutMs = pendingTimeoutMinutes * 60 * 1000;
 
