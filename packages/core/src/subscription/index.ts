@@ -1,42 +1,18 @@
+import { addResetInterval } from "../entitlement/entitlement.service";
+import type { ResetInterval } from "../plans/schema";
 import type { PlanInterval, SubscriptionStatus } from "../types";
 
-// TODO: Migrate to Temporal once it's no longer experimental in Node.js
-// Temporal provides safer calendar arithmetic and better date/time handling
-// https://tc39.es/proposal-temporal/
+const intervalToReset: Record<PlanInterval, ResetInterval> = {
+  daily: "day",
+  weekly: "week",
+  monthly: "month",
+  yearly: "year",
+};
 
 export function calculateExpiresAt(startDate: Date, interval: PlanInterval): Date {
-  const expiresAt = new Date(startDate.getTime());
-
-  switch (interval) {
-    case "daily":
-      expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
-      break;
-    case "weekly":
-      expiresAt.setUTCDate(expiresAt.getUTCDate() + 7);
-      break;
-    case "monthly": {
-      const targetMonth = expiresAt.getUTCMonth() + 1;
-      expiresAt.setUTCMonth(targetMonth);
-      // Clamp to last day of target month if overflow occurred
-      if (expiresAt.getUTCMonth() !== targetMonth % 12) {
-        expiresAt.setUTCDate(0);
-      }
-      break;
-    }
-    case "yearly": {
-      const originalMonth = expiresAt.getUTCMonth();
-      expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
-      // Clamp to last day of target month if overflow occurred (leap year → non-leap year)
-      if (expiresAt.getUTCMonth() !== originalMonth) {
-        expiresAt.setUTCDate(0);
-      }
-      break;
-    }
-    default:
-      throw new Error(`Invalid interval: ${interval}`);
-  }
-
-  return expiresAt;
+  const reset = intervalToReset[interval];
+  if (!reset) throw new Error(`Invalid interval: ${interval}`);
+  return addResetInterval(startDate, reset);
 }
 
 /**

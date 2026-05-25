@@ -53,7 +53,7 @@ function getNextResetAt(currentResetAt: Date, now: Date, resetInterval: ResetInt
   return nextResetAt;
 }
 
-function aggregateBalance(rows: ActiveEntitlementRow[]): EntitlementBalance | null {
+export function aggregateBalance(rows: ActiveEntitlementRow[]): EntitlementBalance | null {
   if (rows.length === 0) return null;
 
   const hasUnlimited = rows.some((row) => row.originalLimit === null);
