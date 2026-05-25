@@ -68,6 +68,9 @@ export const subscribe = defineBirrJSMethod(
       .where(eq(customer.email, email))
       .limit(1);
     const customerRecord = customers[0];
+    if (!customerRecord) {
+      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
+    }
 
     // Check for existing active subscription (renewal path)
     const existingSubscriptions = await database
@@ -75,7 +78,7 @@ export const subscribe = defineBirrJSMethod(
       .from(subscription)
       .where(
         and(
-          eq(subscription.customerId, customerRecord!.id),
+          eq(subscription.customerId, customerRecord.id),
           eq(subscription.planId, planRecord.id),
           eq(subscription.status, "active"),
         ),
@@ -97,7 +100,7 @@ export const subscribe = defineBirrJSMethod(
       const newSubscription = {
         ...createSubscription({
           id: subscriptionId,
-          customerId: customerRecord!.id,
+          customerId: customerRecord.id,
           planId: planRecord.id,
           interval:
             (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
@@ -119,7 +122,7 @@ export const subscribe = defineBirrJSMethod(
         await database.insert(entitlement).values({
           id: generateId("ent"),
           subscriptionId,
-          customerId: customerRecord!.id,
+          customerId: customerRecord.id,
           featureId: pf.featureId,
           limit: pf.limit,
           balance: pf.limit,
@@ -236,7 +239,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { subscriptionId, cancelAtPeriodEnd = false } = ctx.input;
+    const { subscriptionId } = ctx.input;
     const { customerId } = ctx;
 
     const subscriptions = await database
@@ -251,7 +254,6 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
 
     const result = cancelSubscriptionLogic({
       currentStatus: subscriptionRecord.status as "active" | "expired" | "canceled" | "pending",
-      cancelAtPeriodEnd,
       currentPeriodEndAt: subscriptionRecord.expiresAt,
     });
 
@@ -261,7 +263,7 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
         status: result.status as string,
         canceledAt: result.canceledAt,
         endedAt: result.endedAt,
-        cancelAtPeriodEnd,
+        cancelAtPeriodEnd: true,
         updatedAt: new Date(),
       })
       .where(eq(subscription.id, subscriptionId));

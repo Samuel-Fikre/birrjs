@@ -79,7 +79,6 @@ export type ListSubscriptionsResponse = z.infer<typeof ListSubscriptionsResponse
 // Cancel subscription
 export const CancelSubscriptionRequestSchema = z.object({
   subscriptionId: z.string().min(1),
-  cancelAtPeriodEnd: z.boolean().default(false),
 });
 
 export const CancelSubscriptionResponseSchema = z.object({

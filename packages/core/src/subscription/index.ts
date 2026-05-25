@@ -100,7 +100,6 @@ export function renewSubscription(input: RenewSubscriptionInput): Date {
  */
 export interface CancelSubscriptionInput {
   currentStatus: SubscriptionStatus;
-  cancelAtPeriodEnd: boolean;
   currentPeriodEndAt: Date | null;
 }
 
@@ -118,26 +117,19 @@ export function cancelSubscription(input: CancelSubscriptionInput): CancelSubscr
     throw new Error(`Cannot cancel subscription with status: ${input.currentStatus}`);
   }
 
-  if (input.cancelAtPeriodEnd) {
-    if (!input.currentPeriodEndAt) {
-      throw new Error("Cannot cancel at period end: currentPeriodEndAt is required");
-    }
-    // Prevent cancel-at-period-end for subscriptions without an active period
-    if (input.currentStatus !== "active") {
-      throw new Error("Cannot cancel at period end: subscription must be active");
-    }
-    // Cancel at period end
+  if (!input.currentPeriodEndAt) {
+    // No active period (e.g., pending subscription) — cancel immediately
     return {
-      status: "active",
+      status: "canceled",
       canceledAt: now,
-      endedAt: input.currentPeriodEndAt,
+      endedAt: now,
     };
   }
 
-  // Immediate cancellation
+  // Cancel at period end — user keeps access until current expiry
   return {
-    status: "canceled",
+    status: input.currentStatus,
     canceledAt: now,
-    endedAt: now,
+    endedAt: input.currentPeriodEndAt,
   };
 }

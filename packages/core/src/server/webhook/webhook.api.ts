@@ -184,15 +184,17 @@ export const handleWebhook = defineBirrJSMethod(
     updateFields.status = newStatus;
 
     try {
-      await database
-        .update(subscription)
-        .set(updateFields)
-        .where(eq(subscription.id, subscriptionRecord.id));
+      await database.transaction(async (tx) => {
+        await tx
+          .update(subscription)
+          .set(updateFields)
+          .where(eq(subscription.id, subscriptionRecord.id));
 
-      await database
-        .update(webhookEvent)
-        .set({ status: "completed", processedAt: new Date() })
-        .where(eq(webhookEvent.id, webhookEventId));
+        await tx
+          .update(webhookEvent)
+          .set({ status: "completed", processedAt: new Date() })
+          .where(eq(webhookEvent.id, webhookEventId));
+      });
     } catch (error) {
       await database
         .update(webhookEvent)
