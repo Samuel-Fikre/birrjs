@@ -1,11 +1,12 @@
 import { APIError } from "better-call";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
-import { subscription } from "../../database/schema";
-import { calculateExpiresAt } from "../../subscription";
+import { generateId } from "../../core/utils";
+import { subscription, webhookEvent } from "../../database/schema";
+import { renewSubscription } from "../../subscription";
 import type { PlanInterval } from "../../types";
 
 function headersToRecord(headers: Headers): Record<string, string> {
@@ -51,33 +52,78 @@ export const handleWebhook = defineBirrJSMethod(
     logger.info({ event: payload.event, tx_ref: payload.tx_ref }, "Webhook received");
 
     // Call provider's handleWebhook method (provider handles signature verification)
-    const webhookEvent = await runtime.handleWebhook(payload, rawBody, headers);
+    const providerEvent = await runtime.handleWebhook(payload, rawBody, headers);
 
     logger.info(
-      { providerReferenceId: webhookEvent.providerReferenceId, type: webhookEvent.type },
+      { providerReferenceId: providerEvent.providerReferenceId, type: providerEvent.type },
       "Webhook processed by provider",
     );
+
+    // Webhook-level idempotency: check if this exact webhook was already processed
+    const providerId = ctx.birrjs.options.provider.id;
+    const existingEvent = await database
+      .select({ id: webhookEvent.id, status: webhookEvent.status })
+      .from(webhookEvent)
+      .where(
+        and(
+          eq(webhookEvent.providerId, providerId),
+          eq(webhookEvent.providerReferenceId, providerEvent.providerReferenceId),
+        ),
+      )
+      .limit(1);
+
+    let webhookEventId: string;
+    if (existingEvent[0]) {
+      if (existingEvent[0].status === "completed") {
+        logger.info(
+          { providerId, providerReferenceId: providerEvent.providerReferenceId },
+          "Duplicate webhook, skipping",
+        );
+        return { success: true, message: "Webhook already processed" };
+      }
+      // Previously failed or still processing — retry
+      webhookEventId = existingEvent[0].id;
+      await database
+        .update(webhookEvent)
+        .set({ status: "processing", error: null, receivedAt: new Date() })
+        .where(eq(webhookEvent.id, webhookEventId));
+    } else {
+      // First time seeing this webhook
+      webhookEventId = generateId("wh");
+      await database.insert(webhookEvent).values({
+        id: webhookEventId,
+        providerId,
+        providerReferenceId: providerEvent.providerReferenceId,
+        type: providerEvent.type,
+        payload: providerEvent.payload,
+        status: "processing",
+        receivedAt: new Date(),
+      });
+    }
 
     // Find subscription by providerTxRef (tx_ref from webhook)
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(eq(subscription.providerTxRef, webhookEvent.providerReferenceId))
+      .where(eq(subscription.providerTxRef, providerEvent.providerReferenceId))
       .limit(1);
 
     const subscriptionRecord = subscriptions[0];
 
     if (!subscriptionRecord) {
       logger.warn(
-        { tx_ref: webhookEvent.providerReferenceId },
+        { tx_ref: providerEvent.providerReferenceId },
         "Subscription not found for webhook",
       );
-      // Return success anyway to avoid retry spam
+      await database
+        .update(webhookEvent)
+        .set({ status: "ignored", processedAt: new Date() })
+        .where(eq(webhookEvent.id, webhookEventId));
       return { success: true, message: "Webhook processed (subscription not found)" };
     }
 
     // Map webhook event type to subscription status
-    const eventType = webhookEvent.type;
+    const eventType = providerEvent.type;
     let newStatus: string;
     const updateFields: {
       status: string;
@@ -94,15 +140,30 @@ export const handleWebhook = defineBirrJSMethod(
       case "charge.success":
         newStatus = "active";
         updateFields.lastPaymentAt = new Date();
-        updateFields.startedAt = new Date();
+        if (!subscriptionRecord.startedAt) {
+          updateFields.startedAt = new Date();
+        }
         if (subscriptionRecord.interval) {
-          updateFields.expiresAt = calculateExpiresAt(
-            updateFields.startedAt,
-            subscriptionRecord.interval as PlanInterval,
-          );
+          updateFields.expiresAt = renewSubscription({
+            currentExpiresAt: subscriptionRecord.expiresAt ?? new Date(),
+            interval: subscriptionRecord.interval as PlanInterval,
+          });
         }
         break;
       case "charge.failed/cancelled":
+        // Don't mark active subscriptions as failed (renewal attempt failed,
+        // but current access is still valid until current expiry)
+        if (subscriptionRecord.status === "active") {
+          logger.info(
+            { subscriptionId: subscriptionRecord.id },
+            "Renewal payment failed, current subscription remains active",
+          );
+          await database
+            .update(webhookEvent)
+            .set({ status: "completed", processedAt: new Date() })
+            .where(eq(webhookEvent.id, webhookEventId));
+          return { success: true, message: "Renewal payment failed, subscription unchanged" };
+        }
         newStatus = "failed";
         break;
       case "charge.reversed":
@@ -113,25 +174,32 @@ export const handleWebhook = defineBirrJSMethod(
         break;
       default:
         logger.warn({ eventType }, "Unknown webhook event");
+        await database
+          .update(webhookEvent)
+          .set({ status: "ignored", processedAt: new Date() })
+          .where(eq(webhookEvent.id, webhookEventId));
         return { success: true, message: "Unknown event ignored" };
     }
 
     updateFields.status = newStatus;
 
-    // Skip update if status unchanged (idempotency)
-    if (subscriptionRecord.status === newStatus) {
-      logger.info(
-        { subscriptionId: subscriptionRecord.id, status: newStatus },
-        "Webhook received but status already matches",
-      );
-      return { success: true, message: "Webhook processed (no status change)" };
-    }
+    try {
+      await database
+        .update(subscription)
+        .set(updateFields)
+        .where(eq(subscription.id, subscriptionRecord.id));
 
-    // Update subscription status
-    await database
-      .update(subscription)
-      .set(updateFields)
-      .where(eq(subscription.id, subscriptionRecord.id));
+      await database
+        .update(webhookEvent)
+        .set({ status: "completed", processedAt: new Date() })
+        .where(eq(webhookEvent.id, webhookEventId));
+    } catch (error) {
+      await database
+        .update(webhookEvent)
+        .set({ status: "failed", error: String(error), processedAt: new Date() })
+        .where(eq(webhookEvent.id, webhookEventId));
+      throw error;
+    }
 
     logger.info(
       {

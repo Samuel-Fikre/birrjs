@@ -85,10 +85,11 @@ export function createSubscription(input: CreateSubscriptionInput): CreateSubscr
 export interface RenewSubscriptionInput {
   currentExpiresAt: Date;
   interval: PlanInterval;
+  _now?: Date;
 }
 
 export function renewSubscription(input: RenewSubscriptionInput): Date {
-  const now = new Date();
+  const now = input._now ?? new Date();
   const renewalDate =
     input.currentExpiresAt.getTime() > now.getTime() ? input.currentExpiresAt : now;
   return calculateExpiresAt(renewalDate, input.interval);

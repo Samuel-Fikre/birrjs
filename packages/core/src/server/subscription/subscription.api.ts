@@ -69,46 +69,65 @@ export const subscribe = defineBirrJSMethod(
       .limit(1);
     const customerRecord = customers[0];
 
-    // Create subscription
-    const subscriptionId = generateId("sub");
+    // Check for existing active subscription (renewal path)
+    const existingSubscriptions = await database
+      .select()
+      .from(subscription)
+      .where(
+        and(
+          eq(subscription.customerId, customerRecord!.id),
+          eq(subscription.planId, planRecord.id),
+          eq(subscription.status, "active"),
+        ),
+      )
+      .limit(1);
+    const existingSubscription = existingSubscriptions[0];
 
-    // Initialize payment with provider
+    const subscriptionId = existingSubscription?.id ?? generateId("sub");
     const txRef = `tx_${crypto.randomUUID()}`;
 
-    // Store subscription in database with status "pending"
-    const newSubscription = {
-      ...createSubscription({
-        id: subscriptionId,
-        customerId: customerRecord!.id,
-        planId: planRecord.id,
-        interval:
-          (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
-      }),
-      cancelAtPeriodEnd: false,
-      providerTxRef: txRef,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    await database.insert(subscription).values(newSubscription);
+    if (existingSubscription) {
+      // Renewal: update existing subscription's providerTxRef
+      await database
+        .update(subscription)
+        .set({ providerTxRef: txRef, updatedAt: new Date() })
+        .where(eq(subscription.id, existingSubscription.id));
+    } else {
+      // New subscription: create pending record + entitlements
+      const newSubscription = {
+        ...createSubscription({
+          id: subscriptionId,
+          customerId: customerRecord!.id,
+          planId: planRecord.id,
+          interval:
+            (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
+        }),
+        cancelAtPeriodEnd: false,
+        providerTxRef: txRef,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await database.insert(subscription).values(newSubscription);
 
-    // Create entitlement records for each plan feature
-    const planFeatures = await database
-      .select()
-      .from(planFeature)
-      .where(eq(planFeature.planId, planRecord.internalId));
+      // create Entitlement record
+      const planFeatures = await database
+        .select()
+        .from(planFeature)
+        .where(eq(planFeature.planId, planRecord.internalId));
 
-    for (const pf of planFeatures) {
-      await database.insert(entitlement).values({
-        id: generateId("ent"),
-        subscriptionId: subscriptionId,
-        customerId: customerRecord!.id,
-        featureId: pf.featureId,
-        limit: pf.limit,
-        balance: pf.limit,
-        nextResetAt: pf.resetInterval
-          ? addResetInterval(new Date(), pf.resetInterval as ResetInterval)
-          : null,
-      });
+      for (const pf of planFeatures) {
+        await database.insert(entitlement).values({
+          id: generateId("ent"),
+          subscriptionId,
+          customerId: customerRecord!.id,
+          featureId: pf.featureId,
+          limit: pf.limit,
+          balance: pf.limit,
+          nextResetAt: pf.resetInterval
+            ? addResetInterval(new Date(), pf.resetInterval as ResetInterval)
+            : null,
+        });
+      }
     }
 
     const transactionRequest: TransactionRequest = {
@@ -123,14 +142,14 @@ export const subscribe = defineBirrJSMethod(
     try {
       transaction = await runtime.initializeTransaction(transactionRequest);
     } catch (error) {
-      // Update subscription to failed on error
-      await database
-        .update(subscription)
-        .set({
-          status: "failed",
-          updatedAt: new Date(),
-        })
-        .where(eq(subscription.id, subscriptionId));
+      // For new subscriptions: mark as failed (was never activated)
+      // For renewals: leave existing active subscription untouched
+      if (!existingSubscription) {
+        await database
+          .update(subscription)
+          .set({ status: "failed", updatedAt: new Date() })
+          .where(eq(subscription.id, subscriptionId));
+      }
       throw error;
     }
 
