@@ -83,31 +83,3 @@ export interface ChapaVerifyResponse {
     updated_at: string;
   } | null;
 }
-
-/**
- * Chapa webhook event structure
- */
-export interface ChapaWebhookEvent {
-  event: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  mobile: string;
-  currency: string;
-  amount: string;
-  charge: string;
-  status: ChapaTransactionStatus;
-  mode: string;
-  reference: string;
-  created_at: string;
-  updated_at: string;
-  type: string;
-  tx_ref: string;
-  payment_method: string;
-  customization: {
-    title: string | null;
-    description: string | null;
-    logo: string | null;
-  } | null;
-  meta: unknown | null;
-}

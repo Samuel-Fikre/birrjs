@@ -11,12 +11,12 @@ import { toDecimalAmount, fromDecimalAmount } from "@birrjs/core";
 import type { ChapaClient } from "./client";
 import { createChapaClient } from "./client";
 import { ChapaError, CHAPA_ERROR_CODES, ChapaApiError } from "./errors";
+import { ChapaWebhookEventSchema } from "./schemas";
 import type {
   ChapaTransactionRequest,
   ChapaTransactionResponse,
   ChapaVerifyResponse,
 } from "./types";
-import { isChapaWebhookEvent } from "./validation";
 
 /**
  * Create Chapa provider
@@ -206,14 +206,15 @@ export function createChapaProvider(
     ): Promise<WebhookEvent> {
       try {
         // Validate webhook payload structure
-        if (!isChapaWebhookEvent(payload)) {
+        const parsed = ChapaWebhookEventSchema.safeParse(payload);
+        if (!parsed.success) {
           throw new ChapaError(
             "Invalid webhook payload structure",
             CHAPA_ERROR_CODES.INVALID_WEBHOOK,
           );
         }
 
-        const event = payload;
+        const event = parsed.data;
 
         // Verify webhook signature if webhookSecret is provided
         if (config.webhookSecret) {
