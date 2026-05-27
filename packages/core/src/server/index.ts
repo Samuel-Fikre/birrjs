@@ -63,7 +63,7 @@ export type BirrJSAPI<TOptions extends BirrJSOptions = BirrJSOptions> = Generate
   TOptions
 >;
 
-function wrapMethods<TMethods extends Record<string, unknown>>(
+export function wrapMethods<TMethods extends Record<string, unknown>>(
   source: TMethods,
   ctx: BirrJSContext | Promise<BirrJSContext>,
 ): GenerateBirrJSAPI<TMethods, BirrJSOptions> {

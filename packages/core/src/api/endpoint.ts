@@ -134,7 +134,6 @@ async function resolveCustomer(
 export type BirrJSMethod<TServerInput, TResult> = {
   (birrjs: BirrJSContext, input: TServerInput): Promise<TResult>;
   client?: boolean;
-  path?: string;
   endpoint?: { options: unknown; path: string } & Record<string, unknown>;
 };
 
@@ -214,13 +213,11 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
     );
 
     call.client = routeConfig.client === true;
-    call.path = routeConfig.path;
     call.endpoint = endpoint as unknown as { options: unknown; path: string };
   }
 
   return call as unknown as BirrJSMethod<ServerMethodInput<TConfig>, TResult> & {
     client?: boolean;
-    path?: string;
     endpoint?: { options: unknown; path: string };
   };
 }
