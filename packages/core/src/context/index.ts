@@ -51,7 +51,7 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
       destroyed = true;
 
       // Stop scheduler if running
-      if (options.scheduling?.mode === "auto") {
+      if (options.scheduling?.mode === "auto" || options.scheduling?.mode === undefined) {
         stopScheduler();
         logger.info("Scheduler stopped");
       }
@@ -62,13 +62,20 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
     },
   };
 
-  // Start scheduler if mode is auto
-  if (options.scheduling?.mode === "auto") {
-    const pendingCron = options.scheduling.pendingSweepCron || "*/5 * * * *";
-    const expiryCron = options.scheduling.expirySweepCron || "*/10 * * * *";
+  // Start scheduler if mode is auto or unset
+  const schedulerMode = options.scheduling?.mode;
+  if (schedulerMode === "auto" || schedulerMode === undefined) {
+    if (schedulerMode === undefined) {
+      logger.warn(
+        "birrjs: No scheduling mode configured. Defaulting to 'auto'. " +
+          "Set scheduling.mode to 'manual' or 'external' to disable.",
+      );
+    }
+    const pendingCron = options.scheduling?.pendingSweepCron || "*/5 * * * *";
+    const expiryCron = options.scheduling?.expirySweepCron || "*/10 * * * *";
     try {
       startScheduler(ctx, pendingCron, expiryCron);
-      logger.info("Scheduler started in auto mode");
+      logger.info("Scheduler started");
     } catch (error) {
       await ctx.destroy();
       throw error;
