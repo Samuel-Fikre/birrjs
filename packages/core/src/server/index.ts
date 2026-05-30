@@ -101,7 +101,9 @@ function getRouteEndpoints<TMethods extends Record<string, { endpoint?: Endpoint
 }
 
 export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
-  const routeEndpoints = getRouteEndpoints(methods as Record<string, { endpoint?: Endpoint }>);
+  const routeEndpoints = getRouteEndpoints(
+    methods as unknown as Record<string, { endpoint?: Endpoint }>,
+  );
 
   return createRouter(routeEndpoints, {
     basePath: options.basePath ?? "/api",

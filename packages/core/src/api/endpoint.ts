@@ -63,7 +63,9 @@ type InferMethodInput<TConfig extends BirrJSMethodConfig> =
 type AddCustomerId<TInput> = TInput extends undefined
   ? { customerId: string }
   : TInput extends object
-    ? TInput & { customerId: string }
+    ? TInput extends { [key: string]: never }
+      ? { customerId: string }
+      : TInput & { customerId: string }
     : TInput;
 
 type ServerMethodInput<TConfig extends BirrJSMethodConfig> =
@@ -76,6 +78,26 @@ type InferRequireCustomer<TConfig extends BirrJSMethodConfig> = TConfig extends 
 }
   ? true
   : false;
+
+type InferRoutePath<TConfig extends BirrJSMethodConfig> = TConfig["route"] extends {
+  path: infer TPath extends string;
+}
+  ? TPath
+  : never;
+
+type InferClientRoute<TConfig extends BirrJSMethodConfig> = TConfig["route"] extends {
+  client: true;
+}
+  ? true
+  : false;
+
+type InferMethodMeta<TConfig extends BirrJSMethodConfig> = [InferRoutePath<TConfig>] extends [never]
+  ? { client?: undefined; endpoint?: undefined }
+  : {
+      endpoint: { options: unknown; path: InferRoutePath<TConfig> };
+    } & (InferClientRoute<TConfig> extends true
+      ? { client: true }
+      : { client?: false | undefined });
 
 type OptionalCustomer<TRequireCustomer extends boolean> = TRequireCustomer extends true
   ? { customer: Customer }
@@ -151,7 +173,7 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
   handler: (
     ctx: BirrJSMethodContext<TConfig["input"], InferRequireCustomer<TConfig>>,
   ) => Promise<TResult>,
-): BirrJSMethod<ServerMethodInput<TConfig>, TResult> {
+): BirrJSMethod<ServerMethodInput<TConfig>, TResult> & InferMethodMeta<TConfig> {
   const call = async (
     birrjs: BirrJSContext,
     input: ServerMethodInput<TConfig>,
@@ -225,8 +247,5 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
     call.endpoint = endpoint as unknown as { options: unknown; path: string };
   }
 
-  return call as unknown as BirrJSMethod<ServerMethodInput<TConfig>, TResult> & {
-    client?: boolean;
-    endpoint?: { options: unknown; path: string };
-  };
+  return call as BirrJSMethod<ServerMethodInput<TConfig>, TResult> & InferMethodMeta<TConfig>;
 }

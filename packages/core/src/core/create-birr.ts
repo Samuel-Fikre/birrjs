@@ -78,7 +78,7 @@ async function initContext(options: BirrJSOptions): Promise<BirrJSContext> {
   return ctx;
 }
 
-export function createBirr<TOptions extends BirrJSOptions>(
+export function createBirr<const TOptions extends BirrJSOptions>(
   options: TOptions,
 ): BirrInstance<TOptions> {
   let contextPromise: Promise<BirrJSContext> | undefined;

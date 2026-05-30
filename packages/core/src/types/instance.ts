@@ -11,24 +11,40 @@ export type ClientMethodKeys<TMethods extends Record<string, { client?: boolean 
   [K in keyof TMethods]-?: TMethods[K] extends { client: true } ? K : never;
 }[keyof TMethods];
 
-export type BirrJSInput<M> = M extends BirrJSMethod<infer TInput, unknown> ? TInput : never;
+export type BirrJSInput<M> = M extends (
+  birrjs: BirrJSContext,
+  input: infer TInput,
+) => Promise<unknown>
+  ? TInput
+  : never;
 
-export type BirrJSOutput<M> = M extends BirrJSMethod<unknown, infer TOutput> ? TOutput : never;
+export type BirrJSOutput<M> = M extends (
+  birrjs: BirrJSContext,
+  input: infer _,
+) => Promise<infer TOutput>
+  ? TOutput
+  : never;
 
 // Type-level refinement utils
 
 type OmitCustomerId<T> = T extends object ? Omit<T, "customerId"> : T;
 
-type NarrowPlanId<T, TOptions extends { plans?: readonly BirrJSPlan[] }> = T extends {
-  planId: string;
-}
-  ? Omit<T, "planId"> & { planId: PlanIdFromOptions<TOptions> }
+type NarrowPlanId<
+  T,
+  TOptions extends { plans?: readonly BirrJSPlan[] },
+> = TOptions["plans"] extends readonly [unknown, ...unknown[]]
+  ? T extends { planId: string }
+    ? Omit<T, "planId"> & { planId: PlanIdFromOptions<TOptions> }
+    : T
   : T;
 
-type NarrowFeatureId<T, TOptions extends { plans?: readonly BirrJSPlan[] }> = T extends {
-  featureId: string;
-}
-  ? Omit<T, "featureId"> & { featureId: FeatureIdFromOptions<TOptions> }
+type NarrowFeatureId<
+  T,
+  TOptions extends { plans?: readonly BirrJSPlan[] },
+> = TOptions["plans"] extends readonly [unknown, ...unknown[]]
+  ? T extends { featureId: string }
+    ? Omit<T, "featureId"> & { featureId: FeatureIdFromOptions<TOptions> }
+    : T
   : T;
 
 type RefineServerInput<T, TOptions extends { plans?: readonly BirrJSPlan[] }> = NarrowFeatureId<
@@ -53,19 +69,13 @@ export type BirrJSClientMethods<
 
 // Server API (all methods, planId/featureId narrowed)
 
-type BirrJSMethodInput<T> = T extends (birrjs: BirrJSContext, input: infer I) => unknown
-  ? I
-  : never;
-
-type BirrJSMethodResult<T> = T extends (...args: unknown[]) => Promise<infer R> ? R : never;
-
 export type GenerateBirrJSAPI<
   TMethods extends Record<string, unknown>,
   TOptions extends { plans?: readonly BirrJSPlan[] } = { plans?: readonly BirrJSPlan[] },
 > = {
-  [K in keyof TMethods]: [BirrJSMethodInput<TMethods[K]>] extends [void] | [never]
-    ? () => Promise<BirrJSMethodResult<TMethods[K]>>
-    : (
-        input: RefineServerInput<BirrJSMethodInput<TMethods[K]>, TOptions>,
-      ) => Promise<BirrJSMethodResult<TMethods[K]>>;
+  [K in keyof TMethods]: TMethods[K] extends (birrjs: BirrJSContext, input: infer I) => infer R
+    ? [I] extends [void] | [never]
+      ? () => R
+      : (input: RefineServerInput<I, TOptions>) => R
+    : never;
 };
