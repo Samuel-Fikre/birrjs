@@ -36,7 +36,12 @@ export const customer = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...createTimestampColumns(),
   },
-  (table) => [index("birrjs_customer_deleted_at_idx").on(table.deletedAt)],
+  (table) => [
+    index("birrjs_customer_deleted_at_idx").on(table.deletedAt),
+    uniqueIndex("birrjs_customer_email_unique")
+      .on(table.email)
+      .where(sql`${table.deletedAt} IS NULL`),
+  ],
 );
 
 export const plan = pgTable(

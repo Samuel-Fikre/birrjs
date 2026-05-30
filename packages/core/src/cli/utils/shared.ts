@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 import type { createContext, BirrJSContext } from "../../context";
 import type { getPendingMigrationCount, migrateDatabase } from "../../database/migrate";
 import type { NormalizedPlan } from "../../plans/schema";
-import type { dryRunSyncPlans, syncPlans, SyncPlanResult } from "../../plans/sync";
+import type { dryRunSyncPlans, syncPlans } from "../../plans/sync";
 import type { detectPackageManager, getInstallCommand, getRunCommand } from "./detect";
 import type { formatPlanLine, formatPrice, getConnectionString } from "./format";
 import type { getBirrJSConfig, LoadedConfig } from "./get-config";

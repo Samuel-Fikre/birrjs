@@ -14,6 +14,8 @@ import {
   updateCustomer,
   listCustomers,
   getCustomer,
+  getCustomerWithDetailsEndpoint,
+  deleteCustomer,
 } from "./customer/customer.api";
 // Entitlement methods
 import {
@@ -41,6 +43,8 @@ export const methods = {
   updateCustomer,
   listCustomers,
   getCustomer,
+  getCustomerWithDetails: getCustomerWithDetailsEndpoint,
+  deleteCustomer,
   listPlans,
   getSubscription,
   checkSubscription,

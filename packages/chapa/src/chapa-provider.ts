@@ -101,8 +101,12 @@ export function createChapaProvider(
             );
           }
           if (statusCode >= 400) {
+            const detail =
+              error instanceof ChapaApiError && error.body
+                ? ` - ${JSON.stringify(error.body)}`
+                : "";
             throw new ChapaError(
-              `Chapa client error: ${statusCode}`,
+              `Chapa client error: ${statusCode}${detail}`,
               CHAPA_ERROR_CODES.CLIENT_ERROR,
               statusCode,
             );
@@ -178,8 +182,12 @@ export function createChapaProvider(
             );
           }
           if (statusCode >= 400) {
+            const detail =
+              error instanceof ChapaApiError && error.body
+                ? ` - ${JSON.stringify(error.body)}`
+                : "";
             throw new ChapaError(
-              `Chapa client error: ${statusCode}`,
+              `Chapa client error: ${statusCode}${detail}`,
               CHAPA_ERROR_CODES.CLIENT_ERROR,
               statusCode,
             );

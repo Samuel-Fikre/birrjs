@@ -39,7 +39,7 @@ export const PaginationResponseMetaSchema = z.object({
 
 // Reusable customer fields
 export const CustomerInputSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().max(100).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -47,13 +47,10 @@ export const CustomerInputSchema = z.object({
 // Subscribe to a plan
 export const SubscribeRequestSchema = z.object({
   planId: z.string().min(1),
-  email: z.string().email(),
-  name: z.string().max(100).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const SubscribeResponseSchema = z.object({
-  checkoutUrl: z.string().url(),
+  checkoutUrl: z.url(),
   subscriptionId: z.string(),
   customerId: z.string(),
 });
@@ -180,6 +177,50 @@ export const GetCustomerResponseSchema = z.object({
 
 export type GetCustomerRequest = z.infer<typeof GetCustomerRequestSchema>;
 export type GetCustomerResponse = z.infer<typeof GetCustomerResponseSchema>;
+
+// Get customer with details
+export const GetCustomerWithDetailsRequestSchema = z.object({
+  customerId: z.string().min(1),
+});
+
+export const GetCustomerWithDetailsResponseSchema = z.object({
+  customer: CustomerSchema.extend({
+    subscriptions: z.array(
+      z.object({
+        id: z.string(),
+        planId: z.string(),
+        status: z.string(),
+        effectiveStatus: z.string(),
+        expiresAt: z.date().nullable(),
+        cancelAtPeriodEnd: z.boolean(),
+        createdAt: z.date(),
+      }),
+    ),
+    entitlements: z.record(
+      z.string(),
+      z.object({
+        featureId: z.string(),
+        balance: z.number(),
+        limit: z.number(),
+        usage: z.number(),
+        unlimited: z.boolean(),
+        nextResetAt: z.date().nullable(),
+      }),
+    ),
+  }),
+});
+
+export type GetCustomerWithDetailsRequest = z.infer<typeof GetCustomerWithDetailsRequestSchema>;
+export type GetCustomerWithDetailsResponse = z.infer<typeof GetCustomerWithDetailsResponseSchema>;
+
+// Delete customer
+export const DeleteCustomerRequestSchema = z.object({
+  customerId: z.string().min(1),
+});
+
+export const DeleteCustomerResponseSchema = z.object({
+  success: z.boolean(),
+});
 
 // Webhook schemas
 export const WebhookEventSchema = z.enum([

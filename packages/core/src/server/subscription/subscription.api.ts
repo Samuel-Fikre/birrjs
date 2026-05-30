@@ -6,11 +6,10 @@ import {
   SubscribeRequestSchema,
   CancelSubscriptionRequestSchema,
   GetSubscriptionRequestSchema,
-  CheckSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import { generateId } from "../../core/utils";
-import { plan, subscription, customer, planFeature, entitlement } from "../../database/schema";
+import { plan, subscription, planFeature, entitlement } from "../../database/schema";
 import { addResetInterval } from "../../entitlement/entitlement.service";
 import type { ResetInterval } from "../../plans/schema";
 import type { TransactionRequest } from "../../provider";
@@ -27,6 +26,7 @@ import type { Subscription } from "../../types/models";
 export const subscribe = defineBirrJSMethod(
   {
     input: SubscribeRequestSchema,
+    requireCustomer: true,
     route: {
       client: true,
       method: "POST",
@@ -34,7 +34,8 @@ export const subscribe = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { planId, email, name, metadata } = ctx.input;
+    const { planId } = ctx.input;
+    const { customer } = ctx;
     const { database, runtime } = ctx.birrjs;
 
     // Check if plan exists
@@ -44,41 +45,13 @@ export const subscribe = defineBirrJSMethod(
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);
     }
 
-    // Find or create customer
-    // Create customer with upsert pattern to prevent race conditions
-    const customerId = `cus_${crypto.randomUUID()}`;
-    const newCustomer = {
-      id: customerId,
-      email,
-      name: name || null,
-      metadata: (metadata as Record<string, string>) || null,
-      deletedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await database
-      .insert(customer)
-      .values(newCustomer)
-      .onConflictDoNothing({ target: customer.email });
-
-    const customers = await database
-      .select()
-      .from(customer)
-      .where(eq(customer.email, email))
-      .limit(1);
-    const customerRecord = customers[0];
-    if (!customerRecord) {
-      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
-    }
-
     // Check for existing active subscription (renewal path)
     const existingSubscriptions = await database
       .select()
       .from(subscription)
       .where(
         and(
-          eq(subscription.customerId, customerRecord.id),
+          eq(subscription.customerId, customer.id),
           eq(subscription.planId, planRecord.id),
           eq(subscription.status, "active"),
         ),
@@ -100,7 +73,7 @@ export const subscribe = defineBirrJSMethod(
       const newSubscription = {
         ...createSubscription({
           id: subscriptionId,
-          customerId: customerRecord.id,
+          customerId: customer.id,
           planId: planRecord.id,
           interval:
             (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
@@ -122,7 +95,7 @@ export const subscribe = defineBirrJSMethod(
         await database.insert(entitlement).values({
           id: generateId("ent"),
           subscriptionId,
-          customerId: customerRecord.id,
+          customerId: customer.id,
           featureId: pf.featureId,
           limit: pf.limit,
           balance: pf.limit,
@@ -136,7 +109,7 @@ export const subscribe = defineBirrJSMethod(
     const transactionRequest: TransactionRequest = {
       amount: planRecord.priceAmount || 0,
       currency: planRecord.currency || "ETB",
-      email: email,
+      email: customer.email ?? "",
       txRef,
       callbackUrl: ctx.birrjs.options.callbackUrl,
     };
@@ -157,6 +130,12 @@ export const subscribe = defineBirrJSMethod(
     }
 
     if (!transaction.checkoutUrl) {
+      if (!existingSubscription) {
+        await database
+          .update(subscription)
+          .set({ status: "failed", updatedAt: new Date() })
+          .where(eq(subscription.id, subscriptionId));
+      }
       throw BirrJSError.from(
         "INTERNAL_SERVER_ERROR",
         BIRRJS_ERROR_CODES.TRANSACTION_INVALID_RESPONSE,
@@ -166,7 +145,7 @@ export const subscribe = defineBirrJSMethod(
     return {
       checkoutUrl: transaction.checkoutUrl,
       subscriptionId,
-      customerId: customerRecord!.id,
+      customerId: customer.id,
     };
   },
 );
@@ -190,12 +169,12 @@ export const listSubscriptions = defineBirrJSMethod(
   async (ctx) => {
     const { database, options } = ctx.birrjs;
     const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
-    const { customerId } = ctx;
+    const { customer } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(eq(subscription.customerId, customerId))
+      .where(eq(subscription.customerId, customer.id))
       .limit(limit)
       .offset(offset)
       .orderBy(desc(subscription.createdAt));
@@ -203,7 +182,7 @@ export const listSubscriptions = defineBirrJSMethod(
     const totalResult = await database
       .select({ value: count() })
       .from(subscription)
-      .where(eq(subscription.customerId, customerId));
+      .where(eq(subscription.customerId, customer.id));
     const total = totalResult[0]?.value || 0;
 
     const subscriptionsWithEffectiveStatus = subscriptions.map((sub) => ({
@@ -240,12 +219,12 @@ export const cancelSubscriptionEndpoint = defineBirrJSMethod(
   async (ctx) => {
     const { database } = ctx.birrjs;
     const { subscriptionId } = ctx.input;
-    const { customerId } = ctx;
+    const { customer } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customerId)))
+      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customer.id)))
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
@@ -296,12 +275,12 @@ export const getSubscription = defineBirrJSMethod(
   async (ctx) => {
     const { database, options } = ctx.birrjs;
     const { subscriptionId } = ctx.input;
-    const { customerId } = ctx;
+    const { customer } = ctx;
 
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customerId)))
+      .where(and(eq(subscription.id, subscriptionId), eq(subscription.customerId, customer.id)))
       .limit(1);
     const subscriptionRecord = subscriptions[0];
     if (!subscriptionRecord) {
@@ -323,7 +302,8 @@ export const getSubscription = defineBirrJSMethod(
 
 export const checkSubscription = defineBirrJSMethod(
   {
-    input: CheckSubscriptionRequestSchema,
+    input: z.object({}),
+    requireCustomer: true,
     route: {
       method: "POST",
       path: "/check-subscription",
@@ -331,13 +311,13 @@ export const checkSubscription = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database, options } = ctx.birrjs;
-    const { customerId } = ctx.input;
+    const { customer } = ctx;
 
     // Get the most recent subscription for the customer
     const subscriptions = await database
       .select()
       .from(subscription)
-      .where(eq(subscription.customerId, customerId))
+      .where(eq(subscription.customerId, customer.id))
       .orderBy(desc(subscription.createdAt))
       .limit(1);
 

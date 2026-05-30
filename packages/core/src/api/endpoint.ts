@@ -4,6 +4,11 @@ import type * as z from "zod";
 
 import type { BirrJSContext } from "../context";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
+import {
+  getCustomerByIdOrThrow,
+  syncCustomerWithDefaults,
+} from "../server/customer/customer.service";
+import type { Customer } from "../types/models";
 
 const birrjsMiddleware = createMiddleware(async () => {
   return {} as BirrJSContext;
@@ -73,8 +78,8 @@ type InferRequireCustomer<TConfig extends BirrJSMethodConfig> = TConfig extends 
   : false;
 
 type OptionalCustomer<TRequireCustomer extends boolean> = TRequireCustomer extends true
-  ? { customerId: string }
-  : { customerId?: undefined };
+  ? { customer: Customer }
+  : { customer?: undefined };
 
 export type BirrJSMethodContext<
   TInput,
@@ -105,7 +110,7 @@ async function resolveCustomer(
   ctx: BirrJSContext,
   request: Request | undefined,
   explicitCustomerId?: string,
-): Promise<{ customerId: string }> {
+): Promise<Customer> {
   if (ctx.options.identify && request) {
     const identity = await ctx.options.identify(request);
 
@@ -117,7 +122,11 @@ async function resolveCustomer(
       throw BirrJSError.from("FORBIDDEN", BIRRJS_ERROR_CODES.CUSTOMER_ID_MISMATCH);
     }
 
-    return { customerId: identity.customerId };
+    return syncCustomerWithDefaults(ctx.database, {
+      id: identity.customerId,
+      email: identity.email,
+      name: identity.name,
+    });
   }
 
   if (request) {
@@ -125,7 +134,7 @@ async function resolveCustomer(
   }
 
   if (explicitCustomerId) {
-    return { customerId: explicitCustomerId };
+    return getCustomerByIdOrThrow(ctx.database, explicitCustomerId);
   }
 
   throw BirrJSError.from("UNAUTHORIZED", BIRRJS_ERROR_CODES.IDENTIFY_REQUIRED);
@@ -164,7 +173,7 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
     return handler({
       birrjs,
       input: validatedInput,
-      ...(customer ? { customerId: customer.customerId } : {}),
+      ...(customer ? { customer } : {}),
       params: {} as Record<string, string>,
     } as BirrJSMethodContext<TConfig["input"], InferRequireCustomer<TConfig>>);
   };
@@ -206,7 +215,7 @@ export function defineBirrJSMethod<const TConfig extends BirrJSMethodConfig, TRe
           input: cleaned as InferInput<TConfig["input"]>,
           headers: ctx.headers,
           request: ctx.request,
-          ...(customer ? { customerId: customer.customerId } : {}),
+          ...(customer ? { customer } : {}),
           params: ctx.params,
         } as BirrJSMethodContext<TConfig["input"], InferRequireCustomer<TConfig>>);
       },

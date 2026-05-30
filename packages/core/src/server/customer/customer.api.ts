@@ -1,4 +1,4 @@
-import { eq, desc, count, and, isNull } from "drizzle-orm";
+import { desc, count, eq, isNull } from "drizzle-orm";
 import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
@@ -6,10 +6,13 @@ import {
   CreateCustomerRequestSchema,
   UpdateCustomerRequestSchema,
   GetCustomerRequestSchema,
+  GetCustomerWithDetailsRequestSchema,
+  DeleteCustomerRequestSchema,
 } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import { customer } from "../../database/schema";
 import type { Customer } from "../../types/models";
+import { getCustomerByIdOrThrow, getCustomerWithDetails } from "./customer.service";
 
 /**
  * Create customer
@@ -60,15 +63,7 @@ export const updateCustomer = defineBirrJSMethod(
     const { database } = ctx.birrjs;
     const { customerId, email, name, metadata } = ctx.input;
 
-    const customers = await database
-      .select()
-      .from(customer)
-      .where(and(eq(customer.id, customerId), isNull(customer.deletedAt)))
-      .limit(1);
-    const customerRecord = customers[0];
-    if (!customerRecord) {
-      throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
-    }
+    await getCustomerByIdOrThrow(database, customerId);
 
     const updateData: Partial<Customer> = {
       updatedAt: new Date(),
@@ -147,18 +142,64 @@ export const getCustomer = defineBirrJSMethod(
     const { database } = ctx.birrjs;
     const { customerId } = ctx.input;
 
-    const customers = await database
-      .select()
-      .from(customer)
-      .where(and(eq(customer.id, customerId), isNull(customer.deletedAt)))
-      .limit(1);
-    const customerRecord = customers[0];
-    if (!customerRecord) {
+    const customerRecord = await getCustomerByIdOrThrow(database, customerId);
+
+    return {
+      customer: customerRecord,
+    };
+  },
+);
+
+/**
+ * Get customer with details (subscriptions, entitlements)
+ */
+export const getCustomerWithDetailsEndpoint = defineBirrJSMethod(
+  {
+    input: GetCustomerWithDetailsRequestSchema,
+    route: {
+      method: "GET",
+      path: "/get-customer-with-details",
+    },
+  },
+  async (ctx) => {
+    const { database } = ctx.birrjs;
+    const { customerId } = ctx.input;
+
+    const details = await getCustomerWithDetails(database, customerId);
+    if (!details) {
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.CUSTOMER_NOT_FOUND);
     }
 
     return {
-      customer: customerRecord as Customer,
+      customer: details,
+    };
+  },
+);
+
+/**
+ * Delete customer (soft delete)
+ */
+export const deleteCustomer = defineBirrJSMethod(
+  {
+    input: DeleteCustomerRequestSchema,
+    route: {
+      method: "POST",
+      path: "/delete-customer",
+    },
+  },
+  async (ctx) => {
+    const { database } = ctx.birrjs;
+    const { customerId } = ctx.input;
+
+    const customerRecord = await getCustomerByIdOrThrow(database, customerId);
+
+    await database
+      .update(customer)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(customer.id, customerRecord.id));
+
+    return {
+      success: true,
     };
   },
 );

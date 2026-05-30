@@ -25,7 +25,7 @@ export const check = defineBirrJSMethod(
   },
   async (ctx) =>
     checkEntitlement(ctx.birrjs.database, {
-      customerId: ctx.customerId,
+      customerId: ctx.customer.id,
       featureId: ctx.input.featureId,
       now: new Date(),
       required: ctx.input.required,
@@ -45,7 +45,7 @@ export const report = defineBirrJSMethod(
   async (ctx) =>
     reportEntitlement(ctx.birrjs.database, {
       amount: ctx.input.amount,
-      customerId: ctx.customerId,
+      customerId: ctx.customer.id,
       featureId: ctx.input.featureId,
       now: new Date(),
     }),

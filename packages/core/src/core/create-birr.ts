@@ -5,7 +5,7 @@ import type { BirrJSContext } from "../context";
 import { createContext } from "../context";
 import { getPendingMigrationCount } from "../database/migrate";
 import type { PlanIdFromOptions, FeatureIdFromOptions } from "../plans/schema";
-import { dryRunSyncPlans, syncPlans } from "../plans/sync";
+import { dryRunSyncPlans } from "../plans/sync";
 import { getApi, createBirrJSRouter } from "../server";
 import type { BirrJSClientAPI, BirrJSAPI } from "../server/index";
 import type { BirrJSOptions } from "../types";
