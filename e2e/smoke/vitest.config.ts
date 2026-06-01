@@ -6,7 +6,7 @@ export default defineConfig({
   envDir: resolve(__dirname, "../../"),
   test: {
     name: "e2e",
-    include: ["smoke/**/*.test.ts"],
+
     env: { NODE_ENV: "production" },
     fileParallelism: false,
     maxWorkers: 1,
