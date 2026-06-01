@@ -38,7 +38,7 @@ export const priceSchema = z.object({
     .number()
     .positive("Price amount must be positive")
     .max(999_999.99, "Price amount must not exceed 999,999.99"),
-  interval: z.enum(["month", "year"]),
+  interval: z.enum(["daily", "weekly", "monthly", "yearly"]),
   currency: z.string().optional(),
 });
 

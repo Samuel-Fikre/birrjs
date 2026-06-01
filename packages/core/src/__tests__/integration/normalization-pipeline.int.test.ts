@@ -44,15 +44,20 @@ function makeBooleanFeature(featureId: string): FeatureInclude {
 
 describe("normalizePlan", () => {
   it("converts a BirrJSPlan to a NormalizedPlan with default currency", () => {
-    const result = normalizePlan(makePlan({ price: { amount: 1000, interval: "month" } }), "ETB");
+    const result = normalizePlan(makePlan({ price: { amount: 1000, interval: "monthly" } }), "ETB");
 
-    expect(result.priceAmount).toBe(1000);
-    expect(result.currency).toBe("ETB");
+    expect(result).toEqual(
+      expect.objectContaining({
+        priceAmount: 1000,
+        priceInterval: "monthly",
+        currency: "ETB",
+      }),
+    );
   });
 
-  it("uses price.currency over defaultCurrency when provided", () => {
+  it("normalizes price with explicit currency", () => {
     const result = normalizePlan(
-      makePlan({ price: { amount: 500, interval: "month", currency: "USD" } }),
+      makePlan({ price: { amount: 500, interval: "monthly", currency: "USD" } }),
       "ETB",
     );
 
@@ -98,15 +103,15 @@ describe("normalizePlan", () => {
 
 describe("computePlanHash", () => {
   it("produces the same hash for identical plans", () => {
-    const a = normalizePlan(makePlan({ price: { amount: 1000, interval: "month" } }), "ETB");
-    const b = normalizePlan(makePlan({ price: { amount: 1000, interval: "month" } }), "ETB");
+    const a = normalizePlan(makePlan({ price: { amount: 1000, interval: "monthly" } }), "ETB");
+    const b = normalizePlan(makePlan({ price: { amount: 1000, interval: "monthly" } }), "ETB");
 
     expect(computePlanHash(a)).toBe(computePlanHash(b));
   });
 
   it("changes when price changes", () => {
     const free = normalizePlan(makePlan(), "ETB");
-    const paid = normalizePlan(makePlan({ price: { amount: 1000, interval: "month" } }), "ETB");
+    const paid = normalizePlan(makePlan({ price: { amount: 1000, interval: "monthly" } }), "ETB");
 
     expect(computePlanHash(free)).not.toBe(computePlanHash(paid));
   });

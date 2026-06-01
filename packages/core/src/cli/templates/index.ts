@@ -23,7 +23,7 @@ export const pro = plan({
   id: "pro",
   name: "Pro",
   group: "base",
-  price: { amount: 29, interval: "month" },
+  price: { amount: 29, interval: "monthly" },
 });
 `,
   },
@@ -47,7 +47,7 @@ export const pro = plan({
   id: "pro",
   name: "Pro",
   group: "base",
-  price: { amount: 29, interval: "month" },
+  price: { amount: 29, interval: "monthly" },
   includes: [messages({ limit: 5000, reset: "month" })],
 });
 `,
@@ -61,7 +61,7 @@ export const pro = plan({
 // export const myPlan = plan({
 //   id: "my-plan",
 //   name: "My Plan",
-//   price: { amount: 29, interval: "month" },
+//   price: { amount: 29, interval: "monthly" },
 // });
 `,
   },

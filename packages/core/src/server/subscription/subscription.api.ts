@@ -18,6 +18,7 @@ import {
   cancelSubscription as cancelSubscriptionLogic,
 } from "../../subscription";
 import { getEffectiveStatus } from "../../subscription/effective-status";
+import type { PlanInterval } from "../../types";
 import type { Subscription } from "../../types/models";
 
 /**
@@ -75,8 +76,7 @@ export const subscribe = defineBirrJSMethod(
           id: subscriptionId,
           customerId: customer.id,
           planId: planRecord.id,
-          interval:
-            (planRecord.priceInterval as "monthly" | "yearly" | "weekly" | "daily") || "monthly",
+          interval: (planRecord.priceInterval ?? "monthly") as PlanInterval,
         }),
         cancelAtPeriodEnd: false,
         providerTxRef: txRef,

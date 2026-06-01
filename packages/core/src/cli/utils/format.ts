@@ -22,10 +22,10 @@ export function formatPrice(amountCents: number | null, interval: string | null)
   if (!interval) {
     return formatted;
   }
-  if (interval === "month") {
+  if (interval === "monthly") {
     return `${formatted}/mo`;
   }
-  if (interval === "year") {
+  if (interval === "yearly") {
     return `${formatted}/yr`;
   }
   return `${formatted}/${interval}`;
