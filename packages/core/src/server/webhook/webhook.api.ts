@@ -59,9 +59,24 @@ export const handleWebhook = defineBirrJSMethod(
       "Webhook processed by provider",
     );
 
-    // Webhook-level idempotency: check if this exact webhook was already processed
+    // Webhook-level idempotency: try insert first, let unique index handle races
     const providerId = ctx.birrjs.options.provider.id;
-    const existingEvent = await database
+    const newEventId = generateId("wh");
+    await database
+      .insert(webhookEvent)
+      .values({
+        id: newEventId,
+        providerId,
+        providerReferenceId: providerEvent.providerReferenceId,
+        type: providerEvent.type,
+        payload: providerEvent.payload,
+        status: "processing",
+        receivedAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    // Determine which event was actually committed (ours or a concurrent one)
+    const [existingEvent] = await database
       .select({ id: webhookEvent.id, status: webhookEvent.status })
       .from(webhookEvent)
       .where(
@@ -72,34 +87,22 @@ export const handleWebhook = defineBirrJSMethod(
       )
       .limit(1);
 
-    let webhookEventId: string;
-    if (existingEvent[0]) {
-      if (existingEvent[0].status === "completed") {
+    if (!existingEvent) {
+      throw new Error("Webhook event not found after insert");
+    }
+
+    if (existingEvent.id !== newEventId) {
+      // Another request inserted this event first
+      if (existingEvent.status === "completed") {
         logger.info(
           { providerId, providerReferenceId: providerEvent.providerReferenceId },
           "Duplicate webhook, skipping",
         );
         return { success: true, message: "Webhook already processed" };
       }
-      // Previously failed or still processing — retry
-      webhookEventId = existingEvent[0].id;
-      await database
-        .update(webhookEvent)
-        .set({ status: "processing", error: null, receivedAt: new Date() })
-        .where(eq(webhookEvent.id, webhookEventId));
-    } else {
-      // First time seeing this webhook
-      webhookEventId = generateId("wh");
-      await database.insert(webhookEvent).values({
-        id: webhookEventId,
-        providerId,
-        providerReferenceId: providerEvent.providerReferenceId,
-        type: providerEvent.type,
-        payload: providerEvent.payload,
-        status: "processing",
-        receivedAt: new Date(),
-      });
     }
+
+    const webhookEventId = existingEvent.id;
 
     // Find subscription by providerTxRef (tx_ref from webhook)
     const subscriptions = await database

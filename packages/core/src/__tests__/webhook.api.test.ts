@@ -192,7 +192,7 @@ describe("webhook error scenarios", () => {
 
   it("handles subscription not found gracefully", async () => {
     const { db } = createMockDb([
-      [], // no existing webhook event
+      [{ id: "wh_skip", status: "processing" }], // re-query after insert
       [], // no matching subscription
     ]);
     const c = ctx({
@@ -218,7 +218,7 @@ describe("webhook error scenarios", () => {
 
   it("catches DB transaction failure and marks webhook as failed", async () => {
     const { db, updateMock } = createMockDb([
-      [], // no existing webhook event
+      [{ id: "wh_fail", status: "processing" }], // re-query after insert
       [
         {
           id: "sub_1",
