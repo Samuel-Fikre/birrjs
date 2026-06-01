@@ -27,6 +27,8 @@ function validateAdminAuth(ctx: {
   headers?: Headers;
   birrjs: { options: { adminSecret?: string } };
 }): void {
+  if (!ctx.headers) return;
+
   const auth = ctx.headers?.get("authorization");
   if (!auth?.startsWith("Bearer ")) {
     throw new APIError("UNAUTHORIZED", {
@@ -167,13 +169,15 @@ export const listCustomers = defineBirrJSMethod(
 export const getCustomer = defineBirrJSMethod(
   {
     input: GetCustomerRequestSchema,
-    requireCustomer: true,
     route: {
       method: "GET",
       path: "/get-customer",
+      requireHeaders: true,
     },
   },
   async (ctx) => {
+    validateAdminAuth(ctx);
+
     const { database } = ctx.birrjs;
     const { customerId } = ctx.input;
 
@@ -191,13 +195,15 @@ export const getCustomer = defineBirrJSMethod(
 export const getCustomerWithDetailsEndpoint = defineBirrJSMethod(
   {
     input: GetCustomerWithDetailsRequestSchema,
-    requireCustomer: true,
     route: {
       method: "GET",
       path: "/get-customer-with-details",
+      requireHeaders: true,
     },
   },
   async (ctx) => {
+    validateAdminAuth(ctx);
+
     const { database } = ctx.birrjs;
     const { customerId } = ctx.input;
 

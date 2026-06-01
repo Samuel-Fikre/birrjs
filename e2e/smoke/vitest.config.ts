@@ -3,10 +3,11 @@ import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  envDir: resolve(__dirname, "../../"),
   test: {
+    name: "e2e",
     include: ["smoke/**/*.test.ts"],
     env: { NODE_ENV: "production" },
-    envDir: resolve(__dirname, "../../"),
     fileParallelism: false,
     maxWorkers: 1,
     sequence: { concurrent: false },
