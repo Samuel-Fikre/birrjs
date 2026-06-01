@@ -1,283 +1,353 @@
-import type { NormalizedWebhookEvent } from "@birrjs/core";
+import type {
+  PaymentProvider,
+  PaymentProviderConfig,
+  TransactionRequest,
+  TransactionResponse,
+  VerificationResponse,
+  WebhookEvent,
+} from "@birrjs/core";
+import { toDecimalAmount, fromDecimalAmount } from "@birrjs/core";
 
 import type { ChapaClient } from "./client";
-import type { ChapaProviderConfig, ChapaRuntime } from "./types";
-import { ChapaError, CHAPA_ERROR_CODES } from "./errors";
+import { createChapaClient } from "./client";
+import { ChapaError, CHAPA_ERROR_CODES, ChapaApiError } from "./errors";
+import { ChapaWebhookEventSchema } from "./schemas";
+import type {
+  ChapaTransactionRequest,
+  ChapaTransactionResponse,
+  ChapaVerifyResponse,
+} from "./types";
 
+/**
+ * Create Chapa provider
+ */
 export function createChapaProvider(
   client: ChapaClient,
-  config: ChapaProviderConfig,
-): ChapaRuntime {
-  const currency = config.currency ?? "ETB";
+  config: PaymentProviderConfig,
+): PaymentProvider {
+  const defaultCurrency = config.currency ?? "ETB";
 
   return {
-    async upsertCustomer(data) {
-      // Chapa doesn't have customer management - return mock customer ID
-      return {
-        providerCustomer: {
-          id: data.id,
-          frozenTime: data.createTestClock ? new Date().toISOString() : undefined,
-          testClockId: data.createTestClock ? `clock-${data.id}` : undefined,
-        },
-      };
-    },
+    async initializeTransaction(request: TransactionRequest): Promise<TransactionResponse> {
+      try {
+        // Convert minor units to decimal for Chapa
+        const chapaRequest: ChapaTransactionRequest = {
+          amount: toDecimalAmount(request.amount),
+          currency: request.currency ?? defaultCurrency,
+          email: request.email,
+          first_name: request.firstName ?? "",
+          last_name: request.lastName ?? "",
+          phone_number: request.phoneNumber,
+          tx_ref: request.txRef,
+          callback_url: request.callbackUrl,
+          return_url: request.returnUrl ?? "",
+        };
 
-    async deleteCustomer(data) {
-      // Chapa doesn't have customer management - no-op
-      return;
-    },
+        const response: ChapaTransactionResponse = await client.initializeTransaction(chapaRequest);
 
-    async getTestClock(data) {
-      // Chapa doesn't support test clocks - throw error
-      throw ChapaError.from(
-        "Chapa does not support test clocks",
-        CHAPA_ERROR_CODES.TEST_CLOCK_NOT_SUPPORTED,
-      );
-    },
+        // Check for provider failure response
+        if (response.status === "failed" || response.status === "cancelled") {
+          return {
+            success: false,
+            error: response.message || "Transaction failed",
+          };
+        }
 
-    async advanceTestClock(data) {
-      // Chapa doesn't support test clocks - throw error
-      throw ChapaError.from(
-        "Chapa does not support test clocks",
-        CHAPA_ERROR_CODES.TEST_CLOCK_NOT_SUPPORTED,
-      );
-    },
+        // Check for malformed response (missing checkout_url)
+        if (!response.data?.checkout_url) {
+          return {
+            success: false,
+            error: "Invalid response from Chapa: missing checkout URL",
+          };
+        }
 
-    async attachPaymentMethod(data) {
-      // Chapa doesn't have payment method management - throw error
-      throw ChapaError.from(
-        "Chapa does not support payment method management",
-        CHAPA_ERROR_CODES.PAYMENT_METHOD_NOT_SUPPORTED,
-      );
-    },
+        return {
+          success: true,
+          checkoutUrl: response.data.checkout_url,
+          txRef: request.txRef,
+        };
+      } catch (error) {
+        // Use structured error fields from ChapaApiError
+        if (error instanceof ChapaApiError) {
+          const { statusCode } = error;
 
-    async createSubscriptionCheckout(data) {
-      // Use Chapa's transaction initialize for subscription checkout
-      const txRef = `sub-${data.providerCustomerId}-${Date.now()}`;
+          // Determine error type based on status code
+          if (statusCode >= 500) {
+            throw new ChapaError(
+              `Chapa server error: ${statusCode}`,
+              CHAPA_ERROR_CODES.SERVER_ERROR,
+              statusCode,
+            );
+          }
+          if (statusCode === 401) {
+            throw new ChapaError(
+              "Chapa authorization failed: invalid API key",
+              CHAPA_ERROR_CODES.UNAUTHORIZED,
+              statusCode,
+            );
+          }
+          if (statusCode === 404) {
+            throw new ChapaError(
+              "Chapa resource not found",
+              CHAPA_ERROR_CODES.NOT_FOUND,
+              statusCode,
+            );
+          }
+          if (statusCode === 429) {
+            throw new ChapaError(
+              "Chapa rate limit exceeded",
+              CHAPA_ERROR_CODES.RATE_LIMITED,
+              statusCode,
+            );
+          }
+          if (statusCode >= 400) {
+            const detail =
+              error instanceof ChapaApiError && error.body
+                ? ` - ${JSON.stringify(error.body)}`
+                : "";
+            throw new ChapaError(
+              `Chapa client error: ${statusCode}${detail}`,
+              CHAPA_ERROR_CODES.CLIENT_ERROR,
+              statusCode,
+            );
+          }
+          throw new ChapaError(error.message, CHAPA_ERROR_CODES.INITIALIZATION_FAILED, statusCode);
+        }
 
-      // Chapa requires amount - get from metadata (temporary workaround)
-      const amount = data.metadata?.amount;
-      if (!amount) {
-        throw ChapaError.from(
-          "'amount' is missing in metadata. Since Chapa is a stateless gateway, you must provide the amount in the checkout call via metadata.amount",
-          CHAPA_ERROR_CODES.AMOUNT_REQUIRED,
+        // Fallback for other error types
+        if (error instanceof Error) {
+          throw new ChapaError(error.message, CHAPA_ERROR_CODES.INITIALIZATION_FAILED);
+        }
+
+        throw new ChapaError(
+          "Unknown error initializing transaction",
+          CHAPA_ERROR_CODES.INITIALIZATION_FAILED,
         );
       }
+    },
 
-      const response = await client.initializeTransaction({
-        amount,
-        currency,
-        email: config.fallbackCustomer?.email ?? "",
-        first_name: config.fallbackCustomer?.firstName ?? "",
-        last_name: config.fallbackCustomer?.lastName ?? "",
-        tx_ref: txRef,
-        callback_url: config.callbackUrl,
-        return_url: data.successUrl,
-        customization: {
-          title: "Subscription Payment",
-          description: "Subscription payment via Chapa",
-        },
-      });
+    async verifyTransaction(txRef: string): Promise<VerificationResponse> {
+      try {
+        const response: ChapaVerifyResponse = await client.verifyTransaction(txRef);
 
-      if (!response.data || !response.data.checkout_url) {
-        throw ChapaError.from(
-          "Chapa failed to create checkout session",
-          CHAPA_ERROR_CODES.CHECKOUT_SESSION_FAILED,
+        if (response.status !== "success") {
+          return {
+            success: false,
+            status: response.status,
+            error: "Transaction verification failed",
+          };
+        }
+
+        return {
+          success: true,
+          status: response.status,
+          amount: response.data ? fromDecimalAmount(response.data.amount.toString()) : undefined,
+          currency: response.data?.currency,
+          email: response.data?.email,
+          txRef: response.data?.tx_ref,
+          providerTxRef: response.data?.reference,
+          mode: response.data?.mode,
+        };
+      } catch (error) {
+        if (error instanceof ChapaApiError) {
+          const { statusCode } = error;
+
+          // Determine error type based on status code
+          if (statusCode >= 500) {
+            throw new ChapaError(
+              `Chapa server error: ${statusCode}`,
+              CHAPA_ERROR_CODES.SERVER_ERROR,
+              statusCode,
+            );
+          }
+          if (statusCode === 401) {
+            throw new ChapaError(
+              "Chapa authorization failed: invalid API key",
+              CHAPA_ERROR_CODES.UNAUTHORIZED,
+              statusCode,
+            );
+          }
+          if (statusCode === 404) {
+            throw new ChapaError(
+              "Chapa resource not found",
+              CHAPA_ERROR_CODES.NOT_FOUND,
+              statusCode,
+            );
+          }
+          if (statusCode === 429) {
+            throw new ChapaError(
+              "Chapa rate limit exceeded",
+              CHAPA_ERROR_CODES.RATE_LIMITED,
+              statusCode,
+            );
+          }
+          if (statusCode >= 400) {
+            const detail =
+              error instanceof ChapaApiError && error.body
+                ? ` - ${JSON.stringify(error.body)}`
+                : "";
+            throw new ChapaError(
+              `Chapa client error: ${statusCode}${detail}`,
+              CHAPA_ERROR_CODES.CLIENT_ERROR,
+              statusCode,
+            );
+          }
+          throw new ChapaError(error.message, CHAPA_ERROR_CODES.VERIFICATION_FAILED, statusCode);
+        }
+
+        // Fallback for other error types
+        if (error instanceof Error) {
+          throw new ChapaError(error.message, CHAPA_ERROR_CODES.VERIFICATION_FAILED);
+        }
+
+        throw new ChapaError(
+          "Unknown error verifying transaction",
+          CHAPA_ERROR_CODES.VERIFICATION_FAILED,
         );
       }
-
-      return {
-        paymentUrl: response.data.checkout_url,
-        providerCheckoutSessionId: txRef,
-      };
     },
 
-    async createSubscription(data) {
-      // Chapa doesn't have subscription management - throw error
-      throw ChapaError.from(
-        "Chapa does not support direct subscription creation. Use createSubscriptionCheckout instead.",
-        CHAPA_ERROR_CODES.SUBSCRIPTION_NOT_SUPPORTED,
-      );
-    },
+    async handleWebhook(
+      payload: unknown,
+      rawBody: string | Buffer,
+      headers: Record<string, string>,
+    ): Promise<WebhookEvent> {
+      try {
+        // Validate webhook payload structure
+        const parsed = ChapaWebhookEventSchema.safeParse(payload);
+        if (!parsed.success) {
+          throw new ChapaError(
+            "Invalid webhook payload structure",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
 
-    async updateSubscription(data) {
-      // Chapa doesn't have subscription management - throw error
-      throw ChapaError.from(
-        "Chapa does not support subscription updates. PayKit handles subscription logic.",
-        CHAPA_ERROR_CODES.SUBSCRIPTION_UPDATE_NOT_SUPPORTED,
-      );
-    },
+        const event = parsed.data;
 
-    async createInvoice(data) {
-      // Use Chapa's transaction initialize for invoice payment
-      const totalAmount = data.lines.reduce((sum, line) => sum + line.amount, 0);
+        // Verify webhook signature if webhookSecret is provided
+        if (config.webhookSecret) {
+          const signature = headers["chapa-signature"] || headers["x-chapa-signature"];
+          if (!signature) {
+            throw new ChapaError("Missing webhook signature", CHAPA_ERROR_CODES.INVALID_WEBHOOK);
+          }
 
-      const response = await client.initializeTransaction({
-        amount: totalAmount.toString(),
-        currency,
-        email: config.fallbackCustomer?.email ?? "",
-        first_name: config.fallbackCustomer?.firstName ?? "",
-        last_name: config.fallbackCustomer?.lastName ?? "",
-        tx_ref: `invoice-${data.providerCustomerId}-${Date.now()}`,
-        callback_url: config.callbackUrl,
-        return_url: "",
-        customization: {
-          title: "Invoice Payment",
-          description: "Invoice payment via Chapa",
-        },
-      });
+          // Verify signature using HMAC SHA256 with raw body
+          const crypto = await import("crypto");
+          const expectedSignature = crypto
+            .createHmac("sha256", config.webhookSecret)
+            .update(rawBody)
+            .digest("hex");
 
-      if (!response.data) {
-        throw ChapaError.from("Chapa failed to create invoice", CHAPA_ERROR_CODES.INVOICE_FAILED);
+          // Use timing-safe comparison to prevent timing attacks
+          const signatureBuffer = Buffer.from(signature, "utf8");
+          const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+
+          if (
+            signatureBuffer.length !== expectedBuffer.length ||
+            !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+          ) {
+            throw new ChapaError("Invalid webhook signature", CHAPA_ERROR_CODES.INVALID_WEBHOOK);
+          }
+        }
+
+        // Extract tx_ref from webhook
+        const txRef = event.tx_ref;
+
+        // tx_ref is required for verification
+        if (!txRef) {
+          throw new ChapaError(
+            "Missing tx_ref in webhook payload",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        // Verify transaction with Chapa API before processing (as per Chapa docs)
+        const verification = await this.verifyTransaction(txRef);
+        if (!verification.success) {
+          throw new ChapaError(
+            "Webhook transaction verification failed",
+            CHAPA_ERROR_CODES.VERIFICATION_FAILED,
+          );
+        }
+
+        // Verify critical fields match webhook values
+        if (verification.status !== event.status) {
+          throw new ChapaError(
+            "Webhook status mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        if (verification.amount && verification.amount !== fromDecimalAmount(event.amount)) {
+          throw new ChapaError(
+            "Webhook amount mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        if (verification.currency && verification.currency !== event.currency) {
+          throw new ChapaError(
+            "Webhook currency mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        if (verification.txRef && verification.txRef !== event.tx_ref) {
+          throw new ChapaError(
+            "Webhook tx_ref mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        if (verification.mode && verification.mode !== event.mode) {
+          throw new ChapaError(
+            "Webhook mode mismatch with Chapa API",
+            CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+          );
+        }
+
+        return {
+          providerReferenceId: txRef,
+          type: event.event,
+          payload: event as unknown as Record<string, unknown>,
+        };
+      } catch (error) {
+        // Preserve specific error types instead of always wrapping as INVALID_WEBHOOK
+        if (error instanceof ChapaError) {
+          throw error;
+        }
+        if (error instanceof ChapaApiError) {
+          throw new ChapaError(
+            error.message,
+            CHAPA_ERROR_CODES.VERIFICATION_FAILED,
+            error.statusCode,
+          );
+        }
+        throw new ChapaError(
+          error instanceof Error ? error.message : "Invalid webhook payload",
+          CHAPA_ERROR_CODES.INVALID_WEBHOOK,
+        );
       }
-
-      return {
-        currency,
-        hostedUrl: response.data.checkout_url ?? null,
-        periodEndAt: null,
-        periodStartAt: null,
-        providerInvoiceId: response.data.checkout_url ?? "",
-        status: response.status,
-        totalAmount,
-      };
-    },
-
-    async scheduleSubscriptionChange(data) {
-      // Chapa doesn't have subscription schedules - throw error
-      throw ChapaError.from(
-        "Chapa does not support subscription schedules. PayKit handles renewal logic.",
-        CHAPA_ERROR_CODES.SUBSCRIPTION_SCHEDULE_NOT_SUPPORTED,
-      );
-    },
-
-    async cancelSubscription(data) {
-      // Chapa doesn't have subscription management - no-op (PayKit handles cancellation)
-      return {
-        invoice: null,
-        paymentUrl: null,
-        requiredAction: null,
-        subscription: {
-          cancelAtPeriodEnd: true,
-          canceledAt: data.currentPeriodEndAt ?? null,
-          currentPeriodEndAt: data.currentPeriodEndAt ?? null,
-          currentPeriodStartAt: null,
-          endedAt: null,
-          providerPriceId: null,
-          providerSubscriptionId: data.providerSubscriptionId,
-          providerSubscriptionScheduleId: data.providerSubscriptionScheduleId ?? null,
-          status: "canceled",
-        },
-      };
-    },
-
-    async listActiveSubscriptions(data) {
-      // Chapa doesn't have subscription management - return empty (PayKit tracks subscriptions)
-      return [];
-    },
-
-    async resumeSubscription(data) {
-      // Chapa doesn't have subscription management - no-op (PayKit handles resumption)
-      return {
-        invoice: null,
-        paymentUrl: null,
-        requiredAction: null,
-        subscription: {
-          cancelAtPeriodEnd: false,
-          canceledAt: null,
-          currentPeriodEndAt: null,
-          currentPeriodStartAt: null,
-          endedAt: null,
-          providerPriceId: null,
-          providerSubscriptionId: data.providerSubscriptionId,
-          providerSubscriptionScheduleId: data.providerSubscriptionScheduleId ?? null,
-          status: "active",
-        },
-      };
-    },
-
-    async detachPaymentMethod(data) {
-      // Chapa doesn't have payment method management - no-op
-      return;
-    },
-
-    async syncProduct(data) {
-      // Chapa doesn't have product management - return mock IDs (PayKit tracks products)
-      return {
-        providerProductId: data.existingProviderProductId ?? `product-${data.id}`,
-        providerPriceId: data.existingProviderPriceId ?? `price-${data.id}`,
-      };
-    },
-
-    async handleWebhook(data) {
-      // Parse Chapa webhook and convert to NormalizedWebhookEvent[]
-      const event = JSON.parse(data.body) as {
-        event: string;
-        tx_ref: string;
-        status: string;
-        amount: string;
-      };
-
-      // Verify the transaction with Chapa API to prevent spoofing
-      const verification = await client.verifyTransaction(event.tx_ref);
-
-      if (verification.status !== "success") {
-        return [];
-      }
-
-      // Convert to NormalizedWebhookEvent
-      const normalizedEvent: NormalizedWebhookEvent = {
-        name: "payment.succeeded",
-        payload: {
-          providerEventId: event.tx_ref,
-          payment: {
-            amount: parseFloat(event.amount),
-            createdAt: new Date(),
-            currency: "ETB",
-            description: "Payment via Chapa",
-            metadata: {},
-            providerPaymentId: event.tx_ref,
-            providerMethodId: "",
-            status: "succeeded",
-          },
-          providerCustomerId: verification.data?.tx_ref ?? "",
-        },
-        actions: [
-          {
-            type: "payment.upsert",
-            data: {
-              payment: {
-                amount: parseFloat(event.amount),
-                createdAt: new Date(),
-                currency: "ETB",
-                description: "Payment via Chapa",
-                metadata: {},
-                providerPaymentId: event.tx_ref,
-                providerMethodId: "",
-                status: "succeeded",
-              },
-              providerCustomerId: verification.data?.tx_ref ?? "",
-            },
-          },
-        ],
-      };
-
-      return [normalizedEvent];
-    },
-
-    async createPortalSession(data) {
-      // Chapa doesn't have a customer portal - throw error
-      throw ChapaError.from(
-        "Chapa does not support customer portal",
-        CHAPA_ERROR_CODES.PORTAL_NOT_SUPPORTED,
-      );
     },
   };
 }
 
+/**
+ * Chapa provider configuration
+ */
+export interface ChapaProviderConfig extends PaymentProviderConfig {}
+
+/**
+ * Create Chapa provider configuration
+ */
 export function chapa(config: ChapaProviderConfig): ChapaProviderConfig {
+  const client = createChapaClient(config);
+  const runtime = createChapaProvider(client, config);
+
   return {
     ...config,
-    id: config.id,
+    id: "chapa",
     kind: "chapa",
+    runtime,
   };
 }

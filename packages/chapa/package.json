@@ -7,15 +7,25 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts"
   },
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "test": "vitest"
   },
   "dependencies": {
     "@birrjs/core": "workspace:*",
@@ -23,6 +33,7 @@
   },
   "devDependencies": {
     "tsdown": "^0.21.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^4.1.6"
   }
 }

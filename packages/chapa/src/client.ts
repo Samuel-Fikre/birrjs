@@ -1,5 +1,7 @@
+import type { PaymentProviderConfig } from "@birrjs/core";
+
+import { ChapaApiError } from "./errors";
 import type {
-  ChapaProviderConfig,
   ChapaTransactionRequest,
   ChapaTransactionResponse,
   ChapaVerifyResponse,
@@ -12,7 +14,7 @@ export interface ChapaClient {
   verifyTransaction: (txRef: string) => Promise<ChapaVerifyResponse>;
 }
 
-export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
+export function createChapaClient(config: PaymentProviderConfig): ChapaClient {
   const headers = {
     Authorization: `Bearer ${config.secretKey}`,
     "Content-Type": "application/json",
@@ -28,7 +30,17 @@ export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Chapa API error: ${response.status} - ${errorText}`);
+        let errorBody: unknown;
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch {
+          errorBody = errorText;
+        }
+        throw new ChapaApiError(
+          `Chapa API error: ${response.status} - ${errorText}`,
+          response.status,
+          errorBody,
+        );
       }
 
       const result = (await response.json()) as ChapaTransactionResponse;
@@ -43,7 +55,17 @@ export function createChapaClient(config: ChapaProviderConfig): ChapaClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Chapa API error: ${response.status} - ${errorText}`);
+        let errorBody: unknown;
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch {
+          errorBody = errorText;
+        }
+        throw new ChapaApiError(
+          `Chapa API error: ${response.status} - ${errorText}`,
+          response.status,
+          errorBody,
+        );
       }
 
       const result = (await response.json()) as ChapaVerifyResponse;

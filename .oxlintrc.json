@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn"
+  },
+  "plugins": ["eslint", "typescript", "import", "node"],
+  "rules": {
+    "eslint/no-unused-vars": "warn",
+    "eslint/no-debugger": "error",
+    "eslint/no-shadow": "off",
+    "eslint/prefer-const": "error",
+    "import/no-unassigned-import": "off",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-require-imports": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.*", "**/*.spec.*", "**/test/**", "**/__tests__/**"],
+      "rules": {
+        "typescript/no-require-imports": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist/**",
+    ".next/**",
+    "coverage/**",
+    "build/**",
+    ".turbo/**",
+    ".cache/**",
+    ".claude/**"
+  ]
+}

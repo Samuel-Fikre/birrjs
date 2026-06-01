@@ -1,0 +1,20 @@
+{
+  "name": "e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --config smoke/vitest.config.ts && vitest run --config cli/vitest.config.ts",
+    "test:watch": "vitest --config smoke/vitest.config.ts",
+    "test:ui": "vitest --config smoke/vitest.config.ts --ui",
+    "test:cli": "vitest run --config cli/vitest.config.ts",
+    "test:cli:watch": "vitest --config cli/vitest.config.ts"
+  },
+  "devDependencies": {
+    "@birrjs/chapa": "workspace:*",
+    "@birrjs/core": "workspace:*",
+    "@types/pg": "^8.18.0",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.20.0",
+    "vitest": "^4.0.18"
+  }
+}

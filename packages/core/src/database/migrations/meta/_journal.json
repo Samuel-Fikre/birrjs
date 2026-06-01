@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1778506618109,
+      "tag": "0000_fat_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778699054389,
+      "tag": "0001_wandering_stellaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778753886795,
+      "tag": "0002_puzzling_the_twelve",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779609650536,
+      "tag": "0003_remarkable_purifiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779616616225,
+      "tag": "0004_productive_inhumans",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779958659000,
+      "tag": "0005_loving_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779960000000,
+      "tag": "0006_soft_delete_email_unique",
+      "breakpoints": true
+    }
+  ]
+}

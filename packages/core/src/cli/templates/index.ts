@@ -1,0 +1,68 @@
+export interface PlanTemplate {
+  id: string;
+  name: string;
+  hint: string;
+  content: string;
+}
+
+export const templates: PlanTemplate[] = [
+  {
+    id: "saas-starter",
+    name: "SaaS Starter",
+    hint: "free + pro monthly",
+    content: `import { plan } from "@birrjs/core";
+
+export const free = plan({
+  id: "free",
+  name: "Free",
+  group: "base",
+  default: true,
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  group: "base",
+  price: { amount: 29, interval: "monthly" },
+});
+`,
+  },
+  {
+    id: "usage-based",
+    name: "Usage Based",
+    hint: "metered with limits",
+    content: `import { feature, plan } from "@birrjs/core";
+
+const messages = feature({ id: "messages", type: "metered" });
+
+export const free = plan({
+  id: "free",
+  name: "Free",
+  group: "base",
+  default: true,
+  includes: [messages({ limit: 100, reset: "month" })],
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  group: "base",
+  price: { amount: 29, interval: "monthly" },
+  includes: [messages({ limit: 5000, reset: "month" })],
+});
+`,
+  },
+  {
+    id: "empty",
+    name: "Empty",
+    hint: "start from scratch",
+    content: `import { plan } from "@birrjs/core";
+
+// export const myPlan = plan({
+//   id: "my-plan",
+//   name: "My Plan",
+//   price: { amount: 29, interval: "monthly" },
+// });
+`,
+  },
+];
