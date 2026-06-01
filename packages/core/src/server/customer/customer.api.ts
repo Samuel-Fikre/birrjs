@@ -1,3 +1,6 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
+import { APIError } from "better-call";
 import { desc, count, eq, isNull } from "drizzle-orm";
 import * as z from "zod";
 
@@ -13,6 +16,31 @@ import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import { customer } from "../../database/schema";
 import type { Customer } from "../../types/models";
 import { getCustomerByIdOrThrow, getCustomerWithDetails } from "./customer.service";
+
+function safeCompare(a: string, b: string): boolean {
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(hashA, hashB);
+}
+
+function validateAdminAuth(ctx: {
+  headers?: Headers;
+  birrjs: { options: { adminSecret?: string } };
+}): void {
+  const auth = ctx.headers?.get("authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    throw new APIError("UNAUTHORIZED", {
+      message: "Missing or invalid Authorization header",
+    });
+  }
+  const token = auth.slice(7);
+  const adminSecret = ctx.birrjs.options.adminSecret;
+  if (!adminSecret || !safeCompare(token, adminSecret)) {
+    throw new APIError("UNAUTHORIZED", {
+      message: "Invalid admin secret",
+    });
+  }
+}
 
 /**
  * Create customer
@@ -57,9 +85,12 @@ export const updateCustomer = defineBirrJSMethod(
     route: {
       method: "PATCH",
       path: "/customers/:customerId",
+      requireHeaders: true,
     },
   },
   async (ctx) => {
+    validateAdminAuth(ctx);
+
     const { database } = ctx.birrjs;
     const { customerId, email, name, metadata } = ctx.input;
 
@@ -98,9 +129,12 @@ export const listCustomers = defineBirrJSMethod(
     route: {
       method: "GET",
       path: "/list-customers",
+      requireHeaders: true,
     },
   },
   async (ctx) => {
+    validateAdminAuth(ctx);
+
     const { database } = ctx.birrjs;
     const { limit = 20, offset = 0 } = ctx.input as { limit?: number; offset?: number };
 
@@ -133,6 +167,7 @@ export const listCustomers = defineBirrJSMethod(
 export const getCustomer = defineBirrJSMethod(
   {
     input: GetCustomerRequestSchema,
+    requireCustomer: true,
     route: {
       method: "GET",
       path: "/get-customer",
@@ -156,6 +191,7 @@ export const getCustomer = defineBirrJSMethod(
 export const getCustomerWithDetailsEndpoint = defineBirrJSMethod(
   {
     input: GetCustomerWithDetailsRequestSchema,
+    requireCustomer: true,
     route: {
       method: "GET",
       path: "/get-customer-with-details",
@@ -185,9 +221,12 @@ export const deleteCustomer = defineBirrJSMethod(
     route: {
       method: "POST",
       path: "/delete-customer",
+      requireHeaders: true,
     },
   },
   async (ctx) => {
+    validateAdminAuth(ctx);
+
     const { database } = ctx.birrjs;
     const { customerId } = ctx.input;
 

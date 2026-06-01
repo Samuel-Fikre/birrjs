@@ -26,6 +26,7 @@ export interface BirrJSOptions {
   basePath?: string;
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
+  adminSecret?: string;
   identify?: (
     request: Request,
   ) => Promise<{ customerId?: string; email?: string; name?: string } | null>;
