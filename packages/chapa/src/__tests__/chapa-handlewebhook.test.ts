@@ -49,15 +49,13 @@ function validHeaders(): Record<string, string> {
 
 function createMockClient(verifyResult?: unknown, initResult?: unknown): ChapaClient {
   return {
-    initializeTransaction: vi
-      .fn()
-      .mockResolvedValue(
-        initResult ?? {
-          status: "success",
-          message: "ok",
-          data: { checkout_url: "https://checkout.chapa.co/1" },
-        },
-      ),
+    initializeTransaction: vi.fn().mockResolvedValue(
+      initResult ?? {
+        status: "success",
+        message: "ok",
+        data: { checkout_url: "https://checkout.chapa.co/1" },
+      },
+    ),
     verifyTransaction: vi.fn().mockResolvedValue(
       verifyResult ?? {
         status: "success",

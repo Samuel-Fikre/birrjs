@@ -208,12 +208,8 @@
           "name": "birrjs_entitlement_subscription_id_birrjs_subscription_id_fk",
           "tableFrom": "birrjs_entitlement",
           "tableTo": "birrjs_subscription",
-          "columnsFrom": [
-            "subscription_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subscription_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -221,12 +217,8 @@
           "name": "birrjs_entitlement_customer_id_birrjs_customer_id_fk",
           "tableFrom": "birrjs_entitlement",
           "tableTo": "birrjs_customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -234,12 +226,8 @@
           "name": "birrjs_entitlement_feature_id_birrjs_feature_id_fk",
           "tableFrom": "birrjs_entitlement",
           "tableTo": "birrjs_feature",
-          "columnsFrom": [
-            "feature_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -408,12 +396,8 @@
           "name": "birrjs_invoice_customer_id_birrjs_customer_id_fk",
           "tableFrom": "birrjs_invoice",
           "tableTo": "birrjs_customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -421,12 +405,8 @@
           "name": "birrjs_invoice_subscription_id_birrjs_subscription_id_fk",
           "tableFrom": "birrjs_invoice",
           "tableTo": "birrjs_subscription",
-          "columnsFrom": [
-            "subscription_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subscription_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -656,12 +636,8 @@
           "name": "birrjs_plan_feature_plan_id_birrjs_plan_internal_id_fk",
           "tableFrom": "birrjs_plan_feature",
           "tableTo": "birrjs_plan",
-          "columnsFrom": [
-            "plan_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
+          "columnsFrom": ["plan_id"],
+          "columnsTo": ["internal_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -669,12 +645,8 @@
           "name": "birrjs_plan_feature_feature_id_birrjs_feature_id_fk",
           "tableFrom": "birrjs_plan_feature",
           "tableTo": "birrjs_feature",
-          "columnsFrom": [
-            "feature_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -682,10 +654,7 @@
       "compositePrimaryKeys": {
         "birrjs_plan_feature_plan_id_feature_id_pk": {
           "name": "birrjs_plan_feature_plan_id_feature_id_pk",
-          "columns": [
-            "plan_id",
-            "feature_id"
-          ]
+          "columns": ["plan_id", "feature_id"]
         }
       },
       "uniqueConstraints": {},
@@ -832,12 +801,8 @@
           "name": "birrjs_subscription_customer_id_birrjs_customer_id_fk",
           "tableFrom": "birrjs_subscription",
           "tableTo": "birrjs_customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -845,12 +810,8 @@
           "name": "birrjs_subscription_plan_id_birrjs_plan_internal_id_fk",
           "tableFrom": "birrjs_subscription",
           "tableTo": "birrjs_plan",
-          "columnsFrom": [
-            "plan_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
+          "columnsFrom": ["plan_id"],
+          "columnsTo": ["internal_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }

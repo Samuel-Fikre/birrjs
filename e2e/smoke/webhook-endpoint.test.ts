@@ -81,7 +81,7 @@ describe("webhook HTTP endpoint", () => {
   });
 
   afterAll(async () => {
-    ws.close();
+    ws?.close();
     await t?.cleanup();
   });
 
