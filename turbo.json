@@ -1,7 +1,7 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["NODE_ENV"],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "CHAPA_SECRET_KEY", "CALLBACK_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -12,6 +12,11 @@
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "cache": false
     },
     "dev": {
       "cache": false,

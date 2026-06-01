@@ -28,6 +28,7 @@
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
     "typecheck": "tsc --build",
+    "test": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push"
@@ -56,6 +57,7 @@
     "drizzle-kit": "^0.31.5",
     "pino-pretty": "^11.0.0",
     "tsdown": "^0.21.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^4.1.6"
   }
 }

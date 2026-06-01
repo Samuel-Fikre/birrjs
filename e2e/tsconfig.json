@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "outDir": "./node_modules/.cache/ts/out",
+    "tsBuildInfoFile": "./node_modules/.cache/ts/tsbuildinfo"
+  },
+  "references": [{ "path": "../packages/core/tsconfig.build.json" }],
+  "include": ["smoke/**/*.ts", "cli/**/*.ts"]
+}

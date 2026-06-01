@@ -1,4 +1,3 @@
-import type { BirrJSMethod } from "../api/endpoint";
 import type { BirrJSContext } from "../context";
 import type { BirrJSPlan } from "../plans";
 import type { PlanIdFromOptions, FeatureIdFromOptions } from "../plans/schema";

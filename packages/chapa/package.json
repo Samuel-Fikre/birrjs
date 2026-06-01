@@ -24,7 +24,8 @@
   },
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "test": "vitest"
   },
   "dependencies": {
     "@birrjs/core": "workspace:*",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "tsdown": "^0.21.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^4.1.6"
   }
 }
