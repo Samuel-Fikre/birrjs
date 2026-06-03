@@ -2,3 +2,6 @@ packages:
   - "packages/*"
   - "e2e"
   - "landing"
+
+pnpm:
+  minimumReleaseAge: "3 days"
