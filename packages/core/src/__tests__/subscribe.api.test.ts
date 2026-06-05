@@ -73,7 +73,7 @@ describe("subscribe error scenarios", () => {
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
-      options: { callbackUrl: "https://example.com/cb" } as BirrJSContext["options"],
+      options: { provider: { callbackUrl: "https://example.com/cb" } } as BirrJSContext["options"],
       logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -103,7 +103,7 @@ describe("subscribe error scenarios", () => {
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
-      options: { callbackUrl: "https://example.com/cb" } as BirrJSContext["options"],
+      options: { provider: { callbackUrl: "https://example.com/cb" } } as BirrJSContext["options"],
       logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -137,7 +137,7 @@ describe("subscribe error scenarios", () => {
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
-      options: { callbackUrl: "https://example.com/cb" } as BirrJSContext["options"],
+      options: { provider: { callbackUrl: "https://example.com/cb" } } as BirrJSContext["options"],
       logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -173,7 +173,7 @@ describe("subscribe error scenarios", () => {
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
-      options: { callbackUrl: "https://example.com/cb" } as BirrJSContext["options"],
+      options: { provider: { callbackUrl: "https://example.com/cb" } } as BirrJSContext["options"],
       logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -213,7 +213,7 @@ describe("subscribe error scenarios", () => {
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
-      options: { callbackUrl: "https://example.com/cb" } as BirrJSContext["options"],
+      options: { provider: { callbackUrl: "https://example.com/cb" } } as BirrJSContext["options"],
       logger: {
         info: vi.fn(),
         warn: vi.fn(),

@@ -83,10 +83,10 @@ import { createBirr } from "@birrjs/core";${importLine}
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  callbackUrl: process.env.CALLBACK_URL!,
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
   }),${plansLine}${identifyBlock}
 });
 `;

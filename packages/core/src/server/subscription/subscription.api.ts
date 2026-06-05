@@ -111,7 +111,7 @@ export const subscribe = defineBirrJSMethod(
       currency: planRecord.currency || "ETB",
       email: customer.email ?? "",
       txRef,
-      callbackUrl: ctx.birrjs.options.callbackUrl,
+      callbackUrl: ctx.birrjs.options.provider.callbackUrl,
     };
 
     let transaction;

@@ -5,12 +5,12 @@ import { checkEntitlement, reportEntitlement } from "../../entitlement";
 
 const entitlementCheckSchema = z.object({
   featureId: z.string(),
-  required: z.number().positive().optional(),
+  required: z.number().positive().default(1),
 });
 
 const entitlementReportSchema = z.object({
   featureId: z.string(),
-  amount: z.number().positive().optional(),
+  amount: z.number().positive().default(1),
 });
 
 export const check = defineBirrJSMethod(

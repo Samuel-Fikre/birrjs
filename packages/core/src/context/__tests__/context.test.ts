@@ -54,7 +54,6 @@ describe("createContext", () => {
       runtime: {} as unknown as PaymentProvider,
     } satisfies Partial<PaymentProviderConfig>,
     database: {} as Pool,
-    callbackUrl: "",
   };
 
   it("throws when provider is missing", async () => {
