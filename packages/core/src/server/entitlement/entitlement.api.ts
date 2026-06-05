@@ -20,7 +20,7 @@ export const check = defineBirrJSMethod(
     route: {
       client: true,
       method: "POST",
-      path: "/check-entitlement",
+      path: "/check",
     },
   },
   async (ctx) =>
@@ -39,7 +39,7 @@ export const report = defineBirrJSMethod(
     route: {
       client: true,
       method: "POST",
-      path: "/report-entitlement",
+      path: "/report",
     },
   },
   async (ctx) =>

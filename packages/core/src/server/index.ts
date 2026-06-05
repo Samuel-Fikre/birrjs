@@ -18,10 +18,7 @@ import {
   deleteCustomer,
 } from "./customer/customer.api";
 // Entitlement methods
-import {
-  check as checkEntitlement,
-  report as reportEntitlement,
-} from "./entitlement/entitlement.api";
+import { check, report } from "./entitlement/entitlement.api";
 // Plan methods
 import { listPlans } from "./plan/plan.api";
 // Subscription methods
@@ -48,8 +45,8 @@ export const methods = {
   listPlans,
   getSubscription,
   checkSubscription,
-  checkEntitlement,
-  reportEntitlement,
+  check,
+  report,
   handleWebhook,
   checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
   checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,

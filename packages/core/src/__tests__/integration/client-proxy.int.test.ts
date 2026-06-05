@@ -30,7 +30,7 @@ describe("createBirrJSClient proxy", () => {
       baseURL: "http://test.local/api",
     }) as unknown as BirrJSClientProxy;
 
-    await client.checkEntitlement!({});
+    await client.check!({});
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
