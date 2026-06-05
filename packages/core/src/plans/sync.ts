@@ -132,29 +132,32 @@ async function updatePlanName(database: BirrJSDatabase, planId: string, name: st
 }
 
 async function upsertPlanVersion(database: BirrJSDatabase, plan: NormalizedPlan, version: number) {
-  const inserted = await insertPlanVersion(database, {
-    group: plan.group ?? undefined,
-    hash: plan.hash,
-    id: plan.id,
-    isDefault: plan.isDefault,
-    name: plan.name,
-    priceAmount: plan.priceAmount,
-    priceInterval: plan.priceInterval,
-    version,
-    currency: plan.currency,
+  return await database.transaction(async (tx) => {
+    const db = tx as unknown as BirrJSDatabase;
+    const inserted = await insertPlanVersion(db, {
+      group: plan.group ?? undefined,
+      hash: plan.hash,
+      id: plan.id,
+      isDefault: plan.isDefault,
+      name: plan.name,
+      priceAmount: plan.priceAmount,
+      priceInterval: plan.priceInterval,
+      version,
+      currency: plan.currency,
+    });
+
+    const storedPlan = inserted[0] ?? null;
+    if (!storedPlan) {
+      throw new Error(`Failed to insert plan "${plan.id}" version ${version}`);
+    }
+
+    await replacePlanFeatures(db, {
+      features: plan.includes,
+      planId: storedPlan.internalId,
+    });
+
+    return storedPlan;
   });
-
-  const storedPlan = inserted[0] ?? null;
-  if (!storedPlan) {
-    throw new Error(`Failed to insert plan "${plan.id}" version ${version}`);
-  }
-
-  await replacePlanFeatures(database, {
-    features: plan.includes,
-    planId: storedPlan.internalId,
-  });
-
-  return storedPlan;
 }
 
 /**

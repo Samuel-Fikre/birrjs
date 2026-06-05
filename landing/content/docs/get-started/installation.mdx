@@ -234,7 +234,7 @@ export const client = createBirrJSClient<typeof birrjs>();
 
 Create a file for your products:
 
-```ts title="src/lib/birrjs-plans.ts"
+```ts title="plans.ts"
 import { feature, plan } from "@birrjs/core";
 
 const storage = feature({ id: "storage", type: "metered" });
@@ -246,8 +246,8 @@ export const free = plan({
   name: "Free",
   default: true,
   includes: [
-    storage({ limit: 1_000_000_000, reset: "month" }),
-    apiCalls({ limit: 1_000, reset: "month" }),
+    storage({ limit: 1000, reset: "month" }),
+    apiCalls({ limit: 1000, reset: "month" }),
   ],
 });
 
@@ -256,7 +256,7 @@ export const pro = plan({
   name: "Pro",
   price: { amount: 29, interval: "monthly" },
   includes: [
-    storage({ limit: 50_000_000_000, reset: "month" }),
+    storage({ limit: 5000, reset: "month" }),
     apiCalls({ limit: 50_000, reset: "month" }),
     advancedReports(),
   ],
