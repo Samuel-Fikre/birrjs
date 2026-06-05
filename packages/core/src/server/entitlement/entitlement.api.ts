@@ -5,7 +5,7 @@ import { checkEntitlement, reportEntitlement } from "../../entitlement";
 
 const entitlementCheckSchema = z.object({
   featureId: z.string(),
-  required: z.number().positive().default(1),
+  required: z.number().positive().optional(),
 });
 
 const entitlementReportSchema = z.object({

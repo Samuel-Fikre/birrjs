@@ -333,21 +333,39 @@ export function createChapaProvider(
 }
 
 /**
- * Chapa provider configuration
+ * Chapa provider options — what you pass to `chapa()`
  */
-export interface ChapaProviderConfig extends PaymentProviderConfig {}
+export interface ChapaProviderOptions {
+  secretKey: string;
+  webhookSecret?: string;
+  callbackUrl: string;
+  currency?: string;
+  testMode?: boolean;
+}
+
+/**
+ * Chapa provider configuration — what `chapa()` returns
+ */
+export interface ChapaProviderConfig extends ChapaProviderOptions {
+  id: string;
+  kind: string;
+  runtime: PaymentProvider;
+}
 
 /**
  * Create Chapa provider configuration
  */
-export function chapa(config: ChapaProviderConfig): ChapaProviderConfig {
+export function chapa(options: ChapaProviderOptions): ChapaProviderConfig {
+  const config: PaymentProviderConfig = {
+    ...options,
+    id: "chapa",
+    kind: "chapa",
+  };
   const client = createChapaClient(config);
   const runtime = createChapaProvider(client, config);
 
   return {
     ...config,
-    id: "chapa",
-    kind: "chapa",
     runtime,
   };
 }
