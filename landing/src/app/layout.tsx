@@ -5,7 +5,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
 
-import { Navbar } from "@/components/layout/navbar";
 import { Providers } from "@/components/providers";
 import {
   OG_DESCRIPTION,
@@ -71,7 +70,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={cn(geist.variable, fontMono.variable)}>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <Navbar />
         <Providers>{children}</Providers>
         <Analytics />
         {process.env.NODE_ENV === "development" && (

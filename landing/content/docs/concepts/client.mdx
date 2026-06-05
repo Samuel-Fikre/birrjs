@@ -1,0 +1,108 @@
+---
+title: Client SDK
+description: Type-safe client for frontend applications using the Proxy pattern.
+---
+
+The BirrJS client is a dynamic Proxy-based SDK that mirrors your server-side API with full TypeScript inference.
+
+## Creating the client
+
+```ts title="lib/birrjs-client.ts"
+import { createBirrJSClient } from "@birrjs/core";
+import type { birrjs } from "@/birrjs";
+
+export const client = createBirrJSClient<typeof birrjs>();
+```
+
+<Callout type="info">
+  The `import type` syntax carries server types into the browser without bundling any server code.
+</Callout>
+
+The generic type parameter (`typeof birrjs`) gives the client full type inference — autocompletion for method names and their input/output types.
+
+<Callout type="info">
+  **Customer identification is required.** Configure `identify()` on your server instance so the client can resolve the current customer on each request. Without it, methods that require a customer will fail. See [Customers](/docs/concepts/customers#customer-identification-client) for setup.
+</Callout>
+
+### Custom base URL
+
+If your API mounts at a non-default path, pass `baseURL`:
+
+```ts
+export const client = createBirrJSClient<typeof birrjs>({
+  baseURL: "/custom/api",
+});
+```
+
+Defaults to `/api`. This must match the full path prefix where your BirrJS routes are mounted. For example, if your server uses `basePath: "/api/birrjs"`, pass `baseURL: "/api/birrjs"`.
+
+## How it works
+
+- **Proxy pattern** — Method calls are intercepted at runtime
+- **kebab-case URLs** — `listSubscriptions` → POST `/list-subscriptions`
+- **Always POST** — All client methods send POST requests with JSON body
+- **Type inference** — Via a branded carrier type (`BirrJSClientApiCarrier<TClientApi>`)
+
+## Client methods
+
+All 7 client-accessible methods:
+
+| Method | Input | Output |
+|--------|-------|--------|
+| `subscribe` | `{ planId }` | `{ checkoutUrl, subscriptionId, customerId }` |
+| `listSubscriptions` | `{ limit?, offset? }` | `{ subscriptions[], total, limit, offset }` |
+| `cancelSubscription` | `{ subscriptionId }` | `{ subscription }` |
+| `getSubscription` | `{ subscriptionId }` | `{ subscription }` |
+| `listPlans` | `{ limit?, offset? }` | `{ plans[], total, limit, offset }` |
+| `check` | `{ featureId, required? }` | `{ allowed, balance }` |
+| `report` | `{ featureId, amount? }` | `{ balance, success }` |
+
+### Method details
+
+- **`subscribe`** — Creates a subscription and returns a `checkoutUrl` to redirect the customer for payment. The customer is resolved from the current session — do not pass a `customerId`.
+- **`listSubscriptions`** — Returns subscriptions for the current customer. Each subscription includes an `effectiveStatus` computed from the actual status and scheduling rules.
+- **`cancelSubscription`** — Marks the subscription for cancellation at period end. No provider API call is made. Idempotent — safe on already-cancelled subscriptions.
+- **`getSubscription`** — Fetches a single subscription by ID. Returns it with `effectiveStatus`. Only returns the subscription if it belongs to the current customer — throws `NOT_FOUND` otherwise.
+- **`listPlans`** — Lists all plans with pagination. Supports `limit` (max 100) and `offset`.
+- **`check`** — Checks whether the customer has access to a feature, optionally with a minimum `required` count. Returns `{ allowed, balance }` — useful for feature gates.
+- **`report`** — Deducts usage from a metered feature. Returns the updated `balance` and whether the deduction succeeded.
+
+<Callout type="info">
+  A customer billing portal (subscription management UI) is not yet available. If your provider supports it, a self-serve portal may be added in a future release.
+</Callout>
+
+## Using in components
+
+```tsx
+"use client";
+
+import { client } from "@/lib/birrjs-client";
+
+function SubscribeButton({ planId }: { planId: "free" | "pro" }) {
+  return (
+    <button
+      onClick={async () => {
+        const result = await client.subscribe({ planId });
+        window.location.href = result.checkoutUrl;
+      }}
+    >
+      Subscribe to {planId}
+    </button>
+  );
+}
+```
+
+<Callout type="info">
+  When plans are defined inline in your configuration, `planId` and `featureId` are **narrowed to literal unions** — TypeScript will autocomplete valid plan IDs.
+</Callout>
+
+## Type narrowing
+
+If your config defines `plans` with specific IDs, the client automatically narrows:
+
+```ts
+// TypeScript knows planId can only be "free" | "pro"
+const result = await client.subscribe({ planId: "pro" });
+//                                          ^ "free" | "pro"
+```
+

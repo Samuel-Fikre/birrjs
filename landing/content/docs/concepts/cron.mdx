@@ -1,0 +1,110 @@
+---
+title: Scheduling (Cron)
+description: Keep subscription state up to date with periodic sweep jobs.
+---
+
+BirrJS uses cron sweeps to update subscriptions when events don't arrive via webhook — expired periods and stuck pending payments. Chapa doesn't notify on these, so BirrJS handles them locally.
+
+## Sweep Jobs
+
+Two maintenance sweeps keep subscription state consistent:
+
+| Sweep | Default interval | What it does |
+|-------|-----------------|--------------|
+| Pending | Every 5 min | Marks `pending` subscriptions older than the timeout as `failed` |
+| Expiry | Every 10 min | Marks `active` subscriptions past their period end as `expired` |
+
+These are purely data updates — no payment operations, no provider API calls.
+
+## Scheduling Modes
+
+### Auto (default)
+
+Sweeps run inside your application process. Recommended for long-running Node.js/Bun apps.
+
+```ts
+createBirr({
+  scheduling: {
+    mode: "auto",
+    // Optional overrides:
+    pendingSweepCron: "*/5 * * * *",
+    expirySweepCron: "*/10 * * * *",
+    pendingTimeoutMinutes: 60,
+  },
+});
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `mode` | — | Set to `"auto"` |
+| `pendingSweepCron` | `*/5 * * * *` | Cron expression for pending check |
+| `expirySweepCron` | `*/10 * * * *` | Cron expression for expiry check |
+| `pendingTimeoutMinutes` | `60` | Age at which pending subs are marked failed |
+
+<Callout type="info">
+  Auto mode uses UTC for scheduling, includes overlap guards, and stops sweeps on graceful shutdown.
+</Callout>
+
+### External
+
+Exposes HTTP endpoints for your own cron service. Best for serverless (Vercel, AWS Lambda, etc.).
+
+```ts
+createBirr({
+  scheduling: {
+    mode: "external",
+    cronSecret: "your-secret-key",
+  },
+});
+```
+
+```bash
+curl -X POST https://your-app.com/api/birrjs/cron/pending \
+  -H "Authorization: Bearer your-secret-key"
+
+curl -X POST https://your-app.com/api/birrjs/cron/expiry \
+  -H "Authorization: Bearer your-secret-key"
+```
+
+| Field | Description |
+|-------|-------------|
+| `mode` | Set to `"external"` |
+| `cronSecret` | Secret key for Bearer auth on cron endpoints |
+
+### Manual
+
+No scheduling. Call the sweep functions directly from your own code or scripts.
+
+```ts
+createBirr({
+  scheduling: { mode: "manual" },
+});
+
+// Run sweeps manually:
+await birrjs.checkPendingSubscriptions();
+await birrjs.checkExpiredSubscriptions();
+```
+
+Useful for testing, one-off maintenance, or custom scheduling logic.
+
+## Mode Comparison
+
+| | Auto | External | Manual |
+|--|------|----------|--------|
+| Internal scheduling | ✅ | ❌ | ❌ |
+| HTTP endpoints | ❌ | ✅ | ❌ |
+| Serverless friendly | ❌ | ✅ | ✅ |
+| Long-running apps | ✅ | ❌ | ✅ |
+
+## Cron Syntax
+
+BirrJS uses the standard 5-field cron syntax:
+
+```
+* * * * *
+│ │ │ │ └─ Day of week (0-6)
+│ │ │ └─── Month (1-12)
+│ │ └───── Day of month (1-31)
+│ └─────── Hour (0-23)
+└───────── Minute (0-59)
+```

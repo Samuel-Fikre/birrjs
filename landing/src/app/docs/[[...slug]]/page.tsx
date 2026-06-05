@@ -1,6 +1,15 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
+import defaultMdxComponents from "fumadocs-ui/mdx";
 import { notFound, redirect } from "next/navigation";
 
+import { CopyMarkdownButton } from "@/components/docs/copy-markdown-button";
 import { source } from "@/lib/source";
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
@@ -18,12 +27,31 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
 
   const MDXContent = page.data.body;
 
+  const baseDir = join(process.cwd(), "content/docs");
+  const slugPath = join(baseDir, ...params.slug);
+  const rawPath = existsSync(slugPath + ".mdx") ? slugPath + ".mdx" : join(slugPath, "index.mdx");
+  const rawContent = readFileSync(rawPath, "utf-8");
+
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
       <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      {page.data.description ? <DocsDescription>{page.data.description}</DocsDescription> : null}
+      <div className="-mt-6 border-b pb-5 mb-4">
+        <CopyMarkdownButton rawContent={rawContent} />
+      </div>
       <DocsBody>
-        <MDXContent />
+        <MDXContent
+          components={{
+            ...defaultMdxComponents,
+            Callout,
+            Card,
+            Cards,
+            Step,
+            Steps,
+            Tab,
+            Tabs,
+          }}
+        />
       </DocsBody>
     </DocsPage>
   );

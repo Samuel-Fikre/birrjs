@@ -1,0 +1,142 @@
+---
+title: Plans & Features
+description: Define products with code-first plans and feature types.
+---
+
+Plans are defined in TypeScript code and synced to the database. This gives you type safety, version history, and a single source of truth.
+
+## Feature Types
+
+BirrJS supports two feature types:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `boolean` | Access/no-access toggle | Analytics, Reports, API access |
+| `metered` | Usage-based with a limit | Messages sent, API calls, storage |
+
+Define a feature with `feature()`:
+
+```ts
+import { feature } from "@birrjs/core";
+
+const messages = feature({ id: "messages", type: "metered" });
+const analytics = feature({ id: "analytics", type: "boolean" });
+```
+
+<Callout type="info">
+  `feature()` returns a callable object. When invoked with a config, it produces a `FeatureInclude` for use inside a `plan()`.
+</Callout>
+
+## Plan Groups
+
+Plans can be organized into groups with the `group` option. A customer can have one active subscription per group at a time.
+
+| Pattern | Group |
+|---------|-------|
+| Free / Pro / Ultra tiers | `"tier"` |
+| One-off addons | `"addons"` |
+| Per-seat pricing | `"seats"` |
+
+```ts
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  group: "tier",
+  // ...
+});
+```
+
+If a plan has `default: true`, it must belong to a group.
+
+## Defining a Plan
+
+```ts
+import { plan } from "@birrjs/core";
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  group: "tier",
+  default: false,
+  price: { amount: 29, interval: "monthly" },
+  includes: [
+    messages({ limit: 5000, reset: "month" }),
+    analytics(),
+  ],
+});
+```
+
+### Plan options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `id` | `string` | Lowercase alphanumeric with `_`/`-` |
+| `name` | `string` | Display name (1-100 chars) |
+| `group` | `string` | Group for organizing plans. Required if `default: true` |
+| `default` | `boolean` | Default plan for a group. A customer without an active subscription is treated as being on this plan — no subscription record is created |
+| `price` | `{ amount, interval, currency? }` | Price in ETB (decimal). E.g. `29` = 29 ETB. Currency defaults to `"ETB"` |
+| `price.currency` | `string` | Currency code (e.g. `"ETB"`, `"USD"`) |
+| `includes` | `FeatureInclude[]` | Feature definitions with limits and resets |
+
+### Price intervals
+
+- `"daily"`, `"weekly"`, `"monthly"`, `"yearly"`
+
+### Reset intervals (for metered features)
+
+- `"day"`, `"week"`, `"month"`, `"year"`
+
+## Adding Plans to Your Instance
+
+Pass your plans array to `createBirr()`:
+
+```ts
+import { createBirr } from "@birrjs/core";
+import { free, pro } from "./birrjs-plans";
+
+export const birrjs = createBirr({
+  // ...
+  plans: [free, pro],
+});
+```
+
+This enables type inference for all plan and feature IDs.
+
+## Syncing Plans to the Database
+
+```bash
+birrjs push
+```
+
+This compares your code-first plan definitions against the database using SHA-256 hashes. If a plan changed, a new version is created with an incremented version number.
+
+### Dry run
+
+Preview changes without writing to the database:
+
+```bash
+birrjs status
+```
+
+`createBirr()` also runs a dry run check automatically in development and warns if plans are out of sync.
+
+<Callout type="warning">
+  Plan IDs must be unique. If you rename a plan, the old one stays in the database — create a new plan and deprecate the old one.
+</Callout>
+
+## Type Inference
+
+BirrJS infers plan IDs and feature IDs from your `plans` array. Typos like `planId: "proe"` or `featureId: "mesages"` are caught at compile time.
+
+Access inferred types via `$infer` on your birrjs instance:
+
+```ts
+type PlanIds = typeof birrjs.$infer.planId;
+type FeatureIds = typeof birrjs.$infer.featureId;
+```
+
+This powers full autocomplete in `subscribe`, `check`, and `report` across your entire app.
+
+## Version History
+
+Each plan change creates a new version row. The database stores all versions, so customers on an old plan keep their entitlements. Only the latest version is used for new subscriptions.

@@ -1,0 +1,61 @@
+---
+title: Plugins
+description: Extend BirrJS with custom endpoints via the plugin system.
+---
+
+The plugin system allows you to add custom HTTP endpoints to the BirrJS router. It follows a phased rollout plan.
+
+## Phase 1: HTTP-only (current)
+
+Plugins add **better-call endpoints** to the BirrJS router. They are not typed on the Proxy client.
+
+### Plugin interface
+
+```ts
+import type { Endpoint } from "better-call";
+
+interface BirrJSPlugin {
+  id: string;
+  endpoints?: Record<string, Endpoint>;
+}
+```
+
+### Example plugin
+
+```ts title="plugins/sms-notifications.ts"
+import type { BirrJSPlugin } from "@birrjs/core";
+import { notifyEndpoint } from "./endpoints/notify";
+
+export const smsPlugin: BirrJSPlugin = {
+  id: "sms-notifications",
+  endpoints: {
+    "/notify": notifyEndpoint,
+  },
+};
+```
+
+### Registering plugins
+
+```ts
+createBirr({
+  // ... other options
+  plugins: [smsPlugin],
+});
+```
+
+## Phase 2: Client-typed plugins (planned)
+
+Plugins will be able to contribute types to the Proxy client so autocompletion works for plugin methods.
+
+## Phase 3: Hooks (planned)
+
+Hooks will allow running custom logic at subscription lifecycle points:
+
+| Hook | Trigger |
+|------|---------|
+| `onBeforeSubscribe` | Before a subscription is created |
+| `onSubscribeComplete` | After payment is confirmed |
+| `onBeforeCancel` | Before a cancellation |
+| `onCancelComplete` | After cancellation |
+
+

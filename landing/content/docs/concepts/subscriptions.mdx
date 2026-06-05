@@ -1,0 +1,141 @@
+---
+title: Subscriptions
+description: The subscription lifecycle — from pending to active to canceled or expired.
+---
+
+## Lifecycle States
+
+```text
+                  ┌──► failed (after 60 min pending)
+pending ──► active ──► expired
+               │
+               └──► canceled (at period end)
+
+none ──► (no subscription record exists)
+```
+
+| State | Description |
+|-------|-------------|
+| `pending` | Created but payment not yet confirmed |
+| `active` | Payment confirmed, customer has access |
+| `expired` | Period ended without renewal |
+| `canceled` | Manually canceled (immediate or at period end) |
+| `failed` | Pending subscription that never activated (effective status) |
+| `none` | Customer has no subscription at all (effective status) |
+
+## Effective Status
+
+BirrJS computes a **runtime effective status** that may differ from the stored database status:
+
+| Stored | Condition | Effective |
+|--------|-----------|-----------|
+| `active` | Within period | `active` |
+| `active` | `expiresAt` passed | `expired` |
+| `pending` | Created > 60 min ago | `failed` |
+| `canceled` | Period not yet ended | `active` (until period end) |
+
+This is handled by `getEffectiveStatus()`:
+
+```ts
+const effective = getEffectiveStatus(subscription);
+// "pending" | "active" | "canceled" | "failed" | "expired" | "none"
+```
+
+## Subscription Flow
+
+<Steps>
+  <Step>
+  ### Subscribe
+
+  Call `subscribe()` with the target plan ID. BirrJS creates a subscription in `pending` status and initializes a transaction with the payment provider. For paid plans, the result includes a `checkoutUrl` to redirect the user.
+
+  <Tabs items={["Client", "Server"]}>
+    <Tab value="Client">
+
+  ```ts
+  const result = await client.subscribe({ planId: "pro" });
+  // result.checkoutUrl → redirect to Chapa checkout
+  ```
+
+    </Tab>
+    <Tab value="Server">
+
+  ```ts
+  const result = await birrjs.subscribe({
+    customerId: "user_123",
+    planId: "pro",
+  });
+  // result.checkoutUrl → return to client for redirect
+  ```
+
+    </Tab>
+  </Tabs>
+  </Step>
+
+  <Step>
+  ### Payment confirmed (webhook)
+
+  When the provider sends a `charge.success` webhook, BirrJS transitions the subscription to `active`, sets `startedAt`, and calculates `expiresAt`.
+  </Step>
+
+  <Step>
+  ### Renewal
+
+  On the next `charge.success` webhook, the subscription is renewed: `expiresAt` extends from its current value.
+  </Step>
+
+  <Step>
+  ### Cancel
+
+  Cancellation behavior depends on the subscription state:
+
+  ```ts
+  // Active subscription: cancel at period end (keeps access until paid period ends)
+  await client.cancelSubscription({ subscriptionId });
+  // status stays "active", endedAt = expiresAt
+
+  // Pending subscription (never activated): cancels immediately
+  // status → "canceled", endedAt = now
+  ```
+  </Step>
+
+  <Step>
+  ### Expiration
+
+  If the period ends without renewal, the subscription transitions to `expired`. This can happen via:
+  - The **expiry sweep** cron job (every 10 minutes by default)
+  - `getEffectiveStatus()` on read
+  </Step>
+</Steps>
+
+## Subscribe Input
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `planId` | Yes | The target plan ID. Must be a valid plan from your config. |
+| `customerId` | Server only | The customer to subscribe. Not needed on the client (resolved from `identify`). |
+
+## Result Shape
+
+| Field | Description |
+|-------|-------------|
+| `checkoutUrl` | The payment provider's checkout URL. Redirect the user here to complete payment. |
+| `subscriptionId` | The ID of the created subscription record. |
+| `customerId` | The customer ID the subscription was created for. |
+
+If `checkoutUrl` is set, the subscription stays in `pending` until the provider confirms payment via webhook.
+
+## Cron Sweeps
+
+| Sweep | Interval | Action |
+|-------|----------|--------|
+| Pending | Every 5 min | Marks stuck `pending` subscriptions as `failed` |
+| Expiry | Every 10 min | Marks expired `active` subscriptions as `expired` |
+
+The scheduler runs automatically by default (`mode: "auto"`). You can set `mode: "external"` and call the cron endpoints manually, or `mode: "manual"` to never run cron.
+
+## Webhook Idempotency
+
+Webhooks are deduplicated using a unique index on `(providerId, providerReferenceId)`. If a webhook is received twice, the second one is skipped.
+
+

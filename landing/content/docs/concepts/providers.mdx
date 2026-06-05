@@ -1,0 +1,118 @@
+---
+title: Payment Providers
+description: Integrate payment gateways with the PaymentProvider interface.
+---
+
+BirrJS uses a **provider interface** to abstract payment gateway logic. Each provider implements the same three methods.
+
+## Provider Interface
+
+```ts
+interface PaymentProvider {
+  initializeTransaction(request: TransactionRequest): Promise<TransactionResponse>;
+  verifyTransaction(txRef: string): Promise<VerificationResponse>;
+  handleWebhook(payload: unknown, rawBody: string | Buffer, headers: Record<string, string>): Promise<WebhookEvent>;
+}
+```
+
+### TransactionRequest → TransactionResponse
+
+```ts
+type TransactionRequest = {
+  amount: number;       // Minor units (e.g. 2990 = 29.90 ETB)
+  currency: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  txRef: string;        // Unique transaction reference
+  callbackUrl: string;
+  returnUrl?: string;
+  metadata?: Record<string, string>;
+  customization?: {
+    title?: string;
+    description?: string;
+  };
+};
+
+type TransactionResponse = {
+  success: boolean;
+  checkoutUrl?: string;
+  txRef?: string;
+  error?: string;
+};
+```
+
+## Chapa Provider
+
+The `@birrjs/chapa` package provides the Chapa integration:
+
+```ts
+import { chapa } from "@birrjs/chapa";
+
+createBirr({
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: "https://your-app.com/api/handle-webhook",
+  }),
+});
+```
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CHAPA_SECRET_KEY` | API key from [developer.chapa.co](https://developer.chapa.co) |
+| `CHAPA_WEBHOOK_SECRET` | Webhook signing secret |
+
+### Chapa-specific notes
+
+- **Amounts** are sent as decimal strings (e.g. `"29.90"`) — BirrJS converts from minor units automatically
+- **Callback URL** is set per-request during `initializeTransaction`
+- **Webhook signature** uses HMAC-SHA256, verified via timing-safe comparison
+- **Supported events**: `charge.success`, `charge.failed`, `charge.cancelled`, `charge.reversed`, `charge.refunded`
+
+### Chapa gaps (future)
+
+The following Chapa features are typed but not yet wired up:
+- `customization` (title, description, logo)
+- `meta` (hide_receipt, invoices)
+- `subaccounts` (split payments)
+
+## Switching Providers
+
+Your app code never references the provider directly — all calls go through the `PaymentProvider` interface. Swapping from Chapa to another provider means changing one import:
+
+```ts
+// Before
+import { chapa } from "@birrjs/chapa";
+// After
+import { arifpay } from "@birrjs/arifpay";
+
+createBirr({
+  provider: arifpay({
+    secretKey: process.env.ARIFPAY_SECRET_KEY!,
+    callbackUrl: "https://your-app.com/api/handle-webhook",
+  }),
+  // Everything else stays the same
+  database: process.env.DATABASE_URL,
+  plans: [free, pro],
+});
+```
+
+Your `subscribe()`, `check()`, `report()`, and webhook handler all work identically regardless of which provider is configured.
+
+## Adding a New Provider
+
+Create a new package (e.g. `@birrjs/arifpay`) with:
+
+1. A provider factory function that returns `PaymentProvider`
+2. Types for provider-specific request/response shapes
+3. A Zod schema for webhook payload validation
+
+<Callout type="info">
+  Planned providers: ArifPay, Santim Pay and more. The provider system is designed to make adding new ones straightforward.
+</Callout>
+
+

@@ -1,0 +1,173 @@
+---
+title: Quick Start
+description: Build your first subscription flow in 5 minutes.
+---
+
+<Callout type="info">
+  This guide assumes you've completed [Installation](/docs/get-started/installation) and have a working `birrjs` instance with a mounted route handler.
+</Callout>
+
+## 1. Define a plan
+
+```ts title="birrjs-plans.ts"
+import { feature, plan } from "@birrjs/core";
+
+const messages = feature({ id: "messages", type: "metered" });
+const analytics = feature({ id: "analytics", type: "boolean" });
+
+export const free = plan({
+  id: "free",
+  name: "Free",
+  default: true,
+  price: { amount: 0, interval: "monthly" },
+  includes: [messages({ limit: 100, reset: "month" })],
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: { amount: 29, interval: "monthly" },
+  includes: [messages({ limit: 5000, reset: "month" }), analytics()],
+});
+```
+
+## 2. Add plans to your instance
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa";
+import { free, pro } from "./birrjs-plans"; // [!code highlight]
+
+export const birrjs = createBirr({
+  database: process.env.DATABASE_URL!,
+  callbackUrl: process.env.CALLBACK_URL!,
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+  }),
+  plans: [free, pro], // [!code highlight]
+  identify: async (request) => {
+    const session = await auth.getSession(request);
+    if (!session) return null;
+    return { customerId: session.user.id, email: session.user.email };
+  },
+});
+```
+
+## 3. Sync plans to the database
+
+```bash
+birrjs push
+```
+
+This runs pending migrations and syncs your code-first plans into the database.
+
+## 4. How customers work
+
+Customers are created automatically when `identify` returns a user ID on the first client request. The `customerId` you return becomes the BirrJS customer record key — no separate creation step needed.
+
+```ts title="src/lib/birrjs.ts" {identify}
+identify: async (request) => {
+  const session = await auth.getSession(request);
+  if (!session) return null;
+  return { customerId: session.user.id, email: session.user.email };
+},
+```
+
+<Callout type="info">
+  **BirrJS doesn't handle auth** — `identify` receives the raw `Request` and returns your app's user ID. Wire in your own session resolver (BetterAuth, NextAuth, Clerk etc.).
+</Callout>
+
+For server-side code (admin dashboards, cron jobs) where there is no HTTP `Request` object, use `createCustomer` directly:
+
+```ts
+const customer = await birrjs.createCustomer({
+  email: "user@example.com",
+  name: "Jane Doe",
+});
+// customer.id is auto-generated
+```
+
+## 5. Subscribe to a plan
+
+The `identify` option links each request to a customer automatically. On the client, you don't need to pass a `customerId` — the SDK resolves it from the session.
+
+First create the client:
+
+```ts title="src/lib/birrjs-client.ts"
+import { createBirrJSClient } from "@birrjs/core";
+import type { birrjs } from "./birrjs";
+
+export const client = createBirrJSClient<typeof birrjs>();
+```
+
+Subscribe can be called from the client or the server. Both return a `checkoutUrl` to redirect the user to the payment gateway.
+
+<Tabs items={["Client", "Server"]}>
+  <Tab value="Client">
+
+```tsx title="subscribe-button.tsx"
+import { client } from "./birrjs-client";
+
+async function handleSubscribe() {
+  const { checkoutUrl } = await client.subscribe({ planId: "pro" });
+  // redirect to Chapa checkout
+  window.location.href = checkoutUrl;
+}
+```
+
+  </Tab>
+  <Tab value="Server">
+
+```ts title="app/api/subscribe/route.ts"
+import { birrjs } from "../lib/birrjs";
+
+export async function POST(req: Request) {
+  const { customerId } = await req.json();
+  const { checkoutUrl } = await birrjs.subscribe({
+    customerId,
+    planId: "pro",
+  });
+  return Response.json({ checkoutUrl });
+}
+```
+
+  </Tab>
+</Tabs>
+
+For free plans, the subscription activates immediately with no redirect.
+
+## 6. Check usage
+
+Use `check` to verify a customer has remaining balance, then `report` to decrement. Call these server-side with the customer ID.
+
+```ts title="app/api/chat/route.ts"
+import { birrjs } from "./birrjs";
+
+async function sendMessage(customerId: string) {
+  const { allowed } = await birrjs.check({
+    customerId,
+    featureId: "messages",
+    required: 1,
+  });
+
+  if (!allowed) {
+    throw new Error("Monthly message limit reached");
+  }
+
+  // process the message...
+
+  await birrjs.report({
+    customerId,
+    featureId: "messages",
+    amount: 1,
+  });
+}
+```
+
+For boolean features like `analytics`, `check` returns `allowed` without any balance tracking.
+
+<Callout type="info">
+  **Need to react to billing events?** BirrJS processes webhooks automatically — subscription confirmations, payment failures, and more. See the [Webhooks guide](/docs/concepts/webhooks) for setup and event types.
+</Callout>
+

@@ -7,7 +7,7 @@ export const OG_TITLE = "BirrJS";
 export const OG_DESCRIPTION = SITE_DESCRIPTION;
 export const OG_IMAGE_PATH = "/placeholder.png";
 
-export const VERSION_TEXT = "v0.1 beta";
+export const VERSION_TEXT = "";
 
 export const URLs = {
   site: "https://birrjs.dev",

@@ -1,7 +1,7 @@
 /* spell-checker:disable */
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "fumadocs-ui/css/shadcn.css";
+@import "fumadocs-ui/css/solar.css";
 @import "fumadocs-ui/css/preset.css";
 @source "../components/**/*.{ts,tsx}";
 @source "../../node_modules/fumadocs-ui/dist/**/*.js";
@@ -242,6 +242,408 @@ html:not([data-anchor-scrolling]) {
 
 .prose blockquote {
   @apply rounded-lg;
+}
+
+/* Sidebar: edge-to-edge items */
+#nd-sidebar [data-radix-scroll-area-viewport],
+#nd-sidebar-mobile [data-radix-scroll-area-viewport] {
+  padding: 0 !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+#nd-sidebar [style*="mask-image"],
+#nd-sidebar-mobile [style*="mask-image"],
+#nd-sidebar [style*="-webkit-mask-image"],
+#nd-sidebar-mobile [style*="-webkit-mask-image"] {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+/* Sidebar border-l when not collapsed */
+#nd-sidebar:not([data-collapsed="true"]) > div.flex.flex-col.gap-3.p-4.pb-2,
+#nd-sidebar:not([data-collapsed="true"]) > .min-h-0.flex-1,
+#nd-sidebar:not([data-collapsed="true"]) > div.flex.flex-col.p-4.pt-2,
+#nd-sidebar-mobile > div.flex.flex-col.gap-3.p-4.pb-2,
+#nd-sidebar-mobile > .min-h-0.flex-1,
+#nd-sidebar-mobile > div.flex.flex-col.p-4.pt-2 {
+  border-left: 1px solid var(--border);
+}
+
+/* Hide default collapse button, keep our custom one */
+#nd-sidebar
+  > div.flex.flex-col.gap-3.p-4.pb-2
+  > div:first-child
+  > button[aria-label="Collapse Sidebar"]:not(.docs-sidebar-collapse-button) {
+  display: none;
+}
+
+/* Sidebar footer row */
+#nd-sidebar > div.flex.flex-col.p-4.pt-2,
+#nd-sidebar-mobile > div.flex.flex-col.p-4.pt-2 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+
+#nd-sidebar > div.flex.flex-col.p-4.pt-2 > div:last-child > :is(a, button),
+#nd-sidebar-mobile > div.flex.flex-col.p-4.pt-2 > div:last-child > :is(a, button) {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+}
+
+/* Sidebar collapse animations */
+#nd-sidebar,
+#nd-sidebar-mobile {
+  --animate-fd-collapsible-down: fd-collapsible-down 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fd-collapsible-up: fd-collapsible-up 170ms ease-out;
+}
+
+/* Sidebar item rows: edge-to-edge */
+#nd-sidebar [data-radix-scroll-area-viewport] :is(a, button).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  :is(a, button).flex.flex-row.items-center.gap-2 {
+  width: 100%;
+  border-radius: 0;
+  padding-inline: 1.25rem !important;
+}
+
+/* Items inside collapsible sections: border separators */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]
+  > :is(button, a).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]
+  > :is(button, a).flex.flex-row.items-center.gap-2 {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-color: var(--border) !important;
+  transition-property: background-color, color !important;
+  min-height: 41px !important;
+}
+
+/* First item: no top border */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]:first-child
+  > :is(button, a).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]:first-child
+  > :is(button, a).flex.flex-row.items-center.gap-2 {
+  border-top: 0;
+}
+
+/* Item after closed section: no top border */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="closed"]
+  + [data-state]
+  > :is(button, a).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="closed"]
+  + [data-state]
+  > :is(button, a).flex.flex-row.items-center.gap-2 {
+  border-top: 0;
+}
+
+/* Category triggers: no bottom border */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]
+  > button[aria-expanded]:not([data-slot="dropdown-menu-trigger"]).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]
+  > button[aria-expanded]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2 {
+  border-bottom: 0;
+}
+
+/* First category trigger: no top border */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]:first-child
+  > button[aria-expanded]:not([data-slot="dropdown-menu-trigger"]).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state]:first-child
+  > button[aria-expanded]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2 {
+  border-top: 0;
+}
+
+/* Category trigger after closed section: add top border */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="closed"]
+  + [data-state]
+  > button[aria-expanded]:not([data-slot="dropdown-menu-trigger"]).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="closed"]
+  + [data-state]
+  > button[aria-expanded]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2 {
+  border-top: 1px solid var(--border);
+}
+
+/* Open category: divider below the trigger */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > button[aria-expanded="true"]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > button[aria-expanded="true"]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2 {
+  position: relative;
+}
+
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > button[aria-expanded="true"]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2::after,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > button[aria-expanded="true"]:not(
+    [data-slot="dropdown-menu-trigger"]
+  ).flex.flex-row.items-center.gap-2::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-bottom: 1px solid var(--border);
+  pointer-events: none;
+}
+
+/* Sidebar header: edge-to-edge */
+#nd-sidebar > div.flex.flex-col.gap-3.p-4.pb-2,
+#nd-sidebar-mobile > div.flex.flex-col.gap-3.p-4.pb-2 {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: calc(0.5rem + 2px) !important;
+  padding-bottom: 0 !important;
+  row-gap: 0.5rem !important;
+}
+
+#nd-sidebar > div.flex.flex-col.gap-3.p-4.pb-2 > div:first-child,
+#nd-sidebar-mobile > div.flex.flex-col.gap-3.p-4.pb-2 > div:first-child {
+  padding-inline-start: 1.25rem;
+  padding-inline-end: 1rem;
+}
+
+/* Remove folder guide rail */
+#nd-sidebar [data-radix-scroll-area-viewport] .before\:bg-fd-border::before,
+#nd-sidebar-mobile [data-radix-scroll-area-viewport] .before\:bg-fd-border::before {
+  display: none !important;
+}
+
+/* Remove active item left marker */
+#nd-sidebar [data-radix-scroll-area-viewport] a[data-active="true"]::before,
+#nd-sidebar-mobile [data-radix-scroll-area-viewport] a[data-active="true"]::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Non-collapsible folder labels */
+#nd-sidebar [data-radix-scroll-area-viewport] div.relative.flex.flex-row.items-center.gap-2.w-full,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  div.relative.flex.flex-row.items-center.gap-2.w-full {
+  display: flex;
+  height: 1.2rem;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  border-radius: 0;
+  padding-inline: 1.25rem;
+  font-size: 0.6875rem;
+  line-height: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in oklch, var(--foreground) 35%, transparent);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  div.relative.flex.flex-row.items-center.gap-2.w-full::after,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  div.relative.flex.flex-row.items-center.gap-2.w-full::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--border);
+}
+
+/* Sidebar item hover: consistent padding */
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  .before\:bg-fd-border
+  :is(a, button).flex.flex-row.items-center.gap-2,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  .before\:bg-fd-border
+  :is(a, button).flex.flex-row.items-center.gap-2 {
+  padding-block: 0.4rem !important;
+}
+
+/* Search bar */
+#nd-sidebar [data-search-full],
+#nd-sidebar-mobile [data-search-full] {
+  width: 100%;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  min-height: 40px !important;
+  padding-inline: 1.25rem !important;
+  padding-block: 0.5rem !important;
+  filter: none !important;
+}
+
+#nd-sidebar [data-search-full] > svg,
+#nd-sidebar-mobile [data-search-full] > svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* Expanded children: inner spacing */
+#nd-sidebar [data-radix-scroll-area-viewport] > div > [data-state="open"] > div[data-state="open"],
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > div[data-state="open"] {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+#nd-sidebar
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > div[data-state="open"]
+  > div,
+#nd-sidebar-mobile
+  [data-radix-scroll-area-viewport]
+  > div
+  > [data-state="open"]
+  > div[data-state="open"]
+  > div {
+  gap: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Category animation */
+#nd-sidebar [class*="animate-fd-collapsible"][data-state="open"],
+#nd-sidebar-mobile [class*="animate-fd-collapsible"][data-state="open"] {
+  animation-duration: 220ms !important;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+#nd-sidebar [class*="animate-fd-collapsible"][data-state="closed"],
+#nd-sidebar-mobile [class*="animate-fd-collapsible"][data-state="closed"] {
+  animation-duration: 170ms !important;
+  animation-timing-function: ease-out !important;
+}
+
+/* Wider sidebar */
+#nd-docs-layout {
+  --fd-sidebar-width: 300px;
+}
+
+/* Remove gap between sidebar and content */
+#nd-page {
+  padding-left: 0;
+  max-width: none;
+}
+
+/* Doc content headings: thin line separator */
+#nd-page h2,
+#nd-page h3 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.375rem;
+}
+
+/* TOC styling */
+#nd-toc {
+  padding-inline-end: 1.25rem;
+}
+
+#nd-toc .bg-fd-primary.rounded-full {
+  display: none;
+}
+
+#nd-toc a[href^="#"] {
+  padding-inline-start: 14px !important;
+}
+
+#nd-toc a[href^="#"] > .absolute {
+  inset-inline-start: 0px !important;
+}
+
+#nd-toc .stroke-fd-primary {
+  stroke: var(--color-fd-muted-foreground);
+  stroke-width: 2;
+}
+
+#nd-toc [data-hidden] {
+  inset-inline-start: -8.5px !important;
+}
+
+[data-toc-popover] {
+  height: 2.875rem;
+}
+
+[data-toc-popover-trigger] {
+  height: 2.875rem;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

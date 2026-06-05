@@ -1,0 +1,138 @@
+---
+title: Entitlements
+description: Feature access control — check if a customer can access a feature and report usage.
+---
+
+Entitlements are the bridge between subscriptions and feature access. They track which features a customer has access to and how much they've used.
+
+## Check vs Report
+
+| Operation | Description | Mutates? |
+|-----------|-------------|----------|
+| **Check** | Read-only: "Can this customer access feature X?" | No |
+| **Report** | Mutation: "Deduct 1 unit of feature X usage" | Yes |
+
+This follows the **guard vs worker** pattern — check before showing a UI element, report after the action is taken.
+
+## Feature Types
+
+### Boolean features
+
+Access/no-access. No usage tracking.
+
+```ts
+import { feature } from "@birrjs/core";
+
+const analytics = feature({ id: "analytics", type: "boolean" });
+
+// Feature included in plan
+const { allowed } = await client.check({ featureId: "analytics" });
+// allowed: true, balance: null
+
+// Feature not included in any plan
+const { allowed, balance } = await client.check({ featureId: "enterprise" });
+// allowed: false, balance: null
+```
+
+### Metered features
+
+Usage-based with a limit and reset interval. `required` and `amount` default to `1`.
+
+```ts
+import { feature } from "@birrjs/core";
+
+const messages = feature({ id: "messages", type: "metered" });
+
+// Check remaining balance
+const { allowed, balance } = await client.check({ featureId: "messages", required: 1 });
+// allowed: true
+// balance: { limit: 5000, remaining: 4999, resetAt: Date, unlimited: false }
+
+// Insufficient balance
+const { allowed, balance } = await client.check({ featureId: "messages", required: 9999 });
+// allowed: false
+// balance: { limit: 5000, remaining: 5000, resetAt: Date, unlimited: false }
+
+// Deduct usage
+const { success, balance } = await client.report({ featureId: "messages", amount: 1 });
+// success: true
+// balance: { limit: 5000, remaining: 4998, resetAt: Date, unlimited: false }
+
+// Report with insufficient balance — no deduction
+const { success, balance } = await client.report({ featureId: "messages", amount: 9999 });
+// success: false
+// balance: { limit: 5000, remaining: 5000, resetAt: Date, unlimited: false }
+```
+
+<Callout type="info">
+  `check()` is always free — it never mutates state. Use it as a guard before showing a feature. Use `report()` after the action is complete to deduct from the balance. If `success` is false, no usage was deducted.
+</Callout>
+
+## Auto-Reset
+
+Stale entitlements are **lazily reset** on read. When the `nextResetAt` is past, the balance is automatically restored to the original limit:
+
+```ts
+// Before reset
+// balance: 0, nextResetAt: May 1 (now is June 1)
+
+const { allowed, balance } = await client.check({ featureId: "messages" });
+// balance.remaining: 5000 (automatically reset)
+```
+
+This happens on the first read after the reset date passes — no cron job needed.
+
+Entitlements are computed across all active subscriptions for a customer. For most customers this means a single subscription's entitlements. If you intentionally support multiple simultaneous subscriptions, balances are combined.
+
+<Callout type="info">
+  Stale entitlements are processed in batches of 500 rows for efficiency.
+</Callout>
+
+## Unlimited Features
+
+A feature with no limit (`limit: null`) allows unlimited usage. `allowed` is always `true`, `resetAt` is `null`, and `unlimited` is `true`:
+
+```ts
+import { feature } from "@birrjs/core";
+
+const apiCalls = feature({ id: "api_calls", type: "metered" });
+// plan includes: apiCalls({ limit: null, reset: "month" })
+
+const { allowed, balance } = await client.check({ featureId: "api_calls" });
+// allowed: true
+// balance: { limit: 0, remaining: 0, resetAt: null, unlimited: true }
+```
+
+## Atomic Deduction
+
+Metered feature usage is deducted atomically using a CTE query. If the balance is insufficient or the feature doesn't exist, the operation fails safely — no partial state.
+
+## Practical pattern
+
+Check before acting, then report after the action succeeds. Don't report if the action fails.
+
+```ts
+export async function POST(request: Request) {
+  const { allowed } = await birr.check({
+    customerId: userId,
+    featureId: "messages",
+  });
+
+  if (!allowed) {
+    return Response.json({ error: "Usage limit reached" }, { status: 403 });
+  }
+
+  const response = await generateChatResponse(input);
+
+  await birr.report({
+    customerId: userId,
+    featureId: "messages",
+    amount: 1,
+  });
+
+  return Response.json(response);
+}
+```
+
+This ensures you don't charge usage for failed requests, and you don't serve responses to customers who've hit their limit.
+

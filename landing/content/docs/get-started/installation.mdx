@@ -1,0 +1,301 @@
+---
+title: Installation
+description: Install BirrJS, configure Chapa, and mount the route handler in your app.
+---
+
+<Callout type="info">
+  **Want to skip the manual setup?** Run `npx birrjs init` to scaffold the full configuration with framework detection, route handler, and plan templates. See the [CLI reference](/docs/concepts/cli).
+</Callout>
+
+<Steps>
+
+<Step>
+### Install the core package and provider
+
+BirrJS ships as a monorepo with a core package and separate provider packages.
+
+<Tabs items={["pnpm", "npm", "yarn", "bun"]}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @birrjs/core @birrjs/chapa
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @birrjs/core @birrjs/chapa
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @birrjs/core @birrjs/chapa
+  ```
+  </Tab>
+  <Tab value="bun">
+  ```bash
+  bun add @birrjs/core @birrjs/chapa
+  ```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Create the BirrJS instance
+
+Create a file named `birrjs.ts` — usually in `src/lib/` or `src/server/`.
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+
+export const birrjs = createBirr({
+  // ...
+});
+```
+</Step>
+
+<Step>
+### Configure provider
+
+BirrJS uses provider adapters for payment processing. Here's the setup for Chapa:
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa"; // [!code highlight]
+
+export const birrjs = createBirr({
+  provider: chapa({ // [!code highlight]
+    secretKey: process.env.CHAPA_SECRET_KEY!, // [!code highlight]
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!, // [!code highlight]
+  }),
+});
+```
+
+Add these to your `.env`:
+
+```bash
+CHAPA_SECRET_KEY="your-chapa-secret-key"
+CHAPA_WEBHOOK_SECRET="your-webhook-secret"
+```
+</Step>
+
+<Step>
+### Configure database
+
+BirrJS needs PostgreSQL to store subscriptions, entitlements, and customer data.
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa";
+
+export const birrjs = createBirr({
+  database: process.env.DATABASE_URL!, // [!code highlight]
+  callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+  }),
+});
+```
+
+Add to your `.env`:
+
+```bash
+DATABASE_URL="postgres://user:password@localhost:5432/birrjs"
+CALLBACK_URL="https://your-app.com/api/webhook"
+```
+</Step>
+
+<Step>
+### Configure identify
+
+The `identify` function links HTTP requests to customers. Required for the client SDK to resolve the current customer from incoming requests.
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa";
+
+export const birrjs = createBirr({
+  database: process.env.DATABASE_URL!,
+  callbackUrl: process.env.CALLBACK_URL!,
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+  }),
+  identify: async (request) => { // [!code highlight]
+    // Replace with your auth logic // [!code highlight]
+    return { customerId: "cus_abc123" }; // [!code highlight]
+  }, // [!code highlight]
+});
+```
+</Step>
+
+<Step>
+### Mount the route handler
+
+BirrJS needs a catch-all route to handle API requests and webhooks.
+
+<Tabs items={["Next.js", "TanStack Start", "Hono", "Express", "Other"]}>
+  <Tab value="Next.js">
+  Create a catch-all route file:
+
+  ```ts title="app/api/birrjs/[[...slug]]/route.ts"
+  import { birrHandler } from "@birrjs/core";
+  import { birrjs } from "@/lib/birrjs";
+
+  export const { GET, POST } = birrHandler(birrjs);
+  ```
+  </Tab>
+
+  <Tab value="TanStack Start">
+  ```ts title="src/routes/api/birrjs.$.ts"
+  import { birrjs } from "@/lib/birrjs";
+  import { createFileRoute } from "@tanstack/react-router";
+
+  export const Route = createFileRoute("/api/birrjs/$")({
+    server: {
+      handlers: {
+        GET: ({ request }) => birrjs.handler(request),
+        POST: ({ request }) => birrjs.handler(request),
+      },
+    },
+  });
+  ```
+  </Tab>
+
+  <Tab value="Hono">
+  Use the native Request handler:
+
+  ```ts title="src/index.ts"
+  import { Hono } from "hono";
+  import { birrjs } from "./birrjs";
+
+  const app = new Hono();
+
+  app.all("/api/*", async (c) => {
+    return birrjs.handler(c.req.raw);
+  });
+  ```
+  </Tab>
+
+  <Tab value="Express">
+  Wrap the standard handler:
+
+  ```ts title="src/index.ts"
+  import express from "express";
+  import { birrjs } from "./birrjs";
+
+  const app = express();
+
+  app.all("/api/*", async (req, res) => {
+    const request = new Request(`http://localhost${req.originalUrl}`, {
+      method: req.method,
+      headers: req.headers as HeadersInit,
+      body: JSON.stringify(req.body),
+    });
+    const response = await birrjs.handler(request);
+    res.status(response.status).json(await response.json());
+  });
+  ```
+  </Tab>
+
+  <Tab value="Other">
+  The core handler is a standard Web API function that takes a `Request` and returns a `Response`. Use it with any framework that supports the Web API standard.
+
+  ```ts title="server.ts"
+  import { birrjs } from "./birrjs";
+
+  // birrjs.handler: (request: Request) => Promise<Response>
+  // Mount it on any path that catches /api/birrjs/*
+  app.all("/api/birrjs/*", (req) => birrjs.handler(req));
+  ```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Create the client
+
+```ts title="src/lib/birrjs-client.ts"
+import { createBirrJSClient } from "@birrjs/core";
+import type { birrjs } from "./birrjs";
+
+export const client = createBirrJSClient<typeof birrjs>();
+```
+</Step>
+
+<Step>
+### Define plans
+
+Create a file for your products:
+
+```ts title="src/lib/birrjs-plans.ts"
+import { feature, plan } from "@birrjs/core";
+
+const storage = feature({ id: "storage", type: "metered" });
+const apiCalls = feature({ id: "api_calls", type: "metered" });
+const advancedReports = feature({ id: "advanced_reports", type: "boolean" });
+
+export const free = plan({
+  id: "free",
+  name: "Free",
+  default: true,
+  includes: [
+    storage({ limit: 1_000_000_000, reset: "month" }),
+    apiCalls({ limit: 1_000, reset: "month" }),
+  ],
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: { amount: 29, interval: "monthly" },
+  includes: [
+    storage({ limit: 50_000_000_000, reset: "month" }),
+    apiCalls({ limit: 50_000, reset: "month" }),
+    advancedReports(),
+  ],
+});
+```
+
+Then wire them into your instance:
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa";
+import { free, pro } from "./birrjs-plans"; // [!code highlight]
+
+export const birrjs = createBirr({
+  database: process.env.DATABASE_URL!,
+  callbackUrl: process.env.CALLBACK_URL!,
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+  }),
+  plans: [free, pro], // [!code highlight]
+  identify: async (request) => {
+    return { customerId: "cus_abc123" };
+  },
+});
+```
+</Step>
+
+<Step>
+### Sync to the database
+
+Run migrations to create tables and sync your plan definitions:
+
+```bash
+birrjs push
+```
+
+Verify the setup:
+
+```bash
+birrjs status
+```
+
+This checks your database connection, pending migrations, and plan sync status.
+</Step>
+
+</Steps>
+
+__You're now ready to use BirrJS!__ 🚀

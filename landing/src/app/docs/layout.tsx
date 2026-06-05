@@ -1,54 +1,77 @@
+import type { Node } from "fumadocs-core/page-tree";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { ThemeSwitch } from "fumadocs-ui/layouts/shared/slots/theme-switch";
 import { Github } from "lucide-react";
-import type { ReactNode } from "react";
+import { cloneElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
-import { URLs, VERSION_TEXT } from "@/lib/consts";
+import { getDocsCategoryIcon, getDocsPageIcon } from "@/components/docs/docs-icons";
+import { SidebarCollapseButton } from "@/components/docs/sidebar-collapse-button";
+import { BirrjsLogo } from "@/components/icons/birrjs-logo";
+import { URLs } from "@/lib/consts";
 import { source } from "@/lib/source";
+
+function addIcons(nodes: Node[]): Node[] {
+  return nodes.map((node) => {
+    if (node.type === "page" && typeof node.name === "string") {
+      const slug = node.url.split("/").pop() ?? "";
+      const icon = getDocsPageIcon(slug);
+      if (icon) {
+        return { ...node, icon: cloneElement(icon as ReactElement, { key: `icon-${node.url}` }) };
+      }
+    }
+    if (node.type === "folder" && node.children) {
+      const name = typeof node.name === "string" ? node.name : "";
+      let icon = getDocsCategoryIcon(name);
+      if (!icon && node.index) {
+        const slug = node.index.url.split("/").pop() ?? "";
+        icon = getDocsPageIcon(slug);
+      }
+      return {
+        ...node,
+        children: addIcons(node.children),
+        icon: icon || undefined,
+      };
+    }
+    return node;
+  });
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <DocsLayout
-      tree={source.pageTree}
-      nav={{
-        title: (
-          <div className="flex items-center gap-3">
-            <span>BirrJS</span>
-            {VERSION_TEXT ? (
-              <span className="rounded-md border bg-muted px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
-                {VERSION_TEXT}
-              </span>
-            ) : null}
-          </div>
-        ),
-        url: "/",
-      }}
-      links={[
-        {
-          text: "GitHub",
-          type: "main",
-          url: URLs.githubRepo,
-          external: true,
-        },
-      ]}
-      sidebar={{
-        footer: (
-          <div className="flex w-full items-center justify-between gap-2">
-            <a
-              href={URLs.githubRepo}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub repository"
-              className="text-muted-foreground hover:text-accent-foreground"
-            >
-              <Github className="size-4.5" aria-hidden="true" />
-            </a>
-            <ThemeSwitch />
-          </div>
-        ),
-      }}
-    >
-      {children}
-    </DocsLayout>
+    <div className="h-dvh overflow-x-hidden overflow-y-auto scroll-smooth">
+      <DocsLayout
+        themeSwitch={{ enabled: false }}
+        tree={{ ...source.pageTree, children: addIcons(source.pageTree.children) }}
+        nav={{
+          title: (
+            <div className="flex items-center gap-2.5">
+              <BirrjsLogo className="size-6" />
+              <span className="font-semibold">BirrJS</span>
+            </div>
+          ),
+          url: "/",
+          children: <SidebarCollapseButton />,
+        }}
+        sidebar={{
+          footer: (
+            <div key="sidebar-footer" className="flex w-full items-center justify-between gap-2">
+              <a
+                href={URLs.githubRepo}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="GitHub repository"
+                className="text-muted-foreground hover:text-accent-foreground"
+              >
+                <Github className="size-4.5" aria-hidden="true" />
+              </a>
+              <ThemeSwitch />
+            </div>
+          ),
+        }}
+      >
+        {children}
+      </DocsLayout>
+    </div>
   );
 }

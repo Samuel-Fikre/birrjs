@@ -1,0 +1,112 @@
+---
+title: Database & Migrations
+description: Schema overview and migration workflow for BirrJS.
+---
+
+BirrJS uses **PostgreSQL** via [Drizzle ORM](https://orm.drizzle.team). All tables are prefixed with `birrjs_`.
+
+## Configuration
+
+Pass a `pg.Pool` instance or a connection string to `createBirr()`:
+
+```ts
+import { Pool } from "pg";
+
+const birr = createBirr({
+  database: new Pool({
+    connectionString: process.env.DATABASE_URL,
+  }),
+  // ...
+});
+```
+
+```ts
+// Or pass a connection string directly
+const birr = createBirr({
+  database: process.env.DATABASE_URL,
+  // ...
+});
+```
+
+<Callout type="warn">
+  BirrJS owns these tables. Direct writes bypass validation, versioning, and idempotency guarantees — always use the BirrJS API.
+</Callout>
+
+## Schema Overview
+
+| Table | Prefix | Purpose |
+|-------|--------|---------|
+| `birrjs_customer` | `customer` | Customer records with soft-delete |
+| `birrjs_plan` | `plan` | Versioned plan definitions |
+| `birrjs_feature` | `feature` | Feature type registry |
+| `birrjs_plan_feature` | `planFeature` | Plan-to-feature mapping with limits |
+| `birrjs_subscription` | `subscription` | Customer subscriptions |
+| `birrjs_invoice` | `invoice` | Billing records |
+| `birrjs_webhook_event` | `webhookEvent` | Webhook processing log |
+| `birrjs_entitlement` | `entitlement` | Feature usage tracking |
+
+### Key Design Decisions
+
+**Soft-delete with partial unique index** — Deleted customers can re-register with the same email because the unique index only applies to non-deleted rows:
+
+```sql
+CREATE UNIQUE INDEX birrjs_customer_email_unique
+  ON birrjs_customer (email)
+  WHERE deleted_at IS NULL;
+```
+
+**Versioned plans** — Plans use a dual-key system: `id` is the user-facing slug (`"pro"`), `internal_id` is the auto-generated primary key for version tracking. Each plan change creates a new version row. Foreign keys on `subscription` and `plan_feature` reference `internal_id`, so existing subscriptions keep their entitlements when a plan is updated.
+
+`price_amount` is stored as an integer in the **minor unit** of the currency (e.g. 2900 = 29.00 ETB). This avoids floating-point precision issues.
+
+**Idempotent webhooks** — A unique index on `(provider_id, provider_reference_id)` prevents duplicate processing.
+
+**Active subscription filter** — A shared SQL condition is used across all queries:
+
+```sql
+status IN ('active')
+  AND (endedAt IS NULL OR endedAt > now())
+  AND (expiresAt IS NULL OR expiresAt > now())
+```
+
+## What BirrJS manages automatically
+
+Some data stays in sync without any manual commands:
+
+- **Subscription state** — Updated automatically when payment provider webhooks arrive (e.g. `charge.success` activates a pending subscription, `charge.failed` marks it as failed).
+- **Webhook deduplication** — The unique index on `(provider_id, provider_reference_id)` prevents the same event from being processed twice.
+- **Entitlements** — Created automatically when a subscription is created. Balances reset lazily on read (no cron job needed).
+
+## What requires `birrjs push`
+
+These changes are code-first and require explicit sync:
+
+- **Plan and feature definitions** — Code to database. Run after adding, modifying, or removing plans.
+- **Schema migrations** — New tables, columns, or indexes. Applied as numbered SQL files.
+
+## Migrations
+
+### Running migrations
+
+```bash
+birrjs push
+```
+
+This runs all pending migrations and syncs plans in one command.
+
+### Checking migration status
+
+```bash
+birrjs status
+```
+
+Shows pending migrations, database connection status, and plan sync status.
+
+### Dev startup checks
+
+When loading your BirrJS instance in development, it automatically checks for:
+- Pending migrations (warns if any)
+- Out-of-sync plan definitions (warns if code vs DB differs)
+
+
+
