@@ -1,0 +1,46 @@
+{
+  "name": "demo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start",
+    "birrjs": "tsx ../../packages/core/src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
+    "push": "pnpm birrjs push && pnpm --filter @demo/db db:push",
+    "db:studio": "pnpm --filter @demo/db db:studio"
+  },
+  "dependencies": {
+    "@birrjs/chapa": "workspace:*",
+    "@birrjs/core": "workspace:*",
+    "@demo/api": "workspace:*",
+    "@demo/auth": "workspace:*",
+    "@demo/env": "workspace:*",
+    "@demo/ui": "workspace:*",
+    "@tanstack/react-form": "^1.28.0",
+    "@tanstack/react-query": "^5.90.12",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "@trpc/tanstack-react-query": "^11.16.0",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "next-themes": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "sonner": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@demo/config": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tanstack/react-query-devtools": "^5.91.1",
+    "@types/node": "^20",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  }
+}

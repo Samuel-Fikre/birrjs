@@ -1,0 +1,27 @@
+{
+  "name": "@demo/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@demo/auth": "workspace:*",
+    "@demo/db": "workspace:*",
+    "@demo/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "next": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@demo/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
