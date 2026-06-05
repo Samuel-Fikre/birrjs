@@ -103,7 +103,7 @@ export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
   );
 
   return createRouter(routeEndpoints, {
-    basePath: options.basePath ?? "/api",
+    basePath: options.basePath ?? "/api/birrjs",
     routerContext: ctx,
     onError(error) {
       ctx.logger.error({ err: error }, "API error");

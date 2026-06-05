@@ -2,10 +2,10 @@ import * as z from "zod";
 
 export const ChapaWebhookEventSchema = z.object({
   event: z.string(),
-  first_name: z.string(),
-  last_name: z.string(),
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
   email: z.string().nullable(),
-  mobile: z.string(),
+  mobile: z.string().nullable(),
   currency: z.string(),
   amount: z.string(),
   charge: z.string(),

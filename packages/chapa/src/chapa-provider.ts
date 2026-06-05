@@ -226,26 +226,45 @@ export function createChapaProvider(
 
         // Verify webhook signature if webhookSecret is provided
         if (config.webhookSecret) {
-          const signature = headers["chapa-signature"] || headers["x-chapa-signature"];
-          if (!signature) {
+          const crypto = await import("crypto");
+          const chapaSignature = headers["chapa-signature"];
+          const xChapaSignature = headers["x-chapa-signature"];
+
+          if (!chapaSignature && !xChapaSignature) {
             throw new ChapaError("Missing webhook signature", CHAPA_ERROR_CODES.INVALID_WEBHOOK);
           }
 
-          // Verify signature using HMAC SHA256 with raw body
-          const crypto = await import("crypto");
-          const expectedSignature = crypto
+          // Compute both possible signatures
+          const chapaSigExpected = crypto
+            .createHmac("sha256", config.webhookSecret)
+            .update(config.webhookSecret)
+            .digest("hex");
+
+          const xChapaSigExpected = crypto
             .createHmac("sha256", config.webhookSecret)
             .update(rawBody)
             .digest("hex");
 
-          // Use timing-safe comparison to prevent timing attacks
-          const signatureBuffer = Buffer.from(signature, "utf8");
-          const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+          // Check if either header matches (Chapa docs: if either is valid, proceed)
+          let valid = false;
 
-          if (
-            signatureBuffer.length !== expectedBuffer.length ||
-            !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
-          ) {
+          if (chapaSignature) {
+            const buf = Buffer.from(chapaSignature, "utf8");
+            const exp = Buffer.from(chapaSigExpected, "utf8");
+            if (buf.length === exp.length && crypto.timingSafeEqual(buf, exp)) {
+              valid = true;
+            }
+          }
+
+          if (!valid && xChapaSignature) {
+            const buf = Buffer.from(xChapaSignature, "utf8");
+            const exp = Buffer.from(xChapaSigExpected, "utf8");
+            if (buf.length === exp.length && crypto.timingSafeEqual(buf, exp)) {
+              valid = true;
+            }
+          }
+
+          if (!valid) {
             throw new ChapaError("Invalid webhook signature", CHAPA_ERROR_CODES.INVALID_WEBHOOK);
           }
         }
