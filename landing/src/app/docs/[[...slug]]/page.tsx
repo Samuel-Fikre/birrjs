@@ -10,6 +10,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import { notFound, redirect } from "next/navigation";
 
 import { CopyMarkdownButton } from "@/components/docs/copy-markdown-button";
+import { EnvBlock } from "@/components/docs/env-block";
 import { source } from "@/lib/source";
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
@@ -46,6 +47,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
             Callout,
             Card,
             Cards,
+            EnvBlock,
             Step,
             Steps,
             Tab,

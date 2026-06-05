@@ -65,16 +65,24 @@ export const birrjs = createBirr({
   provider: chapa({ // [!code highlight]
     secretKey: process.env.CHAPA_SECRET_KEY!, // [!code highlight]
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!, // [!code highlight]
+    callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
   }),
 });
 ```
 
-Add these to your `.env`:
+<EnvBlock />
 
-```bash
-CHAPA_SECRET_KEY="your-chapa-secret-key"
-CHAPA_WEBHOOK_SECRET="your-webhook-secret"
-```
+<Callout type="info">
+  **`CHAPA_SECRET_KEY`** — get yours from the [Chapa dashboard](https://dashboard.chapa.co/) → Settings → API Keys. Use test mode keys for development.
+
+  **`CALLBACK_URL`** — a publicly reachable URL where Chapa sends payment results. For local testing, use a tunnel like [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
+
+  **`CHAPA_WEBHOOK_SECRET`** — a secret you invent yourself. Click **Generate** above to create a random one (copied automatically).
+
+  Don't forget to configure both `CALLBACK_URL` and `CHAPA_WEBHOOK_SECRET` in your **Chapa dashboard → Profile Settings → Webhooks**: paste your URL into **Webhook URL**, your generated string into **Secret Hash**, 
+  
+  Enable **Receive Webhook for failed Payments**. BirrJS handles `charge.failed` events to mark pending subscriptions as failed — without it, only success events arrive and `pending` subscriptions pile up until the scheduled cron sweep clears them.
+</Callout>
 </Step>
 
 <Step>
@@ -88,10 +96,10 @@ import { chapa } from "@birrjs/chapa";
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!, // [!code highlight]
-  callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
   }),
 });
 ```
@@ -100,7 +108,6 @@ Add to your `.env`:
 
 ```bash
 DATABASE_URL="postgres://user:password@localhost:5432/birrjs"
-CALLBACK_URL="https://your-app.com/api/webhook"
 ```
 </Step>
 
@@ -115,10 +122,10 @@ import { chapa } from "@birrjs/chapa";
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  callbackUrl: process.env.CALLBACK_URL!,
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
   }),
   identify: async (request) => { // [!code highlight]
     // Replace with your auth logic // [!code highlight]
@@ -265,10 +272,10 @@ import { free, pro } from "./birrjs-plans"; // [!code highlight]
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  callbackUrl: process.env.CALLBACK_URL!,
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
   }),
   plans: [free, pro], // [!code highlight]
   identify: async (request) => {
