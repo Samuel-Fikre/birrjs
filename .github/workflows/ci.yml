@@ -138,7 +138,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm build --filter='./packages/*'
 
       - name: E2E tests
         run: pnpm test:e2e
