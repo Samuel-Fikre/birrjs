@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { BirrJSContext } from "../context";
 import { generateId } from "../core/utils";
@@ -131,28 +131,37 @@ async function updatePlanName(database: BirrJSDatabase, planId: string, name: st
   await database.update(plan).set({ name, updatedAt: new Date() }).where(eq(plan.id, planId));
 }
 
-async function upsertPlanVersion(database: BirrJSDatabase, plan: NormalizedPlan, version: number) {
+async function upsertPlanVersion(database: BirrJSDatabase, np: NormalizedPlan, version: number) {
   return await database.transaction(async (tx) => {
     const db = tx as unknown as BirrJSDatabase;
+
+    // Unset isDefault on old version so new version can claim the unique slot
+    if (np.isDefault) {
+      await tx
+        .update(plan)
+        .set({ isDefault: false })
+        .where(and(eq(plan.id, np.id), eq(plan.isDefault, true)));
+    }
+
     const inserted = await insertPlanVersion(db, {
-      group: plan.group ?? undefined,
-      hash: plan.hash,
-      id: plan.id,
-      isDefault: plan.isDefault,
-      name: plan.name,
-      priceAmount: plan.priceAmount,
-      priceInterval: plan.priceInterval,
+      group: np.group ?? undefined,
+      hash: np.hash,
+      id: np.id,
+      isDefault: np.isDefault,
+      name: np.name,
+      priceAmount: np.priceAmount,
+      priceInterval: np.priceInterval,
       version,
-      currency: plan.currency,
+      currency: np.currency,
     });
 
     const storedPlan = inserted[0] ?? null;
     if (!storedPlan) {
-      throw new Error(`Failed to insert plan "${plan.id}" version ${version}`);
+      throw new Error(`Failed to insert plan "${np.id}" version ${version}`);
     }
 
     await replacePlanFeatures(db, {
-      features: plan.includes,
+      features: np.includes,
       planId: storedPlan.internalId,
     });
 
