@@ -358,6 +358,7 @@ export interface ChapaProviderOptions {
   secretKey: string;
   webhookSecret?: string;
   callbackUrl: string;
+  returnUrl?: string;
   currency?: string;
   testMode?: boolean;
 }

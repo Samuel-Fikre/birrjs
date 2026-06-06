@@ -112,6 +112,7 @@ export const subscribe = defineBirrJSMethod(
       email: customer.email ?? "",
       txRef,
       callbackUrl: ctx.birrjs.options.provider.callbackUrl,
+      returnUrl: ctx.birrjs.options.provider.returnUrl,
     };
 
     let transaction;

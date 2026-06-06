@@ -29,6 +29,7 @@ import {
   getSubscription,
   checkSubscription,
 } from "./subscription/subscription.api";
+import { handleWebhookCallback } from "./webhook/handle-webhook-callback";
 // Webhook methods
 import { handleWebhook } from "./webhook/webhook.api";
 
@@ -48,6 +49,7 @@ export const methods = {
   check,
   report,
   handleWebhook,
+  handleWebhookCallback,
   checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
   checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
 } as const;

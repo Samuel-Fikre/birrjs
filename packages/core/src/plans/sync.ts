@@ -135,7 +135,6 @@ async function upsertPlanVersion(database: BirrJSDatabase, np: NormalizedPlan, v
   return await database.transaction(async (tx) => {
     const db = tx as unknown as BirrJSDatabase;
 
-    // Unset isDefault on old version so new version can claim the unique slot
     if (np.isDefault) {
       await tx
         .update(plan)

@@ -86,7 +86,7 @@ describe("webhook HTTP endpoint", () => {
   });
 
   it("activates pending subscription via HTTP endpoint", async () => {
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: JSON.stringify(chapaWebhookPayload(subscriptionTxRef)),
       headers: { "content-type": "application/json" },
@@ -105,7 +105,7 @@ describe("webhook HTTP endpoint", () => {
   });
 
   it("duplicate webhook is idempotent", async () => {
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: JSON.stringify(chapaWebhookPayload(subscriptionTxRef)),
       headers: { "content-type": "application/json" },
@@ -124,7 +124,7 @@ describe("webhook HTTP endpoint", () => {
   });
 
   it("rejects malformed JSON body", async () => {
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: "not json",
       headers: { "content-type": "application/json" },
@@ -147,7 +147,7 @@ describe("webhook HTTP endpoint", () => {
       .limit(1);
     const sub = subs[0]!;
 
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: JSON.stringify(chapaWebhookPayload(sub.providerTxRef!, "charge.failed/cancelled")),
       headers: { "content-type": "application/json" },
@@ -177,7 +177,7 @@ describe("webhook HTTP endpoint", () => {
       .limit(1);
     const sub = subs[0]!;
 
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: JSON.stringify(chapaWebhookPayload(sub.providerTxRef!, "charge.reversed")),
       headers: { "content-type": "application/json" },
@@ -207,7 +207,7 @@ describe("webhook HTTP endpoint", () => {
       .limit(1);
     const sub = subs[0]!;
 
-    const response = await fetch(`http://localhost:${ws.port}/api/handle-webhook`, {
+    const response = await fetch(`http://localhost:${ws.port}/api/birrjs/handle-webhook`, {
       method: "POST",
       body: JSON.stringify(chapaWebhookPayload(sub.providerTxRef!, "charge.refunded")),
       headers: { "content-type": "application/json" },

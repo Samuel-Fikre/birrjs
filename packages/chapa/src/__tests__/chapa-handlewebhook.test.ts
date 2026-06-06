@@ -43,7 +43,7 @@ function validPayload(): ChapaWebhookEvent {
 
 function validHeaders(): Record<string, string> {
   const crypto = require("crypto");
-  const signature = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+  const signature = crypto.createHmac("sha256", webhookSecret).update(webhookSecret).digest("hex");
   return { "chapa-signature": signature };
 }
 
@@ -156,7 +156,7 @@ describe("ChapaProvider - handleWebhook errors", () => {
     const mismatchedPayload = { ...validPayload(), status: "failed" };
     const mismatchedRawBody = JSON.stringify(mismatchedPayload);
     const crypto = require("crypto");
-    const sig = crypto.createHmac("sha256", webhookSecret).update(mismatchedRawBody).digest("hex");
+    const sig = crypto.createHmac("sha256", webhookSecret).update(webhookSecret).digest("hex");
     const client = createMockClient({
       status: "success",
       message: "Success",
