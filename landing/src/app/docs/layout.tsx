@@ -45,9 +45,9 @@ export default function Layout({ children }: { children: ReactNode }) {
         tree={{ ...source.pageTree, children: addIcons(source.pageTree.children) }}
         nav={{
           title: (
-            <div className="flex items-center gap-2.5">
-              <BirrjsLogo className="size-6" />
-              <span className="font-semibold">BirrJS</span>
+            <div className="flex items-center gap-1.5">
+              <BirrjsLogo className="w-auto h-4.5" />
+              <span className="text-xl font-semibold">BirrJS</span>
             </div>
           ),
           url: "/",

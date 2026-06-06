@@ -9,7 +9,7 @@ description: Build your first subscription flow in 5 minutes.
 
 ## 1. Define a plan
 
-```ts title="birrjs-plans.ts"
+```ts title="plans.ts"
 import { feature, plan } from "@birrjs/core";
 
 const messages = feature({ id: "messages", type: "metered" });
@@ -36,18 +36,18 @@ export const pro = plan({
 ```ts title="src/lib/birrjs.ts"
 import { createBirr } from "@birrjs/core";
 import { chapa } from "@birrjs/chapa";
-import { free, pro } from "./birrjs-plans"; // [!code highlight]
+import { free, pro } from "./plans"; // [!code highlight]
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  callbackUrl: process.env.CALLBACK_URL!,
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
   }),
   plans: [free, pro], // [!code highlight]
   identify: async (request) => {
-    const session = await auth.getSession(request);
+    const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return null;
     return { customerId: session.user.id, email: session.user.email };
   },
@@ -68,7 +68,7 @@ Customers are created automatically when `identify` returns a user ID on the fir
 
 ```ts title="src/lib/birrjs.ts" {identify}
 identify: async (request) => {
-  const session = await auth.getSession(request);
+  const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return null;
   return { customerId: session.user.id, email: session.user.email };
 },
@@ -95,7 +95,7 @@ The `identify` option links each request to a customer automatically. On the cli
 First create the client:
 
 ```ts title="src/lib/birrjs-client.ts"
-import { createBirrJSClient } from "@birrjs/core";
+import { createBirrJSClient } from "@birrjs/core/client";
 import type { birrjs } from "./birrjs";
 
 export const client = createBirrJSClient<typeof birrjs>();

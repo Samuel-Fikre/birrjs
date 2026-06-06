@@ -66,6 +66,7 @@ export const birrjs = createBirr({
     secretKey: process.env.CHAPA_SECRET_KEY!, // [!code highlight]
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!, // [!code highlight]
     callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
+    returnUrl: process.env.RETURN_URL!, // [!code highlight]
   }),
 });
 ```
@@ -75,7 +76,9 @@ export const birrjs = createBirr({
 <Callout type="info">
   **`CHAPA_SECRET_KEY`** — get yours from the [Chapa dashboard](https://dashboard.chapa.co/) → Settings → API Keys. Use test mode keys for development.
 
-  **`CALLBACK_URL`** — a publicly reachable URL where Chapa sends payment results. For local testing, use a tunnel like [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
+  **`CALLBACK_URL`** — a publicly reachable URL for payment notifications. Chapa sends a **GET** callback here after payment (`?trx_ref=...&status=success`). Also paste this URL in your Chapa dashboard → Settings → Webhooks for POST notifications. For local testing, use a tunnel like [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
+
+  **`RETURN_URL`** *(optional)* — where Chapa sends the user's browser after payment. Set this to a frontend page like `/account` or `/plans?success=true`. Without it, users stay on Chapa's checkout page after paying.
 
   **`CHAPA_WEBHOOK_SECRET`** — a secret you invent yourself. Click **Generate** above to create a random one (copied automatically).
 
@@ -100,6 +103,7 @@ export const birrjs = createBirr({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
     callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
   }),
 });
 ```
@@ -126,6 +130,7 @@ export const birrjs = createBirr({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
     callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
   }),
   identify: async (request) => { // [!code highlight]
     // Replace with your auth logic // [!code highlight]
@@ -222,7 +227,7 @@ BirrJS needs a catch-all route to handle API requests and webhooks.
 ### Create the client
 
 ```ts title="src/lib/birrjs-client.ts"
-import { createBirrJSClient } from "@birrjs/core";
+import { createBirrJSClient } from "@birrjs/core/client";
 import type { birrjs } from "./birrjs";
 
 export const client = createBirrJSClient<typeof birrjs>();
@@ -276,6 +281,7 @@ export const birrjs = createBirr({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
     callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
   }),
   plans: [free, pro], // [!code highlight]
   identify: async (request) => {

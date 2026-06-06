@@ -1,3 +1,4 @@
 {
-  "pages": ["index", "installation", "quickstart"]
+  "pages": ["index", "installation", "quickstart"],
+  "defaultOpen": true
 }

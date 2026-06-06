@@ -8,7 +8,7 @@ The BirrJS client is a dynamic Proxy-based SDK that mirrors your server-side API
 ## Creating the client
 
 ```ts title="lib/birrjs-client.ts"
-import { createBirrJSClient } from "@birrjs/core";
+import { createBirrJSClient } from "@birrjs/core/client";
 import type { birrjs } from "@/birrjs";
 
 export const client = createBirrJSClient<typeof birrjs>();
@@ -34,7 +34,7 @@ export const client = createBirrJSClient<typeof birrjs>({
 });
 ```
 
-Defaults to `/api`. This must match the full path prefix where your BirrJS routes are mounted. For example, if your server uses `basePath: "/api/birrjs"`, pass `baseURL: "/api/birrjs"`.
+Defaults to `/api/birrjs`. This must match the full path prefix where your BirrJS routes are mounted.
 
 ## How it works
 

@@ -1,0 +1,8 @@
+{
+  "name": "BirrJS",
+  "short_name": "BirrJS",
+  "icons": [{ "src": "/favicon/favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
+  "theme_color": "#09090b",
+  "background_color": "#fafaf9",
+  "display": "standalone"
+}

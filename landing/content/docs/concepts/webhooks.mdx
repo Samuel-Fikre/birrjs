@@ -69,14 +69,28 @@ Events are uniquely identified by `(providerId, providerReferenceId)` — the sa
 
 ## Configuration
 
-Set the `callbackUrl` when creating your BirrJS instance:
+Set the `callbackUrl` when creating your BirrJS instance. The same path `/handle-webhook` handles both GET callbacks and POST webhooks:
 
 ```ts
 createBirr({
-  callbackUrl: "https://your-app.com/api/handle-webhook",
-  // ...
+  provider: chapa({
+    callbackUrl: "https://your-app.com/api/birrjs/handle-webhook",
+    // ...
+  }),
 });
 ```
+
+### GET callback
+
+Chapa sends a **GET** request to `callbackUrl` after payment with `?trx_ref=...&ref_id=...&status=success`. BirrJS verifies the transaction via the provider and activates the subscription.
+
+### POST webhook
+
+Configure the same URL as the **Webhook URL** in your Chapa dashboard. Chapa sends a **POST** with the full event payload (signature-verified via `webhookSecret`).
+
+<Callout type="info">
+  Both mechanisms can arrive for the same payment. BirrJS handles this gracefully — the subscription is only activated once. The POST webhook uses the `webhookEvent` table for deduplication; the GET callback checks if the subscription is already active before updating.
+</Callout>
 
 <Callout type="warning">
   The webhook endpoint does **not** require customer identity. It uses `requireHeaders: true` and `requireRequest: true` to access the raw body and headers directly.

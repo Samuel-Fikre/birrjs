@@ -1,6 +1,7 @@
 "use client";
 
-import { ExternalLinkIcon } from "lucide-react";
+import { ThemeSwitch } from "fumadocs-ui/layouts/shared/slots/theme-switch";
+import { Github } from "lucide-react";
 import Link from "next/link";
 
 import { BirrjsLogo } from "@/components/icons/birrjs-logo";
@@ -16,10 +17,10 @@ export function Navbar() {
         <BrandAssetsMenu logoSVG={LOGO_SVG}>
           <Link
             href="/"
-            className="flex items-center gap-2.5 text-xl font-semibold text-foreground"
+            className="flex items-center gap-1.5 text-xl font-semibold text-foreground"
           >
-            <BirrjsLogo className="size-8" />
-            BirrJS
+            <BirrjsLogo className="w-auto h-4.5" />
+            <span className="text-2xl">BirrJS</span>
           </Link>
         </BrandAssetsMenu>
 
@@ -30,15 +31,16 @@ export function Navbar() {
           >
             Docs
           </Link>
-          <Link
+          <a
             href={URLs.githubRepo}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Github Repo"
             className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            GitHub
-            <ExternalLinkIcon className="size-3.5" />
-          </Link>
+            <Github className="size-4.5" aria-hidden="true" />
+          </a>
+          <ThemeSwitch />
         </nav>
       </div>
     </header>

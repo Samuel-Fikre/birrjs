@@ -74,7 +74,7 @@ export const pro = plan({
 | `name` | `string` | Display name (1-100 chars) |
 | `group` | `string` | Group for organizing plans. Required if `default: true` |
 | `default` | `boolean` | Default plan for a group. A customer without an active subscription is treated as being on this plan — no subscription record is created |
-| `price` | `{ amount, interval, currency? }` | Price in ETB (decimal). E.g. `29` = 29 ETB. Currency defaults to `"ETB"` |
+| `price` | `{ amount, interval, currency? }` | Price in ETB (decimal). E.g. `29` = 29 ETB. Currency defaults to `"ETB"`. Stored as minor units internally — `29` becomes `2900` in the database |
 | `price.currency` | `string` | Currency code (e.g. `"ETB"`, `"USD"`) |
 | `includes` | `FeatureInclude[]` | Feature definitions with limits and resets |
 
@@ -122,6 +122,85 @@ birrjs status
 
 <Callout type="warning">
   Plan IDs must be unique. If you rename a plan, the old one stays in the database — create a new plan and deprecate the old one.
+</Callout>
+
+## Listing Plans
+
+Synced plans are available via the `listPlans` endpoint. Use this to render pricing cards, plan selection UI, or admin dashboards.
+
+```ts
+const { plans, total } = await client.listPlans({ limit: 20, offset: 0 });
+```
+
+### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plans` | `Plan[]` | Array of plan objects (latest version first) |
+| `total` | `number` | Total number of plans |
+| `limit` | `number` | Requested page size |
+| `offset` | `number` | Requested page offset |
+
+Each plan object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Plan identifier (e.g. `"pro"`) |
+| `name` | `string` | Display name |
+| `group` | `string` | Plan group (e.g. `"tier"`) |
+| `priceAmount` | `number` \| `null` | Price in minor units (cents). Divide by 100 for display |
+| `priceInterval` | `string` \| `null` | Billing interval: `"daily"`, `"weekly"`, `"monthly"`, `"yearly"` |
+| `currency` | `string` | Currency code |
+| `isDefault` | `boolean` | Whether this is the default plan |
+| `version` | `number` | Plan version (increments on each change) |
+
+<Callout type="info">
+  `listPlans` returns plans ordered by version descending. If a plan has multiple versions (e.g. after a price change), the latest version is returned first. Use `.filter()` or `.findLast()` to get only the latest version per plan ID.
+</Callout>
+
+### Pricing card example
+
+```tsx
+"use client";
+import { client } from "@/lib/birrjs-client";
+import { useQuery } from "@tanstack/react-query";
+
+export function PricingCards() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => client.listPlans({ limit: 10, offset: 0 }),
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  // Filter out the default plan for display
+  const plans = (data?.plans ?? []).filter((p) => !p.isDefault);
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {plans.map((plan) => (
+        <div key={plan.id} className="rounded-lg border p-6 space-y-4">
+          <h3 className="text-lg font-bold">{plan.name}</h3>
+          {plan.priceAmount ? (
+            <p className="text-2xl font-bold">
+              {plan.priceAmount / 100}
+              {" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                {plan.currency}/{plan.priceInterval}
+              </span>
+            </p>
+          ) : (
+            <p className="text-2xl font-bold">Free</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+<Callout type="info">
+  Prices are stored in minor units (cents). `priceAmount: 2900` means 29.00 currency units. When defining a plan, write `price: { amount: 29 }` — the normalization layer handles the conversion. When reading from the API, divide by 100: `plan.priceAmount / 100`.
 </Callout>
 
 ## Type Inference

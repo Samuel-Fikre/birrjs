@@ -8,7 +8,6 @@ import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
 import { subscription, webhookEvent } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
-import type { PlanInterval } from "../../types";
 
 function headersToRecord(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};

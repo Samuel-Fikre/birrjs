@@ -1,7 +1,7 @@
 "use client";
 
+import { CopyButton } from "@/components/copy-button";
 import { ChromeButton } from "@/components/evil-buttons/chrome-button";
-import { CodeBlockCommand } from "@/components/ui/code-block-command";
 
 export function HeroTitle() {
   return (
@@ -16,12 +16,17 @@ export function HeroTitle() {
           entitlements — with usage tracking, all inside your codebase.
         </p>
         <div className="mt-6 flex flex-col items-center gap-4 sm:mt-8 lg:items-start lg:mt-12">
-          <CodeBlockCommand
-            pnpm="pnpm dlx birrjs init"
-            yarn="yarn dlx birrjs init"
-            npm="npx birrjs init"
-            bun="bunx --bun birrjs init"
-          />
+          <div className="relative w-full overflow-hidden rounded-xl bg-muted shadow-lg border border-border">
+            <div className="flex justify-end p-3 pb-0">
+              <CopyButton text="npx birrjs init" />
+            </div>
+            <pre className="overflow-x-auto px-3 pb-3 pt-0">
+              <code className="font-mono text-sm/none text-foreground/85">
+                <span className="select-none">$ </span>
+                npx birrjs init
+              </code>
+            </pre>
+          </div>
           <ChromeButton href="/docs">Read Docs</ChromeButton>
         </div>
       </div>

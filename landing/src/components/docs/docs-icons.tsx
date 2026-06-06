@@ -25,7 +25,7 @@ const categoryIcons = {
 
 const pageIcons = {
   index: <BookOpen className="docs-category-icon size-3! shrink-0" />,
-  "get-started": <BookOpen className="docs-category-icon size-3! shrink-0" />,
+  "get started": <BookOpen className="docs-category-icon size-3! shrink-0" />,
   installation: <Download className="docs-category-icon size-3! shrink-0" />,
   quickstart: <Rocket className="docs-category-icon size-3! shrink-0" />,
   plans: <Package className="docs-category-icon size-3! shrink-0" />,

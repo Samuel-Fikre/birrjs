@@ -54,7 +54,8 @@ createBirr({
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: "https://your-app.com/api/handle-webhook",
+    callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
   }),
 });
 ```
@@ -69,7 +70,8 @@ createBirr({
 ### Chapa-specific notes
 
 - **Amounts** are sent as decimal strings (e.g. `"29.90"`) — BirrJS converts from minor units automatically
-- **Callback URL** is set per-request during `initializeTransaction`
+- **Callback URL** — Chapa sends a **GET** request here after payment with `?trx_ref=...&status=success`. BirrJS handles this on the same `/handle-webhook` path used by POST webhooks. Set up the webhook URL in your Chapa dashboard to point to the same endpoint for POST events.
+- **Return URL** — Optional. Where Chapa redirects the user's browser after payment completes. Set this to a frontend page like `/account` or `/plans?success=true`.
 - **Webhook signature** uses HMAC-SHA256, verified via timing-safe comparison
 - **Supported events**: `charge.success`, `charge.failed`, `charge.cancelled`, `charge.reversed`, `charge.refunded`
 
@@ -93,7 +95,7 @@ import { arifpay } from "@birrjs/arifpay";
 createBirr({
   provider: arifpay({
     secretKey: process.env.ARIFPAY_SECRET_KEY!,
-    callbackUrl: "https://your-app.com/api/handle-webhook",
+    callbackUrl: "https://your-app.com/api/birrjs/handle-webhook",
   }),
   // Everything else stays the same
   database: process.env.DATABASE_URL,
