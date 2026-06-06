@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "plans",
+    "customers",
+    "subscriptions",
+    "cron",
+    "entitlements",
+    "webhooks",
+    "database",
+    "providers",
+    "plugins",
+    "client",
+    "cli"
+  ],
+  "defaultOpen": true
+}

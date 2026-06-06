@@ -178,7 +178,7 @@ export function normalizePlan(plan: BirrJSPlan, currency: string): NormalizedPla
     includes: sortedIncludes,
     isDefault: plan.default ?? false,
     name: plan.name,
-    priceAmount: plan.price?.amount ?? null,
+    priceAmount: plan.price?.amount != null ? plan.price.amount * 100 : null,
     priceInterval: plan.price?.interval ?? null,
     currency: plan.price?.currency ?? currency,
   };

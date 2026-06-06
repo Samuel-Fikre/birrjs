@@ -10,7 +10,7 @@ const entitlementCheckSchema = z.object({
 
 const entitlementReportSchema = z.object({
   featureId: z.string(),
-  amount: z.number().positive().optional(),
+  amount: z.number().positive().default(1),
 });
 
 export const check = defineBirrJSMethod(
@@ -20,7 +20,7 @@ export const check = defineBirrJSMethod(
     route: {
       client: true,
       method: "POST",
-      path: "/check-entitlement",
+      path: "/check",
     },
   },
   async (ctx) =>
@@ -39,7 +39,7 @@ export const report = defineBirrJSMethod(
     route: {
       client: true,
       method: "POST",
-      path: "/report-entitlement",
+      path: "/report",
     },
   },
   async (ctx) =>

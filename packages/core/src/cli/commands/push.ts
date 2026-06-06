@@ -77,7 +77,9 @@ async function pushAction(options: { config?: string; cwd: string; yes?: boolean
       const planChanged = diffs.filter((d) => d.action !== "unchanged");
       const planLines = diffs.map((diff) => {
         const plan = plans.find((p) => p.id === diff.id);
-        const price = plan?.price ? deps.formatPrice(plan.price.amount, plan.price.interval) : "";
+        const price = plan?.price
+          ? deps.formatPrice(plan.price.amount * 100, plan.price.interval)
+          : "";
         return deps.formatPlanLine(diff.action, diff.id, price);
       });
       const header =

@@ -18,10 +18,7 @@ import {
   deleteCustomer,
 } from "./customer/customer.api";
 // Entitlement methods
-import {
-  check as checkEntitlement,
-  report as reportEntitlement,
-} from "./entitlement/entitlement.api";
+import { check, report } from "./entitlement/entitlement.api";
 // Plan methods
 import { listPlans } from "./plan/plan.api";
 // Subscription methods
@@ -32,6 +29,7 @@ import {
   getSubscription,
   checkSubscription,
 } from "./subscription/subscription.api";
+import { handleWebhookCallback } from "./webhook/handle-webhook-callback";
 // Webhook methods
 import { handleWebhook } from "./webhook/webhook.api";
 
@@ -48,9 +46,10 @@ export const methods = {
   listPlans,
   getSubscription,
   checkSubscription,
-  checkEntitlement,
-  reportEntitlement,
+  check,
+  report,
   handleWebhook,
+  handleWebhookCallback,
   checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
   checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
 } as const;
@@ -106,7 +105,7 @@ export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
   );
 
   return createRouter(routeEndpoints, {
-    basePath: options.basePath ?? "/api",
+    basePath: options.basePath ?? "/api/birrjs",
     routerContext: ctx,
     onError(error) {
       ctx.logger.error({ err: error }, "API error");

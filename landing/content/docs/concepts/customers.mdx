@@ -1,0 +1,128 @@
+---
+title: Customers
+description: Manage customer records and identity resolution.
+---
+
+## Customer Records
+
+A customer is your app's user or billing entity. It can be a user ID, an org ID, or any string that uniquely identifies who's paying. BirrJS maps the customer ID to the underlying provider's customer ID internally — your app never deals with provider IDs.
+
+```ts
+type Customer = {
+  id: string;        // app-provided via identify(), or auto-generated: cus_<uuid>
+  email: string;
+  name?: string;
+  metadata?: Record<string, string>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;  // soft-delete support
+};
+```
+
+## Creating a Customer
+
+There are two paths for creating customers:
+
+**Via `identify()` (recommended)** — customers are auto-created on the first client request. The `customerId` you return from `identify` becomes the customer record's ID:
+
+```ts
+identify: async (request) => {
+  const session = await auth.getSession(request);
+  if (!session) return null;
+  return { customerId: session.user.id, email: session.user.email };
+},
+```
+
+**Via `createCustomer()` (server-side)** — generates a new `cus_<uuid>` ID. This is a plain insert, not an upsert. If the email already exists, it will throw:
+
+```ts
+const customer = await birrjs.createCustomer({
+  email: "Sam@example.com",
+  name: "Samuel",
+  metadata: { company: "Tech" },
+});
+// customer.id → "cus_a1b2c3d4..."
+```
+
+## Get Customer with Details
+
+Returns a customer along with their active subscriptions and entitlements:
+
+```ts
+const result = await birrjs.getCustomerWithDetails({
+  customerId: "cus_a1b2c3d4",
+});
+
+// result.customer.subscriptions — active subscriptions with planId, status, period dates
+// result.customer.entitlements  — feature balances keyed by feature ID
+```
+
+Requires admin auth.
+
+## Update a Customer
+
+```ts
+await birrjs.updateCustomer({
+  customerId: "cus_a1b2c3d4",
+  email: "newemail@example.com",
+  name: "Alemu Newname",
+});
+```
+
+Requires admin auth.
+
+## Identity Resolution
+
+The `identify` callback maps incoming HTTP requests to customer records:
+
+```ts
+createBirr({
+  identify: async (request) => {
+    const token = request.headers.get("authorization")?.split(" ")[1];
+    if (!token) return null;
+    const payload = decodeJwt(token);
+    return { customerId: payload.sub, email: payload.email };
+  },
+});
+```
+
+When `requireCustomer: true` is set on an endpoint:
+1. `identify()` is called with the incoming request
+2. If it returns `null`, the request is rejected with `IDENTIFY_REQUIRED`
+3. If the input `customerId` doesn't match what `identify` returned, the request is rejected with `CUSTOMER_ID_MISMATCH`
+4. The customer record is auto-created or updated
+
+## Soft Delete
+
+Customers are soft-deleted (a `deletedAt` timestamp is set). Provider subscriptions are **not** automatically cancelled on delete — since BirrJS manages subscription state locally, cancelling subscriptions before deleting a customer is your responsibility.
+
+The email unique index is a **partial index** that only applies to non-deleted rows:
+
+```sql
+CREATE UNIQUE INDEX birrjs_customer_email_unique
+  ON birrjs_customer (email)
+  WHERE deleted_at IS NULL;
+```
+
+This means:
+- Active customers must have unique emails
+- Soft-deleted customers can be re-registered with the same email
+- No TOCTOU race conditions (enforced at the database level)
+
+## Admin Endpoints
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `createCustomer` | `/create-customer` | Open (signup) |
+| `getCustomer` | `/get-customer` | Admin |
+| `getCustomerWithDetails` | `/get-customer-with-details` | Admin |
+| `updateCustomer` | `/customers/:customerId` | Admin |
+| `listCustomers` | `/list-customers` | Admin |
+| `deleteCustomer` | `/delete-customer` | Admin |
+
+Admin endpoints use a Bearer token in the `Authorization` header, validated against `adminSecret` with timing-safe comparison.
+
+<Callout type="info">
+  `createCustomer` is open (signup entry point). All other customer endpoints require admin auth.
+</Callout>
+

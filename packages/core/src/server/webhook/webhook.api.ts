@@ -5,9 +5,9 @@ import { defineBirrJSMethod } from "../../api/endpoint";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
 import { generateId } from "../../core/utils";
+import type { BirrJSDatabase } from "../../database";
 import { subscription, webhookEvent } from "../../database/schema";
-import { renewSubscription } from "../../subscription";
-import type { PlanInterval } from "../../types";
+import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 
 function headersToRecord(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
@@ -140,19 +140,29 @@ export const handleWebhook = defineBirrJSMethod(
     };
 
     switch (eventType) {
-      case "charge.success":
-        newStatus = "active";
-        updateFields.lastPaymentAt = new Date();
-        if (!subscriptionRecord.startedAt) {
-          updateFields.startedAt = new Date();
+      case "charge.success": {
+        const result = await database.transaction(async (tx) => {
+          const activation = await activateSubscriptionByTxRef(
+            tx as unknown as BirrJSDatabase,
+            logger,
+            providerEvent.providerReferenceId,
+          );
+          await tx
+            .update(webhookEvent)
+            .set({ status: "completed", processedAt: new Date() })
+            .where(eq(webhookEvent.id, webhookEventId));
+          return activation;
+        });
+
+        if (result.updated) {
+          logger.info(
+            { subscriptionId: result.subscriptionId, eventType },
+            "Subscription activated via webhook",
+          );
         }
-        if (subscriptionRecord.interval) {
-          updateFields.expiresAt = renewSubscription({
-            currentExpiresAt: subscriptionRecord.expiresAt ?? new Date(),
-            interval: subscriptionRecord.interval as PlanInterval,
-          });
-        }
-        break;
+
+        return { success: true, message: "Webhook processed successfully" };
+      }
       case "charge.failed/cancelled":
         // Don't mark active subscriptions as failed (renewal attempt failed,
         // but current access is still valid until current expiry)

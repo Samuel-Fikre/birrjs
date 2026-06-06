@@ -113,7 +113,7 @@ describe("entitlement deduction", () => {
       now,
     });
 
-    const before = await t.birr.checkEntitlement({
+    const before = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
@@ -121,7 +121,7 @@ describe("entitlement deduction", () => {
     expect(before.balance).not.toBeNull();
     expect(before.balance!.remaining).toBe(100);
 
-    const reportResult = await t.birr.reportEntitlement({
+    const reportResult = await t.birr.report({
       customerId: customer.customer.id,
       featureId,
       amount: 1,
@@ -129,7 +129,7 @@ describe("entitlement deduction", () => {
     expect(reportResult.success).toBe(true);
     expect(reportResult.balance).not.toBeNull();
 
-    const after = await t.birr.checkEntitlement({
+    const after = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
@@ -152,7 +152,7 @@ describe("entitlement deduction", () => {
       now,
     });
 
-    const reportResult = await t.birr.reportEntitlement({
+    const reportResult = await t.birr.report({
       customerId: customer.customer.id,
       featureId,
       amount: 10,
@@ -177,14 +177,14 @@ describe("entitlement deduction", () => {
       now,
     });
 
-    const check = await t.birr.checkEntitlement({
+    const check = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
     expect(check.allowed).toBe(true);
     expect(check.balance?.unlimited).toBe(true);
 
-    const report = await t.birr.reportEntitlement({
+    const report = await t.birr.report({
       customerId: customer.customer.id,
       featureId,
       amount: 1000,
@@ -205,7 +205,7 @@ describe("entitlement deduction", () => {
       now,
     });
 
-    const check = await t.birr.checkEntitlement({
+    const check = await t.birr.check({
       customerId: customer.customer.id,
       featureId: "nonexistent-feature",
     });
@@ -329,7 +329,7 @@ describe("entitlement deduction", () => {
       nextResetAt: new Date(now.getTime() + 86_400_000),
     });
 
-    const before = await t.birr.checkEntitlement({
+    const before = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
@@ -338,7 +338,7 @@ describe("entitlement deduction", () => {
     expect(before.balance!.limit).toBe(700);
     expect(before.balance!.remaining).toBe(700);
 
-    const report = await t.birr.reportEntitlement({
+    const report = await t.birr.report({
       customerId: customer.customer.id,
       featureId,
       amount: 600,
@@ -347,7 +347,7 @@ describe("entitlement deduction", () => {
     expect(report.balance).not.toBeNull();
     expect(report.balance!.remaining).toBe(100);
 
-    const after = await t.birr.checkEntitlement({
+    const after = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
@@ -368,7 +368,7 @@ describe("entitlement deduction", () => {
       now,
     });
 
-    const before = await t.birr.checkEntitlement({
+    const before = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });
@@ -382,7 +382,7 @@ describe("entitlement deduction", () => {
       .set({ status: "expired", expiresAt: new Date(Date.now() - 86_400_000) })
       .where(eq(schema.subscription.customerId, customer.customer.id));
 
-    const after = await t.birr.checkEntitlement({
+    const after = await t.birr.check({
       customerId: customer.customer.id,
       featureId,
     });

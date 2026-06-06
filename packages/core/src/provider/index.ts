@@ -33,6 +33,7 @@ export interface PaymentProviderConfig {
   secretKey: string;
   webhookSecret?: string;
   callbackUrl: string;
+  returnUrl?: string;
   currency?: string;
   testMode?: boolean;
   runtime?: PaymentProvider;

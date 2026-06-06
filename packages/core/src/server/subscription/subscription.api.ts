@@ -53,7 +53,7 @@ export const subscribe = defineBirrJSMethod(
       .where(
         and(
           eq(subscription.customerId, customer.id),
-          eq(subscription.planId, planRecord.id),
+          eq(subscription.planId, planRecord.internalId),
           eq(subscription.status, "active"),
         ),
       )
@@ -75,7 +75,7 @@ export const subscribe = defineBirrJSMethod(
         ...createSubscription({
           id: subscriptionId,
           customerId: customer.id,
-          planId: planRecord.id,
+          planId: planRecord.internalId,
           interval: (planRecord.priceInterval ?? "monthly") as PlanInterval,
         }),
         cancelAtPeriodEnd: false,
@@ -111,7 +111,8 @@ export const subscribe = defineBirrJSMethod(
       currency: planRecord.currency || "ETB",
       email: customer.email ?? "",
       txRef,
-      callbackUrl: ctx.birrjs.options.callbackUrl,
+      callbackUrl: ctx.birrjs.options.provider.callbackUrl,
+      returnUrl: ctx.birrjs.options.provider.returnUrl,
     };
 
     let transaction;

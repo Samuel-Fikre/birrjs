@@ -1,0 +1,102 @@
+---
+title: Webhooks
+description: Handle payment events in real time with idempotent webhook processing.
+---
+
+BirrJS processes webhooks from your payment provider to update subscription status.
+
+## Webhook Events
+
+| Event | Effect on subscription |
+|-------|----------------------|
+| `charge.success` | `pending` → `active`. Sets `startedAt`, calls `renewSubscription()` to extend `expiresAt`. Renews if already active. |
+| `charge.failed` | `pending` → `failed`. Active subscriptions are **not** affected. |
+| `charge.cancelled` | Same as `charge.failed` |
+| `charge.reversed` | Marks as cancelled |
+| `charge.refunded` | Marks as cancelled |
+| Unknown | `ignored` (logged, no status change) |
+
+## How It Works
+
+<Steps>
+  <Step>
+  ### 1. Receive the webhook
+
+  The provider sends a POST request to your configured callback URL (e.g. `https://your-app.com/api/handle-webhook`).
+  </Step>
+
+  <Step>
+  ### 2. Provider verification
+
+  The provider driver validates the webhook signature and returns a normalized event. For Chapa, this involves:
+  - Validating the JSON payload structure
+  - Verifying HMAC-SHA256 signature from the `chapa-signature` header
+  - Cross-validating against the Chapa verify API
+  </Step>
+
+  <Step>
+  ### 3. Idempotency check
+
+  BirrJS checks if this event was already processed using a unique index on `(providerId, providerReferenceId)`:
+  - **Already completed** → skip (duplicate)
+  - **Previously failed** → reset to `processing` and retry
+  - **New** → insert as `processing`
+  </Step>
+
+  <Step>
+  ### 4. Process and update
+
+  In a single database transaction:
+  1. Update the subscription status
+  2. Mark the webhook event as `completed`
+
+  If anything fails, the webhook event is marked as `failed` with the error message.
+  </Step>
+</Steps>
+
+## Webhook Event Records
+
+Each incoming webhook is stored in the `webhookEvent` table with these statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `processing` | Being processed |
+| `completed` | Applied successfully |
+| `failed` | Error during processing |
+| `ignored` | Unknown event type or no matching subscription |
+
+Events are uniquely identified by `(providerId, providerReferenceId)` — the same event sent twice skips processing.
+
+## Configuration
+
+Set the `callbackUrl` when creating your BirrJS instance. The same path `/handle-webhook` handles both GET callbacks and POST webhooks:
+
+```ts
+createBirr({
+  provider: chapa({
+    callbackUrl: "https://your-app.com/api/birrjs/handle-webhook",
+    // ...
+  }),
+});
+```
+
+### GET callback
+
+Chapa sends a **GET** request to `callbackUrl` after payment with `?trx_ref=...&ref_id=...&status=success`. BirrJS verifies the transaction via the provider and activates the subscription.
+
+### POST webhook
+
+Configure the same URL as the **Webhook URL** in your Chapa dashboard. Chapa sends a **POST** with the full event payload (signature-verified via `webhookSecret`).
+
+<Callout type="info">
+  Both mechanisms can arrive for the same payment. BirrJS handles this gracefully — the subscription is only activated once. The POST webhook uses the `webhookEvent` table for deduplication; the GET callback checks if the subscription is already active before updating.
+</Callout>
+
+<Callout type="warning">
+  The webhook endpoint does **not** require customer identity. It uses `requireHeaders: true` and `requireRequest: true` to access the raw body and headers directly.
+</Callout>
+
+## Failed Payment Protection
+
+If a renewal payment fails but the current period hasn't expired, the subscription stays **active** — the customer keeps access until their paid period ends. Only `pending` subscriptions (never activated) are marked as `failed`.
+

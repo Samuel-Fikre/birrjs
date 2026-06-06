@@ -14,7 +14,7 @@ type InferClientAPI<TInstance> =
 export function createBirrJSClient<TInstance>(
   options?: BirrJSClientOptions,
 ): InferClientAPI<TInstance> {
-  const baseURL = options?.baseURL ?? "/api";
+  const baseURL = options?.baseURL ?? "/api/birrjs";
   const isCredentialsSupported =
     typeof globalThis.Request !== "undefined" && "credentials" in Request.prototype;
 

@@ -22,7 +22,6 @@ export interface BirrJSSchedulingOptions {
 export interface BirrJSOptions {
   provider: PaymentProviderConfig;
   database: string | Pool;
-  callbackUrl: string;
   basePath?: string;
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;

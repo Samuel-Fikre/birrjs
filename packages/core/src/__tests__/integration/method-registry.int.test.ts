@@ -36,8 +36,8 @@ describe("client: true metadata", () => {
     "cancelSubscription",
     "getSubscription",
     "listPlans",
-    "checkEntitlement",
-    "reportEntitlement",
+    "check",
+    "report",
   ];
 
   for (const name of clientMethods) {
@@ -63,8 +63,8 @@ describe("route path metadata", () => {
     cancelSubscription: "/cancel-subscription",
     getSubscription: "/get-subscription",
     listPlans: "/list-plans",
-    checkEntitlement: "/check-entitlement",
-    reportEntitlement: "/report-entitlement",
+    check: "/check",
+    report: "/report",
     handleWebhook: "/handle-webhook",
     checkPendingSubscriptions: "/check-pending-subscriptions",
     checkExpiredSubscriptions: "/check-expired-subscriptions",

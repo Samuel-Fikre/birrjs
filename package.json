@@ -34,7 +34,9 @@
   },
   "lint-staged": {
     "!(**/migrations/**)": [
-      "oxlint --fix",
+      "oxlint --fix"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
       "oxfmt --write"
     ]
   },

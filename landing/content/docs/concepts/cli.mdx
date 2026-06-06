@@ -1,0 +1,83 @@
+---
+title: CLI Reference
+description: Commands for scaffolding, migrations, and plan sync.
+---
+
+The BirrJS CLI helps you scaffold projects, run database migrations, and sync plans.
+
+## Commands
+
+### `birrjs init`
+
+Scaffolds a new BirrJS project with interactive prompts.
+
+```bash
+npx birrjs init
+```
+
+**What it does:**
+1. Detects your framework (Next.js, Hono, Express, Astro, SvelteKit, etc. — 13 supported)
+2. Selects a payment provider (Chapa active, more coming)
+3. Generates `birrjs.ts` config file
+4. Generates a route handler for your framework
+5. Generates `birrjs-client.ts` (type-safe client)
+6. Creates plan template files (SaaS Starter, Usage-Based, or Empty)
+7. Creates `.env` with required environment variables
+8. Installs `@birrjs/core` and `@birrjs/chapa` via your package manager
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--defaults` | Skip prompts, use all defaults |
+| `--force` | Overwrite existing files |
+| `--skip-install` | Skip package installation |
+
+### `birrjs status`
+
+Check the health of your BirrJS setup.
+
+```bash
+birrjs status
+```
+
+Pass `--throw` to exit with code 1 on failures, useful for CI pipelines:
+
+```bash
+birrjs status --throw
+```
+
+**Checks:**
+- Configuration file validity
+- Database connection
+- Pending migrations
+- Plan sync status (code vs database diff)
+
+### `birrjs push`
+
+Apply migrations and sync plans to the database.
+
+```bash
+birrjs push
+```
+
+**What it does:**
+1. Runs pending database migrations
+2. Syncs code-first plan definitions to the database (versioned, with SHA-256 change detection)
+3. Shows a summary of what changed
+
+## Plan Templates
+
+The `init` command offers three plan templates:
+
+| Template | Description |
+|----------|-------------|
+| **SaaS Starter** | `free` (default) + `pro` ($29/month) |
+| **Usage Based** | Metered features with usage limits |
+| **Empty** | Start from scratch |
+
+## Framework Detection
+
+BirrJS detects these frameworks:
+Next.js, Nuxt, SvelteKit, Solid Start, TanStack Start, Astro, Remix, React Router v7, Hono, Fastify, Express, Elysia, Nitro
+

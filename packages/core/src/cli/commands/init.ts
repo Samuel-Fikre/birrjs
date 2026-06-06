@@ -83,10 +83,11 @@ import { createBirr } from "@birrjs/core";${importLine}
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  callbackUrl: process.env.CALLBACK_URL!,
   provider: chapa({
     secretKey: process.env.CHAPA_SECRET_KEY!,
     webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
   }),${plansLine}${identifyBlock}
 });
 `;
@@ -147,6 +148,7 @@ const ENV_VARS = [
   { key: "CHAPA_SECRET_KEY", line: "CHAPA_SECRET_KEY=" },
   { key: "CHAPA_WEBHOOK_SECRET", line: "CHAPA_WEBHOOK_SECRET=" },
   { key: "CALLBACK_URL", line: "CALLBACK_URL=" },
+  { key: "RETURN_URL", line: "RETURN_URL=" },
 ];
 
 function frameworksList(): string {

@@ -48,7 +48,7 @@ describe("normalizePlan", () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        priceAmount: 1000,
+        priceAmount: 100000,
         priceInterval: "monthly",
         currency: "ETB",
       }),

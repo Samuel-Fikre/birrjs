@@ -1,0 +1,45 @@
+---
+title: Introduction
+description: Type-safe subscription management framework for local payment providers.
+---
+
+BirrJS is a **type-safe** subscription management framework that sits between your application and payment providers. It gives you a unified API for subscriptions, entitlements, and billing — tailored for local providers like Chapa, ArifPay, Santim Pay, and more.
+
+```ts
+import { createBirr } from "@birrjs/core";
+import { chapa } from "@birrjs/chapa";
+
+const birr = createBirr({
+  database: process.env.DATABASE_URL,
+  provider: chapa({ apiKey: process.env.CHAPA_API_KEY }),
+  plans: [starter, pro],
+  identify: (c) => c.auth.userId,
+});
+
+const { checkoutUrl } = await birr.subscribe({ planId: "pro" });
+```
+
+## Why BirrJS?
+
+<Cards>
+  <Card title="Local Providers" description="Built for Ethiopian payment gateways." />
+  <Card title="Code-First Plans" description="Define plans and features in TypeScript. Sync to your database with one command." />
+  <Card title="Type-Safe API" description="Full TypeScript inference from the server to the client. Narrowed planId and featureId literals." />
+  <Card title="Webhooks" description="Built-in webhook handling. Automatic event processing for subscriptions and entitlements." />
+</Cards>
+
+## Architecture
+
+BirrJS has three layers:
+
+- **Server SDK** — Integrate into your backend (Next.js, Hono, Express, etc.). Define plans, handle webhooks, manage subscriptions.
+- **Client SDK** — A dynamic Proxy-based client for your frontend app. Full type inference from your server instance.
+- **CLI** — Scaffold projects, sync plans to the database, run migrations.
+
+## Server / Client 
+
+| Side | Methods | Access |
+|------|---------|--------|
+| **Client** | `subscribe`, `listSubscriptions`, `cancelSubscription`, `getSubscription`, `listPlans`, `check`, `report` | Proxy client (POST, typed) |
+| **Server-only** | Customer CRUD, webhook handling, cron sweeps | Admin auth or direct call |
+| **Cron** | `checkPendingSubscriptions`, `checkExpiredSubscriptions` | Cron secret header |

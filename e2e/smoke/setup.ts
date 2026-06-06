@@ -76,7 +76,6 @@ export async function createTestBirrJS(options?: CreateTestBirrJSOptions): Promi
   const birr: BirrInstance = createBirr({
     database: pool,
     provider: providerConfig,
-    callbackUrl,
     logging: { level: "silent" },
   });
 

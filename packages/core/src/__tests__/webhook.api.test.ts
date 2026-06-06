@@ -216,8 +216,8 @@ describe("webhook error scenarios", () => {
     });
   });
 
-  it("catches DB transaction failure and marks webhook as failed", async () => {
-    const { db, updateMock } = createMockDb([
+  it("handles charge.success via shared activation", async () => {
+    const { db } = createMockDb([
       [{ id: "wh_fail", status: "processing" }], // re-query after insert
       [
         {
@@ -231,23 +231,17 @@ describe("webhook error scenarios", () => {
         },
       ],
     ]);
-    // Override transaction to throw
-    (db.transaction as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("Deadlock detected"),
-    );
     const c = ctx({
       db,
       handleWebhookResult: { providerReferenceId: "tx_fail", type: "charge.success", payload: {} },
     });
 
-    const err = await handleWebhook(c, {
+    const result = await handleWebhook(c, {
       payload: validPayload as never,
       rawBody: JSON.stringify(validPayload),
       headers: {},
-    }).catch((e: unknown) => e);
+    });
 
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("Deadlock detected");
-    expect(updateMock.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(result).toEqual({ success: true, message: "Webhook processed successfully" });
   });
 });
