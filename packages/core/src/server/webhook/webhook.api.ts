@@ -4,10 +4,12 @@ import { and, eq } from "drizzle-orm";
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
+import { runEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
 import { subscription, webhookEvent } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
+import type { BirrJSEventMap } from "../../types/events";
 
 function headersToRecord(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
@@ -159,6 +161,26 @@ export const handleWebhook = defineBirrJSMethod(
             { subscriptionId: result.subscriptionId, eventType },
             "Subscription activated via webhook",
           );
+
+          const [activatedSub] = await database
+            .select({ startedAt: subscription.startedAt, expiresAt: subscription.expiresAt })
+            .from(subscription)
+            .where(eq(subscription.id, result.subscriptionId!))
+            .limit(1);
+
+          const eventPayload: BirrJSEventMap["subscription.activated"] = {
+            customerId: subscriptionRecord.customerId,
+            subscriptionId: subscriptionRecord.id,
+            planId: subscriptionRecord.planId,
+            startedAt: activatedSub?.startedAt ?? null,
+            expiresAt: activatedSub?.expiresAt ?? null,
+          };
+          await runEventHandlers(
+            ctx.birrjs.options.on,
+            "subscription.activated",
+            eventPayload,
+            logger,
+          );
         }
 
         return { success: true, message: "Webhook processed successfully" };
@@ -225,6 +247,21 @@ export const handleWebhook = defineBirrJSMethod(
       },
       "Subscription status updated via webhook",
     );
+
+    const [cancelledSub] = await database
+      .select({ canceledAt: subscription.canceledAt, endedAt: subscription.endedAt })
+      .from(subscription)
+      .where(eq(subscription.id, subscriptionRecord.id))
+      .limit(1);
+
+    const cancelPayload: BirrJSEventMap["subscription.cancelled"] = {
+      customerId: subscriptionRecord.customerId,
+      subscriptionId: subscriptionRecord.id,
+      planId: subscriptionRecord.planId,
+      canceledAt: cancelledSub?.canceledAt ?? null,
+      endedAt: cancelledSub?.endedAt ?? null,
+    };
+    await runEventHandlers(ctx.birrjs.options.on, "subscription.cancelled", cancelPayload, logger);
 
     return { success: true, message: "Webhook processed successfully" };
   },

@@ -8,10 +8,11 @@ import {
   GetSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
+import { runBeforeHooks, runAfterHooks } from "../../core/hooks";
 import { generateId } from "../../core/utils";
-import { plan, subscription, planFeature, entitlement } from "../../database/schema";
+import { plan, subscription, feature, planFeature, entitlement } from "../../database/schema";
 import { addResetInterval } from "../../entitlement/entitlement.service";
-import type { ResetInterval } from "../../plans/schema";
+import type { ResetInterval, NormalizedPlan, PriceInterval, FeatureType } from "../../plans/schema";
 import type { TransactionRequest } from "../../provider";
 import {
   createSubscription,
@@ -46,6 +47,38 @@ export const subscribe = defineBirrJSMethod(
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);
     }
 
+    // Load plan features with type for hooks and entitlement creation
+    const planFeatures = await database
+      .select({
+        featureId: planFeature.featureId,
+        limit: planFeature.limit,
+        resetInterval: planFeature.resetInterval,
+        config: planFeature.config,
+        type: feature.type,
+      })
+      .from(planFeature)
+      .innerJoin(feature, eq(feature.id, planFeature.featureId))
+      .where(eq(planFeature.planId, planRecord.internalId));
+
+    // Build NormalizedPlan for hook context
+    const normalizedPlan: NormalizedPlan = {
+      id: planRecord.id,
+      name: planRecord.name,
+      group: planRecord.group ?? null,
+      includes: planFeatures.map((pf) => ({
+        config: pf.config,
+        id: pf.featureId,
+        limit: pf.limit,
+        resetInterval: pf.resetInterval as ResetInterval | null,
+        type: pf.type as FeatureType,
+      })),
+      isDefault: planRecord.isDefault,
+      priceAmount: planRecord.priceAmount,
+      priceInterval: planRecord.priceInterval as PriceInterval | null,
+      currency: planRecord.currency ?? "ETB",
+      hash: planRecord.hash ?? "",
+    };
+
     // Check for existing active subscription (renewal path)
     const existingSubscriptions = await database
       .select()
@@ -59,6 +92,22 @@ export const subscribe = defineBirrJSMethod(
       )
       .limit(1);
     const existingSubscription = existingSubscriptions[0];
+
+    // Run onBeforeSubscribe hooks (fail-closed gate)
+    const cfIp = ctx.request?.headers.get("cf-connecting-ip");
+    const xForwardedFor = ctx.request?.headers.get("x-forwarded-for");
+    const ip = cfIp ?? xForwardedFor?.split(",")[0]?.trim() ?? undefined;
+    const hookTimeout = ctx.birrjs.options.hookTimeout ?? 5000;
+    await runBeforeHooks(
+      ctx.birrjs.options.plugins,
+      {
+        customerId: customer.id,
+        plan: normalizedPlan,
+        customerEmail: customer.email ?? undefined,
+        ip,
+      },
+      hookTimeout,
+    );
 
     const subscriptionId = existingSubscription?.id ?? generateId("sub");
     const txRef = `tx_${crypto.randomUUID()}`;
@@ -86,11 +135,6 @@ export const subscribe = defineBirrJSMethod(
       await database.insert(subscription).values(newSubscription);
 
       // create Entitlement record
-      const planFeatures = await database
-        .select()
-        .from(planFeature)
-        .where(eq(planFeature.planId, planRecord.internalId));
-
       for (const pf of planFeatures) {
         await database.insert(entitlement).values({
           id: generateId("ent"),
@@ -142,6 +186,19 @@ export const subscribe = defineBirrJSMethod(
         BIRRJS_ERROR_CODES.TRANSACTION_INVALID_RESPONSE,
       );
     }
+
+    // Schedule onCheckoutReady fire-and-forget after response
+    Promise.resolve()
+      .then(() =>
+        runAfterHooks(ctx.birrjs.options.plugins, {
+          customerId: customer.id,
+          planId: planRecord.id,
+          subscriptionId,
+          checkoutUrl: transaction.checkoutUrl!,
+          txRef,
+        }),
+      )
+      .catch((err) => ctx.birrjs.logger.error({ err }, "subscribe complete hook error"));
 
     return {
       checkoutUrl: transaction.checkoutUrl,

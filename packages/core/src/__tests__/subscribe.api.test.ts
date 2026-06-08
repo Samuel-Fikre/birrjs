@@ -36,6 +36,7 @@ function createMockDb(): {
   function query(): Record<string, unknown> {
     const chain: Record<string, unknown> = {
       from: () => chain,
+      innerJoin: () => chain,
       where: () => chain,
       orderBy: () => chain,
       limit: (_n: number) => Promise.resolve(next()),
@@ -127,6 +128,7 @@ describe("subscribe error scenarios", () => {
     const { db, push, updateMock } = createMockDb();
     push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([]); // plan features
     push([]); // no existing active subscription
     const ctx = {
       database: db as BirrJSDatabase,
@@ -163,6 +165,7 @@ describe("subscribe error scenarios", () => {
     const { db, push } = createMockDb();
     push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([]); // plan features
     push([]); // no existing subscription
     const ctx = {
       database: db as BirrJSDatabase,
@@ -197,6 +200,7 @@ describe("subscribe error scenarios", () => {
     const { db, push, updateMock } = createMockDb();
     push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([]); // plan features
     push([
       {
         id: "sub_active",

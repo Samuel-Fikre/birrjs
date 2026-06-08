@@ -3,6 +3,8 @@ import type { LevelWithSilent, Logger } from "pino";
 
 import type { BirrJSPlan } from "../plans/index";
 import type { PaymentProviderConfig } from "../provider";
+import type { BirrJSEventHandlers } from "./events";
+import type { BirrJSPlugin } from "./plugin";
 
 export interface BirrJSLoggingOptions {
   level?: LevelWithSilent;
@@ -30,4 +32,7 @@ export interface BirrJSOptions {
     request: Request,
   ) => Promise<{ customerId?: string; email?: string; name?: string } | null>;
   plans?: readonly BirrJSPlan[];
+  plugins?: BirrJSPlugin[];
+  on?: BirrJSEventHandlers;
+  hookTimeout?: number;
 }

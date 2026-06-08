@@ -35,3 +35,5 @@ export interface PlanWithFeatures {
 }
 
 export * from "./options";
+export * from "./plugin";
+export * from "./events";

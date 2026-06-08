@@ -5,7 +5,9 @@ import { eq, and, lt } from "drizzle-orm";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import type { BirrJSContext } from "../../context";
+import { runEventHandlers } from "../../core/hooks";
 import { subscription } from "../../database/schema";
+import type { BirrJSEventMap } from "../../types/events";
 
 function safeCompare(a: string, b: string): boolean {
   const hashA = createHash("sha256").update(a).digest();
@@ -85,6 +87,16 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
     .returning();
 
   logger.info(`Marked ${updatedSubscriptions.length} subscriptions as expired`);
+
+  for (const sub of updatedSubscriptions) {
+    const eventPayload: BirrJSEventMap["subscription.expired"] = {
+      customerId: sub.customerId,
+      subscriptionId: sub.id,
+      planId: sub.planId,
+      expiredAt: sub.expiresAt ?? sub.endedAt ?? new Date(),
+    };
+    await runEventHandlers(ctx.options.on, "subscription.expired", eventPayload, logger);
+  }
 
   return {
     checked: updatedSubscriptions.length,
