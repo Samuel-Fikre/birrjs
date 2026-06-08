@@ -21,6 +21,10 @@ async function sendSms(config: AfromessageConfig, to: string, message: string): 
     }),
   });
 
+  if (!response.ok) {
+    throw new Error(`Afromessage API HTTP error: ${response.status} ${response.statusText}`);
+  }
+
   const body = (await response.json()) as { acknowledge: string; response?: { errors?: string[] } };
   if (body.acknowledge !== "success") {
     const errors = body.response?.errors ?? ["Unknown error"];
