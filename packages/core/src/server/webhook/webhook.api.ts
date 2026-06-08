@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
-import { runEventHandlers } from "../../core/hooks";
+import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
 import { subscription, webhookEvent } from "../../database/schema";
@@ -175,11 +175,16 @@ export const handleWebhook = defineBirrJSMethod(
             startedAt: activatedSub?.startedAt ?? null,
             expiresAt: activatedSub?.expiresAt ?? null,
           };
-          await runEventHandlers(
-            ctx.birrjs.options.on,
-            "subscription.activated",
-            eventPayload,
-            logger,
+          Promise.resolve().then(() =>
+            runEventHandlers(ctx.birrjs.options.on, "subscription.activated", eventPayload, logger),
+          );
+          Promise.resolve().then(() =>
+            runPluginEventHandlers(
+              ctx.birrjs.options.plugins,
+              "subscription.activated",
+              eventPayload,
+              ctx.birrjs,
+            ),
           );
         }
 
@@ -261,7 +266,17 @@ export const handleWebhook = defineBirrJSMethod(
       canceledAt: cancelledSub?.canceledAt ?? null,
       endedAt: cancelledSub?.endedAt ?? null,
     };
-    await runEventHandlers(ctx.birrjs.options.on, "subscription.cancelled", cancelPayload, logger);
+    Promise.resolve().then(() =>
+      runEventHandlers(ctx.birrjs.options.on, "subscription.cancelled", cancelPayload, logger),
+    );
+    Promise.resolve().then(() =>
+      runPluginEventHandlers(
+        ctx.birrjs.options.plugins,
+        "subscription.cancelled",
+        cancelPayload,
+        ctx.birrjs,
+      ),
+    );
 
     return { success: true, message: "Webhook processed successfully" };
   },

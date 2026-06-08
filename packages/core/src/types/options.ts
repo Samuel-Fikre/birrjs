@@ -30,7 +30,7 @@ export interface BirrJSOptions {
   adminSecret?: string;
   identify?: (
     request: Request,
-  ) => Promise<{ customerId?: string; email?: string; name?: string } | null>;
+  ) => Promise<{ customerId?: string; email?: string; name?: string; phone?: string } | null>;
   plans?: readonly BirrJSPlan[];
   plugins?: BirrJSPlugin[];
   on?: BirrJSEventHandlers;

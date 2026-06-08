@@ -1,4 +1,5 @@
 import type { NormalizedPlan } from "../plans/schema";
+import type { BirrJSPluginEventHandlers } from "./events";
 
 export interface BeforeSubscribeHookCtx {
   readonly customerId: string;
@@ -20,4 +21,5 @@ export interface BirrJSPlugin {
   endpoints?: Record<string, unknown>;
   onBeforeSubscribe?: (hookCtx: BeforeSubscribeHookCtx) => Promise<void>;
   onCheckoutReady?: (hookCtx: CheckoutReadyHookCtx) => Promise<void>;
+  onEvent?: BirrJSPluginEventHandlers;
 }

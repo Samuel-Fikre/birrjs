@@ -132,15 +132,24 @@ export async function getCustomerWithDetails(
 
 export async function syncCustomerWithDefaults(
   database: BirrJSDatabase,
-  input: { id: string; email?: string | null; name?: string | null },
+  input: { id: string; email?: string | null; name?: string | null; phone?: string | null },
 ): Promise<Customer> {
   const existing = await database.select().from(customer).where(eq(customer.id, input.id)).limit(1);
 
   if (existing[0]) {
-    if (existing[0].email !== input.email || existing[0].name !== input.name) {
+    if (
+      existing[0].email !== input.email ||
+      existing[0].name !== input.name ||
+      existing[0].phone !== input.phone
+    ) {
       const [updated] = await database
         .update(customer)
-        .set({ email: input.email, name: input.name, updatedAt: new Date() })
+        .set({
+          email: input.email,
+          name: input.name,
+          phone: input.phone,
+          updatedAt: new Date(),
+        })
         .where(eq(customer.id, input.id))
         .returning();
       return updated as Customer;
@@ -154,6 +163,7 @@ export async function syncCustomerWithDefaults(
       id: input.id,
       email: input.email ?? null,
       name: input.name ?? null,
+      phone: input.phone ?? null,
     })
     .returning();
   return created as Customer;

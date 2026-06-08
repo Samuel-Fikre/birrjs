@@ -4,6 +4,7 @@ import type { BirrJSContext } from "../context";
 import type { BirrJSDatabase } from "../database";
 import { ProviderError } from "../provider";
 import { handleWebhook } from "../server/webhook/webhook.api";
+import type { BirrJSQueries } from "../types";
 
 type QueryResult = Array<Record<string, unknown>>;
 
@@ -83,6 +84,7 @@ function ctx(
   }> = {},
 ): BirrJSContext {
   return {
+    queries: {} as unknown as BirrJSQueries,
     options: { provider: { id: "chapa" } } as BirrJSContext["options"],
     database: overrides.db ?? ({} as BirrJSDatabase),
     runtime: {

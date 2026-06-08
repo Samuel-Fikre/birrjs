@@ -5,7 +5,7 @@ import { eq, and, lt } from "drizzle-orm";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import type { BirrJSContext } from "../../context";
-import { runEventHandlers } from "../../core/hooks";
+import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { subscription } from "../../database/schema";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -96,6 +96,7 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
       expiredAt: sub.expiresAt ?? sub.endedAt ?? new Date(),
     };
     await runEventHandlers(ctx.options.on, "subscription.expired", eventPayload, logger);
+    await runPluginEventHandlers(ctx.options.plugins, "subscription.expired", eventPayload, ctx);
   }
 
   return {

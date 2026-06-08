@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { BirrJSContext } from "../context";
 import type { BirrJSDatabase } from "../database";
 import { checkPendingSubscriptions, checkExpiredSubscriptions } from "../server/cron/cron.api";
+import type { BirrJSQueries } from "../types";
 
 function mockDb(returnedRows: Array<Record<string, unknown>> = []) {
   const returningMock = vi.fn().mockResolvedValue(returnedRows);
@@ -27,6 +28,7 @@ function ctx(
   }> = {},
 ): BirrJSContext {
   return {
+    queries: {} as unknown as BirrJSQueries,
     database: overrides.database ?? ({} as BirrJSDatabase),
     options: {
       scheduling: {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import type { BirrJSInternalLogger } from "../../core/logger";
 import type { BirrJSEventHandlers, BirrJSEventMap } from "../../types/events";
 import type { BirrJSPlugin } from "../../types/plugin";
 import { runBeforeHooks, runAfterHooks, runEventHandlers } from "../hooks";
@@ -86,7 +87,16 @@ describe("runBeforeHooks", () => {
 });
 
 describe("runAfterHooks", () => {
-  it("rejects when a hook throws (caller expected to catch)", async () => {
+  it("logs errors with allSettled (fail-open)", async () => {
+    const errorFn = vi.fn();
+    const logger = {
+      error: errorFn,
+      info: vi.fn(),
+      warn: vi.fn(),
+      fatal: vi.fn(),
+      debug: vi.fn(),
+      child: vi.fn(),
+    } as unknown as BirrJSInternalLogger;
     const plugins = [
       createPlugin("p1", {
         onCheckoutReady: async () => {
@@ -94,7 +104,11 @@ describe("runAfterHooks", () => {
         },
       }),
     ];
-    await expect(runAfterHooks(plugins, defaultAfterCtx)).rejects.toThrow("log error");
+    await runAfterHooks(plugins, defaultAfterCtx, logger);
+    expect(errorFn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      "Plugin onCheckoutReady hook error",
+    );
   });
 });
 

@@ -41,6 +41,7 @@ export const PaginationResponseMetaSchema = z.object({
 export const CustomerInputSchema = z.object({
   email: z.email(),
   name: z.string().max(100).optional(),
+  phone: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -101,7 +102,11 @@ export const UpdateCustomerRequestSchema = CustomerInputSchema.partial()
     customerId: z.string().min(1),
   })
   .refine(
-    (data) => data.email !== undefined || data.name !== undefined || data.metadata !== undefined,
+    (data) =>
+      data.email !== undefined ||
+      data.name !== undefined ||
+      data.phone !== undefined ||
+      data.metadata !== undefined,
     { message: "At least one field must be provided to update" },
   );
 

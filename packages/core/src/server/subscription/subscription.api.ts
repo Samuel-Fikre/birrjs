@@ -154,6 +154,7 @@ export const subscribe = defineBirrJSMethod(
       amount: planRecord.priceAmount || 0,
       currency: planRecord.currency || "ETB",
       email: customer.email ?? "",
+      phoneNumber: customer.phone ?? undefined,
       txRef,
       callbackUrl: ctx.birrjs.options.provider.callbackUrl,
       returnUrl: ctx.birrjs.options.provider.returnUrl,
@@ -188,17 +189,19 @@ export const subscribe = defineBirrJSMethod(
     }
 
     // Schedule onCheckoutReady fire-and-forget after response
-    Promise.resolve()
-      .then(() =>
-        runAfterHooks(ctx.birrjs.options.plugins, {
+    Promise.resolve().then(() =>
+      runAfterHooks(
+        ctx.birrjs.options.plugins,
+        {
           customerId: customer.id,
           planId: planRecord.id,
           subscriptionId,
           checkoutUrl: transaction.checkoutUrl!,
           txRef,
-        }),
-      )
-      .catch((err) => ctx.birrjs.logger.error({ err }, "subscribe complete hook error"));
+        },
+        ctx.birrjs.logger,
+      ),
+    );
 
     return {
       checkoutUrl: transaction.checkoutUrl,

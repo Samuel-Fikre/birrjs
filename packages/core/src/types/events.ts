@@ -1,3 +1,5 @@
+import type { BirrJSContext } from "../context";
+
 export interface BirrJSEventMap {
   "subscription.activated": {
     customerId: string;
@@ -29,5 +31,18 @@ export type BirrJSEventHandlers = {
   "*"?: (event: {
     name: BirrJSEventName;
     payload: BirrJSEventMap[BirrJSEventName];
+  }) => Promise<void> | void;
+};
+
+export type BirrJSPluginEventHandlers = {
+  [TName in BirrJSEventName]?: (
+    payload: BirrJSEventMap[TName],
+    ctx: BirrJSContext,
+  ) => Promise<void> | void;
+} & {
+  "*"?: (event: {
+    name: BirrJSEventName;
+    payload: BirrJSEventMap[BirrJSEventName];
+    ctx: BirrJSContext;
   }) => Promise<void> | void;
 };
