@@ -79,17 +79,18 @@ describe("createAfromessagePlugin", () => {
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const call = mockFetch.mock.calls[0]! as [string, RequestInit];
-    expect(call[0]).toBe("https://api.afromessage.com/api/send");
-    expect(call[1]!.method).toBe("POST");
+    const url = new URL(call[0]);
+    expect(url.origin + url.pathname).toBe("https://api.afromessage.com/api/send");
+    expect(url.searchParams.get("to")).toBe("+251911111111");
+    expect(url.searchParams.get("from")).toBe("ID_1");
+    expect(url.searchParams.get("sender")).toBe("BirrJS");
+    expect(url.searchParams.get("message")).toContain("Thank you");
+    expect(url.searchParams.get("template")).toBe("0");
+    expect(call[1]!.method).toBe("GET");
     expect(call[1]!.headers).toEqual({
       Authorization: "Bearer sk-test",
-      "Content-Type": "application/json",
+      Accept: "application/json",
     });
-    const body = JSON.parse(call[1]!.body as string);
-    expect(body.from).toBe("ID_1");
-    expect(body.sender).toBe("BirrJS");
-    expect(body.to).toBe("+251911111111");
-    expect(body.message).toContain("Thank you");
   });
 
   it("sends payment failed message on subscription.cancelled", async () => {
@@ -110,8 +111,8 @@ describe("createAfromessagePlugin", () => {
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const call = mockFetch.mock.calls[0]! as [string, RequestInit];
-    const body = JSON.parse(call[1]!.body as string);
-    expect(body.message).toBe("Oops {name}, payment failed!");
+    const url = new URL(call[0]);
+    expect(url.searchParams.get("message")).toBe("Oops {name}, payment failed!");
   });
 
   it("throws on api failure when called directly", async () => {

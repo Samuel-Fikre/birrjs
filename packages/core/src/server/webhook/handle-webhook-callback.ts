@@ -1,8 +1,12 @@
 import { APIError } from "better-call";
+import { eq } from "drizzle-orm";
 import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
+import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
+import { subscription } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
+import type { BirrJSEventMap } from "../../types/events";
 
 export const handleWebhookCallback = defineBirrJSMethod(
   {
@@ -61,6 +65,38 @@ export const handleWebhookCallback = defineBirrJSMethod(
       logger.info(
         { subscriptionId: result.subscriptionId, trx_ref },
         "Subscription activated via callback",
+      );
+
+      // Fire plugin events (same pattern as webhook endpoint)
+      const [activatedSub] = await database
+        .select({
+          customerId: subscription.customerId,
+          planId: subscription.planId,
+          startedAt: subscription.startedAt,
+          expiresAt: subscription.expiresAt,
+        })
+        .from(subscription)
+        .where(eq(subscription.id, result.subscriptionId!))
+        .limit(1);
+
+      const eventPayload: BirrJSEventMap["subscription.activated"] = {
+        customerId: activatedSub?.customerId ?? "",
+        subscriptionId: result.subscriptionId!,
+        planId: activatedSub?.planId ?? "",
+        startedAt: activatedSub?.startedAt ?? null,
+        expiresAt: activatedSub?.expiresAt ?? null,
+      };
+
+      Promise.resolve().then(() =>
+        runEventHandlers(ctx.birrjs.options.on, "subscription.activated", eventPayload, logger),
+      );
+      Promise.resolve().then(() =>
+        runPluginEventHandlers(
+          ctx.birrjs.options.plugins,
+          "subscription.activated",
+          eventPayload,
+          ctx.birrjs,
+        ),
       );
     } else {
       logger.info(

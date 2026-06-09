@@ -7,25 +7,24 @@ export type { AfromessageConfig };
 const AFROMESSAGE_API = "https://api.afromessage.com/api/send";
 
 async function sendSms(config: AfromessageConfig, to: string, message: string): Promise<void> {
-  const response = await fetch(AFROMESSAGE_API, {
-    method: "POST",
+  const params = new URLSearchParams({ to, message, template: "0" });
+  if (config.from) params.set("from", config.from);
+  if (config.sender) params.set("sender", config.sender);
+
+  const response = await fetch(`${AFROMESSAGE_API}?${params.toString()}`, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
+      Accept: "application/json",
     },
-    body: JSON.stringify({
-      from: config.from,
-      sender: config.sender,
-      to,
-      message,
-    }),
   });
+
+  const body = (await response.json()) as { acknowledge: string; response?: { errors?: string[] } };
 
   if (!response.ok) {
     throw new Error(`Afromessage API HTTP error: ${response.status} ${response.statusText}`);
   }
 
-  const body = (await response.json()) as { acknowledge: string; response?: { errors?: string[] } };
   if (body.acknowledge !== "success") {
     const errors = body.response?.errors ?? ["Unknown error"];
     throw new Error(`Afromessage API error: ${errors.join(", ")}`);
