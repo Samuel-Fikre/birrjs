@@ -2,16 +2,20 @@ import {
   Blocks,
   BookMarked,
   BookOpen,
+  Code,
   Compass,
   CreditCard,
   Database,
   Download,
+  Landmark,
+  MessageSquare,
   Monitor,
   Package,
   Repeat,
   Rocket,
   Shield,
   Terminal,
+  Ticket,
   Timer,
   Users,
   Webhook,
@@ -21,6 +25,8 @@ import type { ReactElement } from "react";
 const categoryIcons = {
   "get started": <Compass className="docs-category-icon size-3.5! shrink-0" />,
   concepts: <BookMarked className="docs-category-icon size-3.5! shrink-0" />,
+  plugins: <Blocks className="docs-category-icon size-3.5! shrink-0" />,
+  guides: <BookOpen className="docs-category-icon size-3.5! shrink-0" />,
 } as const;
 
 const pageIcons = {
@@ -37,6 +43,10 @@ const pageIcons = {
   database: <Database className="docs-category-icon size-3! shrink-0" />,
   providers: <CreditCard className="docs-category-icon size-3! shrink-0" />,
   plugins: <Blocks className="docs-category-icon size-3! shrink-0" />,
+  afromessage: <MessageSquare className="docs-category-icon size-3! shrink-0" />,
+  "your first plugin": <Code className="docs-category-icon size-3! shrink-0" />,
+  fayda: <Landmark className="docs-category-icon size-3! shrink-0" />,
+  coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
 } as const;

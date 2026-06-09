@@ -1,0 +1,162 @@
+---
+title: Your First Plugin
+description: Build a custom plugin for BirrJS step by step.
+---
+
+This guide walks through creating a plugin that logs subscription events to a webhook URL.
+
+## 1. Create the file
+
+```ts title="plugins/webhook-logger.ts"
+import type { BirrJSPlugin } from "@birrjs/core";
+```
+
+## 2. Define the config interface
+
+```ts title="plugins/webhook-logger.ts"
+import type { BirrJSPlugin } from "@birrjs/core";
+
+interface WebhookLoggerConfig {
+  url: string;
+}
+```
+
+## 3. Create the factory function
+
+```ts title="plugins/webhook-logger.ts"
+import type { BirrJSPlugin } from "@birrjs/core";
+
+interface WebhookLoggerConfig {
+  url: string;
+}
+
+export function webhookLogger(config: WebhookLoggerConfig): BirrJSPlugin {
+  return {
+    id: "webhook-logger",
+  };
+}
+```
+
+The `id` must be unique across all plugins in your project.
+
+## 4. Add an endpoint
+
+Plugins can expose HTTP endpoints via the `endpoints` field. These are standard better-call endpoints merged into the BirrJS router.
+
+```ts title="plugins/webhook-logger.ts"
+import { createEndpoint } from "better-call";
+import type { BirrJSPlugin } from "@birrjs/core";
+
+interface WebhookLoggerConfig {
+  url: string;
+}
+
+const logCountEndpoint = createEndpoint(
+  "/plugins/webhook-logger/count",
+  {
+    method: "GET",
+  },
+  async (ctx) => {
+    return { count: 42 };
+  },
+);
+
+export function webhookLogger(config: WebhookLoggerConfig): BirrJSPlugin {
+  return {
+    id: "webhook-logger",
+    endpoints: {
+      logCount: logCountEndpoint,
+    },
+  };
+}
+```
+
+## 5. Add an event handler
+
+Use `onEvent` to react to subscription lifecycle events:
+
+```ts title="plugins/webhook-logger.ts"
+import { createEndpoint } from "better-call";
+import type { BirrJSPlugin, BirrJSContext } from "@birrjs/core";
+
+interface WebhookLoggerConfig {
+  url: string;
+}
+
+export function webhookLogger(config: WebhookLoggerConfig): BirrJSPlugin {
+  return {
+    id: "webhook-logger",
+    onEvent: {
+      "subscription.activated": async (payload, ctx) => {
+        const customer = await ctx.queries.getCustomer(payload.customerId);
+        await fetch(config.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "activated",
+            planId: payload.planId,
+            customerEmail: customer?.email,
+          }),
+        });
+      },
+      "subscription.cancelled": async (payload, ctx) => {
+        const customer = await ctx.queries.getCustomer(payload.customerId);
+        await fetch(config.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "cancelled",
+            planId: payload.planId,
+            customerEmail: customer?.email,
+          }),
+        });
+      },
+      "subscription.expired": async (payload, ctx) => {
+        await fetch(config.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "expired",
+            subscriptionId: payload.subscriptionId,
+          }),
+        });
+      },
+    },
+  };
+}
+```
+
+Notice that event handlers receive `ctx` (the full `BirrJSContext`), giving you access to the database, logger, and query helpers.
+
+## 6. Register the plugin
+
+```ts title="src/lib/birrjs.ts"
+import { createBirr } from "@birrjs/core";
+import { webhookLogger } from "./plugins/webhook-logger";
+
+export const birrjs = createBirr({
+  plugins: [
+    webhookLogger({
+      url: "https://hooks.example.com/birrjs-events",
+    }),
+  ],
+});
+```
+
+## 7. Test it
+
+Run a subscription flow:
+
+1. Call `subscribe()` with a plan ID
+2. Complete the payment in the provider's checkout
+3. Wait for the webhook to arrive
+
+Check the target webhook URL for the POST request. Each event type sends a different payload.
+
+For local testing, use a webhook receiver like [webhook.site](https://webhook.site) or [ngrok](https://ngrok.com/).
+
+## Next steps
+
+- Explore the [Afromessage plugin](/docs/plugins/afromessage) — a real plugin using `onEvent`
+- Read the [concepts guide](/docs/concepts/plugins) for the full plugin interface reference
+- Learn about the [`on` option](/docs/concepts/plugins#using-the-on-option-user-level) for simple handlers without a plugin

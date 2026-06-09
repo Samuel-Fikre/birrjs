@@ -109,7 +109,7 @@ export function HeroCodeBlock({
           </div>
         </div>
 
-        <div className="relative h-[24rem] lg:h-[32rem]">
+        <div className="relative h-[18rem] sm:h-[24rem] lg:h-[32rem]">
           <div className="absolute bottom-2.5 right-2.5 z-10">
             <button
               type="button"

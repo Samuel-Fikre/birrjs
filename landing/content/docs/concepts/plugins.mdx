@@ -1,61 +1,188 @@
 ---
 title: Plugins
-description: Extend BirrJS with custom endpoints via the plugin system.
+description: Extend BirrJS with event handlers, endpoints, and lifecycle hooks.
 ---
 
-The plugin system allows you to add custom HTTP endpoints to the BirrJS router. It follows a phased rollout plan.
+Plugins let you add functionality to BirrJS without modifying its core. Each plugin has an `id`, optional endpoints, optional event handlers, and optional lifecycle hooks.
 
-## Phase 1: HTTP-only (current)
-
-Plugins add **better-call endpoints** to the BirrJS router. They are not typed on the Proxy client.
-
-### Plugin interface
+## Plugin interface
 
 ```ts
-import type { Endpoint } from "better-call";
+import type { BirrJSContext } from "@birrjs/core";
 
 interface BirrJSPlugin {
   id: string;
-  endpoints?: Record<string, Endpoint>;
+
+  /** HTTP endpoints merged into the BirrJS router */
+  endpoints?: Record<string, unknown>;
+
+  /** Called before a subscription is created */
+  onBeforeSubscribe?: (hookCtx: {
+    customerId: string;
+    plan: NormalizedPlan;
+    customerEmail?: string;
+    ip?: string;
+  }) => Promise<void>;
+
+  /** Called after checkout is ready (before redirect) */
+  onCheckoutReady?: (hookCtx: {
+    customerId: string;
+    planId: string;
+    subscriptionId: string;
+    checkoutUrl: string;
+    txRef: string;
+  }) => Promise<void>;
+
+  /** Event handlers for subscription lifecycle events */
+  onEvent?: {
+    "subscription.activated"?: (
+      payload: { customerId: string; subscriptionId: string; planId: string; startedAt: Date | null; expiresAt: Date | null },
+      ctx: BirrJSContext,
+    ) => Promise<void> | void;
+    "subscription.cancelled"?: (
+      payload: { customerId: string; subscriptionId: string; planId: string; canceledAt: Date | null; endedAt: Date | null },
+      ctx: BirrJSContext,
+    ) => Promise<void> | void;
+    "subscription.expired"?: (
+      payload: { customerId: string; subscriptionId: string; planId: string; expiredAt: Date },
+      ctx: BirrJSContext,
+    ) => Promise<void> | void;
+    /** Catch-all wildcard — fires for every event */
+    "*"?: (event: {
+      name: "subscription.activated" | "subscription.cancelled" | "subscription.expired";
+      payload: unknown;
+      ctx: BirrJSContext;
+    }) => Promise<void> | void;
+  };
 }
 ```
 
-### Example plugin
+## Lifecycle hooks
 
-```ts title="plugins/sms-notifications.ts"
-import type { BirrJSPlugin } from "@birrjs/core";
-import { notifyEndpoint } from "./endpoints/notify";
+Plugins can intercept the subscription flow at two points:
 
-export const smsPlugin: BirrJSPlugin = {
-  id: "sms-notifications",
-  endpoints: {
-    "/notify": notifyEndpoint,
+| Hook | When | Can abort? |
+|------|------|-----------|
+| `onBeforeSubscribe` | Before a subscription record is created | Yes (throw to abort) |
+| `onCheckoutReady` | After checkout URL is generated, before redirect | No (errors logged) |
+
+```ts
+const myPlugin: BirrJSPlugin = {
+  id: "validate-email",
+  onBeforeSubscribe: async (ctx) => {
+    if (ctx.customerEmail?.endsWith("@spam.com")) {
+      throw new Error("Blocked email domain");
+    }
   },
 };
 ```
 
-### Registering plugins
+## Event handlers
+
+Fired automatically when BirrJS processes webhooks or cron sweeps. Plugin event handlers receive the full `BirrJSContext` — access to the database, logger, and queries.
+
+| Event | When | Fired from |
+|-------|------|------------|
+| `subscription.activated` | Payment confirmed, subscription becomes active | Webhook endpoint, callback handler |
+| `subscription.cancelled` | Subscription is cancelled | Webhook endpoint |
+| `subscription.expired` | Subscription period ends | Cron sweep |
+| `"*"` | Every event (catch-all) | All of the above |
+
+### Wildcard handler
+
+Use `"*"` to handle every event in one function:
+
+```ts
+const myPlugin: BirrJSPlugin = {
+  id: "logger",
+  onEvent: {
+    "*": async (event) => {
+      console.log(`Event: ${event.name}`, event.payload);
+    },
+  },
+};
+```
+
+## Using the `on` option (user-level)
+
+For simple reactions without building a full plugin, pass handlers directly to `createBirr()`:
 
 ```ts
 createBirr({
-  // ... other options
-  plugins: [smsPlugin],
+  on: {
+    "subscription.activated": async (payload) => {
+      await myEmailService.send(payload.customerId);
+    },
+    "*": async (event) => {
+      console.log(event.name, event.payload);
+    },
+  },
 });
 ```
 
-## Phase 2: Client-typed plugins (planned)
+The difference between plugin `onEvent` and the user `on` option:
 
-Plugins will be able to contribute types to the Proxy client so autocompletion works for plugin methods.
+| | Plugin `onEvent` | User `on` option |
+|---|---|---|
+| Signature | `(payload, ctx) => void` | `(payload) => void` |
+| Has access to ctx | Yes (DB, logger, queries) | No |
+| Best for | Plugins that need BirrJS internals | External API calls (email, SMS) |
+| Wildcard signature | `(event) => void` with `ctx` | `(event) => void` without `ctx` |
 
-## Phase 3: Hooks (planned)
+Both are fired together from the same call sites — you can use `on` for simple handlers and plugins for complex ones simultaneously.
 
-Hooks will allow running custom logic at subscription lifecycle points:
+## Endpoints
 
-| Hook | Trigger |
-|------|---------|
-| `onBeforeSubscribe` | Before a subscription is created |
-| `onSubscribeComplete` | After payment is confirmed |
-| `onBeforeCancel` | Before a cancellation |
-| `onCancelComplete` | After cancellation |
+Plugins can add HTTP endpoints to the BirrJS router. These are standard better-call endpoints merged at the same base path.
 
+```ts
+import type { BirrJSPlugin } from "@birrjs/core";
 
+const myPlugin: BirrJSPlugin = {
+  id: "my-plugin",
+  endpoints: {
+    "/health": myHealthEndpoint,
+  },
+};
+```
+
+## Registering plugins
+
+```ts
+import { createBirr } from "@birrjs/core";
+
+createBirr({
+  plugins: [myPlugin],
+});
+```
+
+## Building a plugin
+
+Create a function that returns a `BirrJSPlugin`:
+
+```ts title="plugins/slack-notifier.ts"
+import type { BirrJSPlugin, BirrJSContext } from "@birrjs/core";
+
+interface SlackConfig {
+  webhookUrl: string;
+}
+
+export function slackNotifier(config: SlackConfig): BirrJSPlugin {
+  return {
+    id: "slack-notifier",
+    onEvent: {
+      "subscription.activated": async (payload, ctx) => {
+        const customer = await ctx.queries.getCustomer(payload.customerId);
+        await fetch(config.webhookUrl, {
+          method: "POST",
+          body: JSON.stringify({
+            text: `New subscription: ${customer?.name ?? "Unknown"} activated ${payload.planId}`,
+          }),
+        });
+      },
+    },
+  };
+}
+```
+
+For a complete walkthrough, see the [Your First Plugin](/docs/guides/your-first-plugin) guide.

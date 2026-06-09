@@ -168,6 +168,6 @@ async function sendMessage(customerId: string) {
 For boolean features like `analytics`, `check` returns `allowed` without any balance tracking.
 
 <Callout type="info">
-  **Need to react to billing events?** BirrJS processes webhooks automatically — subscription confirmations, payment failures, and more. See the [Webhooks guide](/docs/concepts/webhooks) for setup and event types.
+  **Need to react to billing events?** Use the [`on` option on `createBirr()`](/docs/concepts/plugins#using-the-on-option-user-level) for simple handlers (email, SMS), or build a [plugin](/docs/guides/your-first-plugin) for advanced use cases.
 </Callout>
 

@@ -240,6 +240,17 @@ html:not([data-anchor-scrolling]) {
   overflow-wrap: anywhere;
 }
 
+/* Scroll wide content on mobile */
+@media (max-width: 63.999rem) {
+  #nd-page pre,
+  #nd-page table,
+  #nd-page .prose pre,
+  #nd-page .prose table {
+    max-width: calc(100vw - 2.5rem);
+    overflow-x: auto;
+  }
+}
+
 .prose blockquote {
   @apply rounded-lg;
 }
@@ -592,15 +603,34 @@ html:not([data-anchor-scrolling]) {
   animation-timing-function: ease-out !important;
 }
 
-/* Wider sidebar */
-#nd-docs-layout {
-  --fd-sidebar-width: 300px;
+/* Wider sidebar (only when sidebar is visible — md breakpoint matches
+   Fumadocs' max-md:hidden on the sidebar element). Below 48rem the
+   default 0px applies so the grid column track collapses. */
+@media (min-width: 48rem) {
+  #nd-docs-layout {
+    --fd-sidebar-width: 300px;
+  }
 }
 
-/* Remove gap between sidebar and content */
-#nd-page {
-  padding-left: 0;
-  max-width: none;
+/* Mobile sidebar drawer (overlay) has its own width via
+   w-[85%] max-w-[380px] in sidebar.js — don't set
+   --fd-sidebar-width on #nd-docs-layout here because the grid
+   uses it for the sidebar column track, pushing content
+   off-screen even when the sidebar element is hidden. */
+@media (max-width: 63.999rem) {
+  #nd-sidebar-mobile > div.flex.flex-col.gap-3.p-4.pb-2,
+  #nd-sidebar-mobile > .min-h-0.flex-1,
+  #nd-sidebar-mobile > div.flex.flex-col.p-4.pt-2 {
+    border-left: none;
+  }
+}
+
+/* Remove gap between sidebar and content (desktop only) */
+@media (min-width: 64rem) {
+  #nd-page {
+    padding-left: 0;
+    max-width: none;
+  }
 }
 
 /* Doc content headings: thin line separator */
