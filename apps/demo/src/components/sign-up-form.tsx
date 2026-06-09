@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import * as z from "zod";
 
+import { setPhone } from "@/lib/actions";
 import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
@@ -19,6 +20,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
       email: "",
       password: "",
       name: "",
+      phone: "",
     },
     onSubmit: async ({ value }) => {
       await authClient.signUp.email(
@@ -28,11 +30,14 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
           name: value.name,
         },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            if (value.phone) {
+              await setPhone(value.phone);
+            }
             router.push("/dashboard");
             toast.success("Sign up successful");
           },
-          onError: (error) => {
+          onError: (error: { error: { message: string; statusText: string } }) => {
             toast.error(error.error.message || error.error.statusText);
           },
         },
@@ -43,6 +48,12 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         name: z.string().min(2, "Name must be at least 2 characters"),
         email: z.email("Invalid email address"),
         password: z.string().min(8, "Password must be at least 8 characters"),
+        phone: z
+          .string()
+          .refine(
+            (v) => v === "" || /^(\+251|0)?[79]\d{8}$/.test(v),
+            "Enter a valid Ethiopian phone number (e.g. +251912345678)",
+          ),
       }),
     },
   });
@@ -71,6 +82,30 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
                 <Input
                   id={field.name}
                   name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
+        <div>
+          <form.Field name="phone">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Phone (optional)</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="tel"
+                  placeholder="+251912345678"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}

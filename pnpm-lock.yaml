@@ -95,6 +95,9 @@ importers:
       '@birrjs/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@birrjs/sms-afromessage':
+        specifier: workspace:*
+        version: link:../../packages/sms-afromessage
       '@demo/api':
         specifier: workspace:*
         version: link:packages/api
