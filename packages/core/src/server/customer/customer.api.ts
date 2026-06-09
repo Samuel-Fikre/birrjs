@@ -57,13 +57,14 @@ export const createCustomer = defineBirrJSMethod(
   },
   async (ctx) => {
     const { database } = ctx.birrjs;
-    const { email, name, metadata } = ctx.input;
+    const { email, name, phone, metadata } = ctx.input;
 
     const customerId = `cus_${crypto.randomUUID()}`;
     const newCustomer: Customer = {
       id: customerId,
       email,
       name: name || null,
+      phone: phone ?? null,
       metadata: (metadata as Record<string, string>) || null,
       deletedAt: null,
       createdAt: new Date(),
@@ -94,7 +95,7 @@ export const updateCustomer = defineBirrJSMethod(
     validateAdminAuth(ctx);
 
     const { database } = ctx.birrjs;
-    const { customerId, email, name, metadata } = ctx.input;
+    const { customerId, email, name, phone, metadata } = ctx.input;
 
     await getCustomerByIdOrThrow(database, customerId);
 
@@ -103,6 +104,7 @@ export const updateCustomer = defineBirrJSMethod(
     };
     if (email !== undefined) updateData.email = email;
     if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
     if (metadata !== undefined) updateData.metadata = metadata as Record<string, string>;
 
     await database.update(customer).set(updateData).where(eq(customer.id, customerId));

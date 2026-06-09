@@ -1,14 +1,17 @@
+import { eq } from "drizzle-orm";
 import { Pool } from "pg";
 
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
 import { createBirrJSLogger, type BirrJSInternalLogger } from "../core/logger";
 import { createDatabase, type BirrJSDatabase } from "../database";
+import { customer, subscription } from "../database/schema";
 import type { PaymentProvider, PaymentProviderConfig } from "../provider";
 import { startScheduler, stopScheduler } from "../scheduler";
-import type { BirrJSOptions } from "../types";
+import type { BirrJSQueries, BirrJSOptions, SubscriptionStatus } from "../types";
 
 export interface BirrJSContext {
   options: BirrJSOptions;
+  queries: BirrJSQueries;
   database: BirrJSDatabase;
   provider: PaymentProviderConfig;
   runtime: PaymentProvider;
@@ -40,8 +43,59 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
     );
   }
 
+  const queries: BirrJSQueries = {
+    getCustomer: async (id) => {
+      const rows = await database
+        .select({
+          id: customer.id,
+          email: customer.email,
+          name: customer.name,
+          phone: customer.phone,
+        })
+        .from(customer)
+        .where(eq(customer.id, id))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return { id: row.id, email: row.email, name: row.name, phone: row.phone };
+    },
+    getSubscription: async (id) => {
+      const rows = await database
+        .select({
+          id: subscription.id,
+          customerId: subscription.customerId,
+          planId: subscription.planId,
+          status: subscription.status,
+          interval: subscription.interval,
+          startedAt: subscription.startedAt,
+          expiresAt: subscription.expiresAt,
+          canceledAt: subscription.canceledAt,
+          endedAt: subscription.endedAt,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        })
+        .from(subscription)
+        .where(eq(subscription.id, id))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        id: row.id,
+        customerId: row.customerId,
+        planId: row.planId,
+        status: row.status as SubscriptionStatus,
+        interval: row.interval,
+        startedAt: row.startedAt,
+        expiresAt: row.expiresAt,
+        canceledAt: row.canceledAt,
+        endedAt: row.endedAt,
+        cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      };
+    },
+  };
+
   const ctx = {
     options,
+    queries,
     database,
     provider: options.provider,
     runtime,

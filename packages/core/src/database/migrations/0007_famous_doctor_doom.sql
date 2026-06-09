@@ -1,0 +1,1 @@
+ALTER TABLE "birrjs_customer" ADD COLUMN "phone" text;

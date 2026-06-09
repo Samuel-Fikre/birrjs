@@ -148,6 +148,7 @@ async function resolveCustomer(
       id: identity.customerId,
       email: identity.email,
       name: identity.name,
+      phone: identity.phone,
     });
   }
 

@@ -4,11 +4,12 @@ import type { BirrJSContext } from "../../context";
 import type { BirrJSInternalLogger } from "../../core/logger";
 import type { BirrJSDatabase } from "../../database";
 import type { PaymentProvider, PaymentProviderConfig } from "../../provider";
-import type { BirrJSOptions } from "../../types";
+import type { BirrJSQueries, BirrJSOptions } from "../../types";
 
 export function createTestContext(overrides: Partial<BirrJSContext> = {}): BirrJSContext {
   return {
     options: {} as BirrJSOptions,
+    queries: {} as BirrJSQueries,
     database: {} as BirrJSDatabase,
     provider: {} as PaymentProviderConfig,
     runtime: {} as PaymentProvider,

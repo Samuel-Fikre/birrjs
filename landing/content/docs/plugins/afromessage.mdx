@@ -1,0 +1,89 @@
+---
+title: Afromessage SMS
+description: Send SMS notifications on subscription events via Afromessage.
+---
+
+The `@birrjs/sms-afromessage` plugin sends SMS messages to customers when subscription events occur — payment received, payment failed, or subscription expired.
+
+## Installation
+
+```bash
+pnpm add @birrjs/sms-afromessage
+```
+
+## Configuration
+
+```ts
+import { afromessage } from "@birrjs/sms-afromessage";
+import { createBirr } from "@birrjs/core";
+
+createBirr({
+  // ... other options
+  plugins: [
+    afromessage({
+      apiKey: process.env.AFROMESSAGE_API_KEY!,
+      sender: process.env.AFROMESSAGE_SENDER,   // optional (defaults to "AfroMessage")
+      from: "your-identifier-id",                  // optional — for multiple short codes
+    }),
+  ],
+});
+```
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AFROMESSAGE_API_KEY` | Yes | API key from the Afromessage dashboard |
+| `AFROMESSAGE_SENDER` | No | Verified sender name (defaults to `"AfroMessage"`). Can be left empty during testing. |
+
+## How it works
+
+The plugin listens to three subscription lifecycle events via the `onEvent` hook system and sends an SMS to the customer's phone number.
+
+| Event | Default message |
+|-------|----------------|
+| `subscription.activated` | "Your payment has been received. Thank you!" |
+| `subscription.cancelled` | "Your payment failed. Please update your payment method." |
+| `subscription.expired` | "Your subscription has expired. Renew now to continue access." |
+
+### Phone number
+
+The phone number is read from the `birrjs_customer.phone` column. You need to set it on your customer record before the event fires — typically in a server action after signup:
+
+```ts
+import { db } from "./db";
+import { birrjsCustomer } from "./schema";
+
+export async function setPhone(customerId: string, phone: string) {
+  await db.insert(birrjsCustomer)
+    .values({ id: customerId, phone })
+    .onConflictDoUpdate({ target: birrjsCustomer.id, set: { phone } });
+}
+```
+
+If the customer has no phone number when an event fires, the SMS is silently skipped.
+
+## Custom messages
+
+Override the default messages with your own templates:
+
+```ts
+afromessage({
+  messages: {
+    paymentReceived: "Payment confirmed! Your {planName} plan is active.",
+    paymentFailed: "Payment failed for {planName}. Please update your payment method.",
+    subscriptionExpired: "Your {planName} subscription has ended. Renew now.",
+  },
+})
+```
+
+Template variables are enclosed in `{curly braces}`. Currently supported: none, reserved for future use.
+
+## Test account behavior
+
+Afromessage test accounts replace API-delivered message content with `<<...>>`. The API returns `acknowledge: "success"` but the actual SMS delivered is a placeholder.
+
+- **Dashboard tests** — work normally, shows your message with the test account watermark
+- **API calls** — content is replaced with `<<...>>`
+
+To send real messages, upgrade your Afromessage account and request a verified sender ID from the Afromessage dashboard. Once verified, set `AFROMESSAGE_SENDER` to your sender name.

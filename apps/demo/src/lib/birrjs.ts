@@ -1,5 +1,6 @@
 import { chapa } from "@birrjs/chapa";
 import { createBirr } from "@birrjs/core";
+import { afromessage } from "@birrjs/sms-afromessage";
 import { auth } from "@demo/auth";
 
 import { free, pro } from "@/server/plans";
@@ -13,6 +14,12 @@ export const birrjs = createBirr({
     returnUrl: process.env.RETURN_URL!,
   }),
   plans: [free, pro],
+  plugins: [
+    afromessage({
+      apiKey: process.env.AFROMESSAGE_API_KEY!,
+      sender: process.env.AFROMESSAGE_SENDER!,
+    }),
+  ],
   identify: async (request) => {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return null;

@@ -32,6 +32,7 @@ export const customer = pgTable(
     id: text("id").primaryKey(),
     email: text("email"),
     name: text("name"),
+    phone: text("phone"),
     metadata: jsonb("metadata").$type<Record<string, string> | null>(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...createTimestampColumns(),
