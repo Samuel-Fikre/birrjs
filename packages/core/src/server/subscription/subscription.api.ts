@@ -154,6 +154,8 @@ export const subscribe = defineBirrJSMethod(
       amount: planRecord.priceAmount || 0,
       currency: planRecord.currency || "ETB",
       email: customer.email ?? "",
+      firstName: customer.name?.split(" ").at(0),
+      lastName: customer.name?.split(" ").slice(1).join(" ") || undefined,
       phoneNumber: customer.phone ?? undefined,
       txRef,
       callbackUrl: ctx.birrjs.options.provider.callbackUrl,

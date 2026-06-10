@@ -28,8 +28,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@birrjs/core": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "@birrjs/core": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.21.1",

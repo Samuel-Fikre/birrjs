@@ -41,6 +41,7 @@ export function createChapaProvider(
           tx_ref: request.txRef,
           callback_url: request.callbackUrl,
           return_url: request.returnUrl ?? "",
+          customization: request.customization,
         };
 
         const response: ChapaTransactionResponse = await client.initializeTransaction(chapaRequest);
