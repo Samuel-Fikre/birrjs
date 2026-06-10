@@ -35,21 +35,21 @@ interface BirrJSPlugin {
 
   /** Event handlers for subscription lifecycle events */
   onEvent?: {
-    "subscription.activated"?: (
-      payload: { customerId: string; subscriptionId: string; planId: string; startedAt: Date | null; expiresAt: Date | null },
-      ctx: BirrJSContext,
-    ) => Promise<void> | void;
-    "subscription.cancelled"?: (
-      payload: { customerId: string; subscriptionId: string; planId: string; canceledAt: Date | null; endedAt: Date | null },
-      ctx: BirrJSContext,
-    ) => Promise<void> | void;
-    "subscription.expired"?: (
-      payload: { customerId: string; subscriptionId: string; planId: string; expiredAt: Date },
-      ctx: BirrJSContext,
-    ) => Promise<void> | void;
+    "subscription.activated"?:
+      (payload: { customerId: string; subscriptionId: string; planId: string; startedAt: Date | null; expiresAt: Date | null },
+      ctx: BirrJSContext) => Promise<void> | void;
+    "subscription.cancelled"?:
+      (payload: { customerId: string; subscriptionId: string; planId: string; canceledAt: Date | null; endedAt: Date | null },
+      ctx: BirrJSContext) => Promise<void> | void;
+    "subscription.expired"?:
+      (payload: { customerId: string; subscriptionId: string; planId: string; expiredAt: Date },
+      ctx: BirrJSContext) => Promise<void> | void;
+    "subscription.reminder"?:
+      (payload: { customerId: string; subscriptionId: string; planId: string; planName: string; customerEmail: string | null; customerPhone: string | null; expiresAt: Date; daysUntilExpiry: number },
+      ctx: BirrJSContext) => Promise<void> | void;
     /** Catch-all wildcard — fires for every event */
     "*"?: (event: {
-      name: "subscription.activated" | "subscription.cancelled" | "subscription.expired";
+      name: "subscription.activated" | "subscription.cancelled" | "subscription.expired" | "subscription.reminder";
       payload: unknown;
       ctx: BirrJSContext;
     }) => Promise<void> | void;
@@ -86,6 +86,7 @@ Fired automatically when BirrJS processes webhooks or cron sweeps. Plugin event 
 | `subscription.activated` | Payment confirmed, subscription becomes active | Webhook endpoint, callback handler |
 | `subscription.cancelled` | Subscription is cancelled | Webhook endpoint |
 | `subscription.expired` | Subscription period ends | Cron sweep |
+| `subscription.reminder` | Subscription approaching expiry | Cron sweep (daily) |
 | `"*"` | Every event (catch-all) | All of the above |
 
 ### Wildcard handler

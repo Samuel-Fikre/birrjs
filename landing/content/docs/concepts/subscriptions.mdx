@@ -125,10 +125,44 @@ const effective = getEffectiveStatus(subscription);
 
 If `checkoutUrl` is set, the subscription stays in `pending` until the provider confirms payment via webhook.
 
+## Reminders
+
+Subscriptions approaching expiry can trigger reminders via the `"subscription.reminder"` event. A daily cron sweep checks for subscriptions expiring on the exact days listed in `reminderLeadDays` and fires the event. A dedup table prevents duplicate sends.
+
+A subscription expiring June 20 with `reminderLeadDays: [7, 3, 1]` gets reminders on June 13, June 17, and June 19. Each event includes `daysUntilExpiry` so your handler can customize per day.
+
+```ts
+createBirr({
+  scheduling: {
+    reminderSweepCron: "0 8 * * *",   // daily at 8am
+    reminderLeadDays: [7, 3, 1],      // send 7, 3, and 1 day before
+  },
+  on: {
+    "subscription.reminder": async (payload) => {
+      await resend.emails.send({
+        to: payload.customerEmail,
+        subject: `Your ${payload.planName} expires in ${payload.daysUntilExpiry} days`,
+        text: `Renew: https://myapp.com/renew?sid=${payload.subscriptionId}`,
+      });
+    },
+  },
+  plugins: [
+    afromessage({
+      messages: {
+        subscriptionReminder: "{daysUntil} days left. Renew now!",
+      },
+    }),
+  ],
+});
+```
+
+Reminder records are automatically cleared when a subscription is reactivated, so renewed subscriptions get fresh reminders for the new period.
+
 ## Cron Sweeps
 
 | Sweep | Interval | Action |
 |-------|----------|--------|
+| Reminder | Every day at 8am | Fires `subscription.reminder` events for expiring subs |
 | Pending | Every 5 min | Marks stuck `pending` subscriptions as `failed` |
 | Expiry | Every 10 min | Marks expired `active` subscriptions as `expired` |
 

@@ -7,10 +7,11 @@ BirrJS uses cron sweeps to update subscriptions when events don't arrive via web
 
 ## Sweep Jobs
 
-Two maintenance sweeps keep subscription state consistent:
+Three maintenance sweeps keep subscription state consistent:
 
 | Sweep | Default interval | What it does |
 |-------|-----------------|--------------|
+| Reminder | Every day at 8am | Fires `subscription.reminder` events for subs expiring in [7, 3, 1] days |
 | Pending | Every 5 min | Marks `pending` subscriptions older than the timeout as `failed` |
 | Expiry | Every 10 min | Marks `active` subscriptions past their period end as `expired` |
 
@@ -27,6 +28,8 @@ createBirr({
   scheduling: {
     mode: "auto",
     // Optional overrides:
+    reminderSweepCron: "0 8 * * *",
+    reminderLeadDays: [7, 3, 1],
     pendingSweepCron: "*/5 * * * *",
     expirySweepCron: "*/10 * * * *",
     pendingTimeoutMinutes: 60,
@@ -37,6 +40,8 @@ createBirr({
 | Field | Default | Description |
 |-------|---------|-------------|
 | `mode` | — | Set to `"auto"` |
+| `reminderSweepCron` | `0 8 * * *` | Cron expression for reminder check |
+| `reminderLeadDays` | `[7, 3, 1]` | Which days before expiry trigger a reminder. Sub expires June 20 → reminders on June 13, June 17, June 19 |
 | `pendingSweepCron` | `*/5 * * * *` | Cron expression for pending check |
 | `expirySweepCron` | `*/10 * * * *` | Cron expression for expiry check |
 | `pendingTimeoutMinutes` | `60` | Age at which pending subs are marked failed |
@@ -64,6 +69,9 @@ curl -X POST https://your-app.com/api/birrjs/cron/pending \
 
 curl -X POST https://your-app.com/api/birrjs/cron/expiry \
   -H "Authorization: Bearer your-secret-key"
+
+curl -X POST https://your-app.com/api/birrjs/send-reminders \
+  -H "Authorization: Bearer your-secret-key"
 ```
 
 | Field | Description |
@@ -83,6 +91,7 @@ createBirr({
 // Run sweeps manually:
 await birrjs.checkPendingSubscriptions();
 await birrjs.checkExpiredSubscriptions();
+await birrjs.sendReminders();
 ```
 
 Useful for testing, one-off maintenance, or custom scheduling logic.
@@ -95,6 +104,7 @@ Useful for testing, one-off maintenance, or custom scheduling logic.
 | HTTP endpoints | ❌ | ✅ | ❌ |
 | Serverless friendly | ❌ | ✅ | ✅ |
 | Long-running apps | ✅ | ❌ | ✅ |
+| Reminder sweep | ✅ | ✅ | ✅ |
 
 ## Cron Syntax
 
