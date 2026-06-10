@@ -1,5 +1,6 @@
+import { createRequire } from "node:module";
+
 import pino from "pino";
-import pretty from "pino-pretty";
 
 import type { BirrJSLoggingOptions } from "../types/options";
 
@@ -26,7 +27,7 @@ export function getDefaultLoggerOptions(
   };
 }
 
-export function getPrettyLoggerOptions(): pretty.PrettyOptions {
+export function getPrettyLoggerOptions() {
   return {
     colorize: true,
     ignore: "pid,hostname",
@@ -39,11 +40,18 @@ export function createBirrJSLogger(
   logging?: BirrJSLoggingOptions,
   environment: LoggerEnvironment = {},
 ): BirrJSInternalLogger {
-  const base =
-    logging?.logger ??
-    (shouldUsePrettyLogs(environment)
-      ? pino(getDefaultLoggerOptions(logging), pretty(getPrettyLoggerOptions()))
-      : pino(getDefaultLoggerOptions(logging)));
+  let transport: { target: string; options?: Record<string, any> } | undefined;
+
+  if (shouldUsePrettyLogs(environment)) {
+    try {
+      createRequire(import.meta.url).resolve("pino-pretty");
+      transport = { target: "pino-pretty", options: getPrettyLoggerOptions() };
+    } catch {
+      // pino-pretty not installed — fall back to JSON logs
+    }
+  }
+
+  const base = logging?.logger ?? pino({ ...getDefaultLoggerOptions(logging), transport });
 
   return base;
 }

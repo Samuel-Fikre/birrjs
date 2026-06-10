@@ -4,7 +4,7 @@ import { Command } from "@commander-js/extra-typings";
 
 process.env.BIRRJS_CLI = "1";
 
-const program = new Command().name("birrjs").description("CLI for BirrJS billing");
+const program = new Command().name("birrjs").description("CLI for BirrJS billing").version("0.1.2");
 
 const commandName = process.argv[2];
 
