@@ -23,11 +23,11 @@
 
 ## Packages
 
-| Package | npm | Description |
-|---|---|---|
-| [`@birrjs/core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@birrjs/core.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/core) | Core framework — subscriptions, entitlements, billing, cron, plans |
-| [`@birrjs/chapa`](./packages/chapa) | [![npm](https://img.shields.io/npm/v/@birrjs/chapa.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/chapa) | Chapa payment provider adapter |
-| [`@birrjs/sms-afromessage`](./packages/sms-afromessage) | [![npm](https://img.shields.io/npm/v/@birrjs/sms-afromessage.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/sms-afromessage) | Afromessage SMS plugin |
+| Package                                                 | npm                                                                                                                                                              | Description                                                        |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [`@birrjs/core`](./packages/core)                       | [![npm](https://img.shields.io/npm/v/@birrjs/core.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/core)                       | Core framework — subscriptions, entitlements, billing, cron, plans |
+| [`@birrjs/chapa`](./packages/chapa)                     | [![npm](https://img.shields.io/npm/v/@birrjs/chapa.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/chapa)                     | Chapa payment provider adapter                                     |
+| [`@birrjs/sms-afromessage`](./packages/sms-afromessage) | [![npm](https://img.shields.io/npm/v/@birrjs/sms-afromessage.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@birrjs/sms-afromessage) | Afromessage SMS plugin                                             |
 
 ## Quick Start
 
