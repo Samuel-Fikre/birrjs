@@ -127,8 +127,9 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
     }
     const pendingCron = options.scheduling?.pendingSweepCron || "*/5 * * * *";
     const expiryCron = options.scheduling?.expirySweepCron || "*/10 * * * *";
+    const reminderCron = options.scheduling?.reminderSweepCron || "0 8 * * *";
     try {
-      startScheduler(ctx, pendingCron, expiryCron);
+      startScheduler(ctx, pendingCron, expiryCron, reminderCron);
       logger.info("Scheduler started");
     } catch (error) {
       await ctx.destroy();

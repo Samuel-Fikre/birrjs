@@ -130,6 +130,7 @@ describe("createContext", () => {
       expect.objectContaining({ options: expect.any(Object) }),
       "*/5 * * * *",
       "*/10 * * * *",
+      "0 8 * * *",
     );
   });
 
@@ -143,6 +144,7 @@ describe("createContext", () => {
       expect.any(Object),
       "*/2 * * * *",
       "*/3 * * * *",
+      "0 8 * * *",
     );
   });
 
@@ -173,6 +175,7 @@ describe("createContext", () => {
       expect.objectContaining({ options: expect.any(Object) }),
       "*/5 * * * *",
       "*/10 * * * *",
+      "0 8 * * *",
     );
   });
 

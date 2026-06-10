@@ -1,12 +1,13 @@
 import { createHash, timingSafeEqual } from "crypto";
 
 import { APIError } from "better-call";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, gte, inArray, lt, lte } from "drizzle-orm";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import type { BirrJSContext } from "../../context";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
-import { subscription } from "../../database/schema";
+import { generateId } from "../../core/utils";
+import { customer, plan, reminderSent, subscription } from "../../database/schema";
 import type { BirrJSEventMap } from "../../types/events";
 
 function safeCompare(a: string, b: string): boolean {
@@ -104,6 +105,145 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
     updated: updatedSubscriptions.length,
   };
 }
+
+/**
+ * Send reminders for subscriptions approaching expiry
+ */
+export async function sendReminders(ctx: BirrJSContext) {
+  const { database, logger, options } = ctx;
+
+  const leadDays = options.scheduling?.reminderLeadDays ?? [7, 3, 1];
+  if (
+    !Array.isArray(leadDays) ||
+    leadDays.length === 0 ||
+    leadDays.some((d) => !Number.isInteger(d) || d < 1)
+  ) {
+    logger.warn({ leadDays }, "Invalid reminderLeadDays, skipping reminder sweep");
+    return { checked: 0, updated: 0 };
+  }
+  const maxLeadDays = Math.max(...leadDays);
+  const now = new Date();
+  const maxExpiry = new Date(now.getTime() + maxLeadDays * 24 * 60 * 60 * 1000);
+
+  const expiringSubscriptions = await database
+    .select({
+      id: subscription.id,
+      customerId: subscription.customerId,
+      planId: subscription.planId,
+      expiresAt: subscription.expiresAt,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      planName: plan.name,
+    })
+    .from(subscription)
+    .innerJoin(customer, eq(customer.id, subscription.customerId))
+    .innerJoin(plan, eq(plan.internalId, subscription.planId))
+    .where(
+      and(
+        eq(subscription.status, "active"),
+        gte(subscription.expiresAt, now),
+        lte(subscription.expiresAt, maxExpiry),
+      ),
+    );
+
+  // Batch check which reminders were already sent
+  const subscriptionIds = expiringSubscriptions.map((s) => s.id);
+  const existingReminders =
+    expiringSubscriptions.length > 0
+      ? await database
+          .select({
+            subscriptionId: reminderSent.subscriptionId,
+            reminderDay: reminderSent.reminderDay,
+          })
+          .from(reminderSent)
+          .where(
+            and(
+              inArray(reminderSent.subscriptionId, subscriptionIds),
+              inArray(
+                reminderSent.reminderDay,
+                leadDays.map((d) => -d),
+              ),
+            ),
+          )
+      : [];
+  const sentSet = new Set(existingReminders.map((r) => `${r.subscriptionId}:${r.reminderDay}`));
+
+  const newRecords: Array<typeof reminderSent.$inferInsert> = [];
+  const eventPromises: Promise<void>[] = [];
+
+  for (const sub of expiringSubscriptions) {
+    if (!sub.expiresAt) continue;
+
+    const daysUntilExpiry = Math.ceil(
+      (sub.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (!leadDays.includes(daysUntilExpiry)) continue;
+    if (sentSet.has(`${sub.id}:${-daysUntilExpiry}`)) continue;
+
+    newRecords.push({
+      id: generateId("rem"),
+      subscriptionId: sub.id,
+      reminderDay: -daysUntilExpiry,
+      sentAt: new Date(),
+    });
+
+    const eventPayload: BirrJSEventMap["subscription.reminder"] = {
+      customerId: sub.customerId,
+      subscriptionId: sub.id,
+      planId: sub.planId,
+      planName: sub.planName ?? "",
+      customerEmail: sub.customerEmail,
+      customerPhone: sub.customerPhone,
+      expiresAt: sub.expiresAt,
+      daysUntilExpiry,
+    };
+    eventPromises.push(
+      runEventHandlers(ctx.options.on, "subscription.reminder", eventPayload, logger),
+      runPluginEventHandlers(ctx.options.plugins, "subscription.reminder", eventPayload, ctx),
+    );
+  }
+
+  // Batch insert all dedup records
+  if (newRecords.length > 0) {
+    await database.insert(reminderSent).values(newRecords);
+  }
+
+  // Fire all events concurrently
+  await Promise.allSettled(eventPromises);
+
+  logger.info(
+    `Sent ${newRecords.length} reminders (${expiringSubscriptions.length} expiring subscriptions checked)`,
+  );
+
+  return {
+    checked: expiringSubscriptions.length,
+    updated: newRecords.length,
+  };
+}
+
+/**
+ * HTTP endpoint to send reminders (requires cronSecret)
+ */
+export const sendRemindersEndpoint = defineBirrJSMethod(
+  {
+    route: {
+      method: "POST",
+      path: "/send-reminders",
+      requireHeaders: true,
+    },
+  },
+  async (ctx) => {
+    validateCronAuth(ctx);
+
+    const result = await sendReminders(ctx.birrjs);
+
+    return {
+      success: true,
+      ...result,
+    };
+  },
+);
 
 /**
  * HTTP endpoint to check pending subscriptions (requires cronSecret)

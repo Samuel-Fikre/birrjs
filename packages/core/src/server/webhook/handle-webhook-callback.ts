@@ -4,7 +4,7 @@ import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
-import { subscription } from "../../database/schema";
+import { reminderSent, subscription } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -66,6 +66,11 @@ export const handleWebhookCallback = defineBirrJSMethod(
         { subscriptionId: result.subscriptionId, trx_ref },
         "Subscription activated via callback",
       );
+
+      // Clear prior reminder records so new period starts fresh
+      await database
+        .delete(reminderSent)
+        .where(eq(reminderSent.subscriptionId, result.subscriptionId!));
 
       // Fire plugin events (same pattern as webhook endpoint)
       const [activatedSub] = await database

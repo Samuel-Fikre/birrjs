@@ -21,6 +21,16 @@ export interface BirrJSEventMap {
     planId: string;
     expiredAt: Date;
   };
+  "subscription.reminder": {
+    customerId: string;
+    subscriptionId: string;
+    planId: string;
+    planName: string;
+    customerEmail: string | null;
+    customerPhone: string | null;
+    expiresAt: Date;
+    daysUntilExpiry: number;
+  };
 }
 
 export type BirrJSEventName = keyof BirrJSEventMap;

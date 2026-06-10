@@ -3,20 +3,30 @@ import cron from "node-cron";
 import type { BirrJSContext } from "../context";
 import { checkPendingSubscriptions } from "../server/cron/cron.api";
 import { checkExpiredSubscriptions } from "../server/cron/cron.api";
+import { sendReminders } from "../server/cron/cron.api";
 
 const scheduledTasks = new Map<string, ReturnType<typeof cron.schedule>>();
 let pendingRunning = false;
 let expiryRunning = false;
+let remindersRunning = false;
 
-export function startScheduler(ctx: BirrJSContext, pendingCron: string, expiryCron: string): void {
+export function startScheduler(
+  ctx: BirrJSContext,
+  pendingCron: string,
+  expiryCron: string,
+  reminderCron: string,
+): void {
   const { logger } = ctx;
 
-  // Validate both cron expressions upfront before scheduling
+  // Validate all cron expressions upfront before scheduling
   if (!cron.validate(pendingCron)) {
     throw new Error(`Invalid cron expression for pending check: ${pendingCron}`);
   }
   if (!cron.validate(expiryCron)) {
     throw new Error(`Invalid cron expression for expiry check: ${expiryCron}`);
+  }
+  if (!cron.validate(reminderCron)) {
+    throw new Error(`Invalid cron expression for reminder check: ${reminderCron}`);
   }
 
   // Stop existing tasks if already running
@@ -68,6 +78,28 @@ export function startScheduler(ctx: BirrJSContext, pendingCron: string, expiryCr
   );
   scheduledTasks.set("expiry", expiryTask);
   logger.info(`Started expired subscription check with cron: ${expiryCron}`);
+
+  // Schedule reminder check
+  const remindersTask = cron.schedule(
+    reminderCron,
+    async () => {
+      if (remindersRunning) {
+        logger.info("Skipping reminder check; previous run still in progress");
+        return;
+      }
+      remindersRunning = true;
+      try {
+        await sendReminders(ctx);
+      } catch (err) {
+        logger.error({ msg: "Scheduler error in reminder check", err });
+      } finally {
+        remindersRunning = false;
+      }
+    },
+    { timezone: "UTC" },
+  );
+  scheduledTasks.set("reminders", remindersTask);
+  logger.info(`Started reminder check with cron: ${reminderCron}`);
 }
 
 export function stopScheduler(): void {
@@ -77,6 +109,7 @@ export function stopScheduler(): void {
   scheduledTasks.clear();
   pendingRunning = false;
   expiryRunning = false;
+  remindersRunning = false;
 }
 
 export function isSchedulerRunning(): boolean {

@@ -57,6 +57,13 @@
       "when": 1780949185401,
       "tag": "0007_famous_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781085462294,
+      "tag": "0008_low_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,7 @@ import type { WebhookPayload } from "../../api/schemas";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
-import { subscription, webhookEvent } from "../../database/schema";
+import { reminderSent, subscription, webhookEvent } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -161,6 +161,11 @@ export const handleWebhook = defineBirrJSMethod(
             { subscriptionId: result.subscriptionId, eventType },
             "Subscription activated via webhook",
           );
+
+          // Clear prior reminder records so new period starts fresh
+          await database
+            .delete(reminderSent)
+            .where(eq(reminderSent.subscriptionId, result.subscriptionId!));
 
           const [activatedSub] = await database
             .select({ startedAt: subscription.startedAt, expiresAt: subscription.expiresAt })

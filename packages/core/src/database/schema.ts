@@ -177,6 +177,21 @@ export const webhookEvent = pgTable(
   ],
 );
 
+export const reminderSent = pgTable(
+  "reminder_sent",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscription.id, { onDelete: "cascade" }),
+    reminderDay: integer("reminder_day").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex("birrjs_reminder_sent_uniq").on(table.subscriptionId, table.reminderDay)],
+);
+
 export const entitlement = pgTable(
   "entitlement",
   {
