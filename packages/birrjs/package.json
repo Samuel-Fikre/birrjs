@@ -1,5 +1,5 @@
 {
-  "name": "birrjs",
+  "name": "@birrjs/cli",
   "version": "0.1.1",
   "description": "BirrJS CLI — subscription management for Ethiopian payments",
   "license": "MIT",

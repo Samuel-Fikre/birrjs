@@ -32,7 +32,7 @@
 ## Quick Start
 
 ```bash
-npx birrjs init
+npx @birrjs/cli init
 ```
 
 Or set up manually:

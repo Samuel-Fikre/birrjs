@@ -18,12 +18,12 @@ export function HeroTitle() {
         <div className="mt-6 flex flex-col items-center gap-4 sm:mt-8 lg:items-start lg:mt-12">
           <div className="relative w-full overflow-hidden rounded-xl bg-muted shadow-lg border border-border">
             <div className="flex justify-end p-3 pb-0">
-              <CopyButton text="npx birrjs init" />
+              <CopyButton text="npx @birrjs/cli init" />
             </div>
             <pre className="overflow-x-auto px-3 pb-3 pt-0">
               <code className="font-mono text-sm/none text-foreground/85">
                 <span className="select-none">$ </span>
-                npx birrjs init
+                npx @birrjs/cli init
               </code>
             </pre>
           </div>

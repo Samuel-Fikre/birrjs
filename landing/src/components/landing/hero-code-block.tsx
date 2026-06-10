@@ -8,7 +8,7 @@ type View = "code" | "terminal";
 type Tab = "plans" | "config";
 
 const pushSteps = [
-  { text: "❯ npx birrjs push", delay: 200 },
+  { text: "❯ npx @birrjs/cli push", delay: 200 },
   { text: "", delay: 100, type: "pause" },
   { text: "│", delay: 150 },
   { text: "● Connected", delay: 200 },
