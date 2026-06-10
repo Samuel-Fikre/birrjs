@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/sms-afromessage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Afromessage SMS plugin for BirrJS",
   "license": "MIT",
   "type": "module",
