@@ -19,6 +19,8 @@ export interface BirrJSSchedulingOptions {
   pendingTimeoutMinutes?: number;
   pendingSweepCron?: string;
   expirySweepCron?: string;
+  reminderSweepCron?: string;
+  reminderLeadDays?: number[];
 }
 
 export interface BirrJSOptions {

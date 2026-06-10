@@ -48,6 +48,8 @@ async function getPhone(customerId: string, ctx: BirrJSContext): Promise<string 
 const DEFAULT_PAYMENT_RECEIVED = "Your payment has been received. Thank you!";
 const DEFAULT_PAYMENT_FAILED = "Your payment failed. Please update your payment method.";
 const DEFAULT_SUBSCRIPTION_EXPIRED = "Your subscription has expired. Renew now to continue access.";
+const DEFAULT_SUBSCRIPTION_REMINDER =
+  "Reminder: your subscription expires in {daysUntil} days. Renew now!";
 
 export function afromessage(config: AfromessageConfig): BirrJSPlugin {
   return {
@@ -78,6 +80,15 @@ export function afromessage(config: AfromessageConfig): BirrJSPlugin {
           {},
         );
         await sendSms(config, phone, message);
+      },
+      "subscription.reminder": async (payload, _ctx) => {
+        if (!payload.customerPhone) return;
+        const message = formatMessage(
+          config.messages?.subscriptionReminder,
+          DEFAULT_SUBSCRIPTION_REMINDER,
+          { daysUntil: String(payload.daysUntilExpiry) },
+        );
+        await sendSms(config, payload.customerPhone, message);
       },
     },
   };

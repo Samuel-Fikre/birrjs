@@ -20,19 +20,29 @@ vi.mock("node-cron", async (importOriginal) => {
 vi.mock("../../server/cron/cron.api", () => ({
   checkPendingSubscriptions: vi.fn(),
   checkExpiredSubscriptions: vi.fn(),
+  sendReminders: vi.fn(),
 }));
 
 import cron from "node-cron";
 
-import { checkPendingSubscriptions, checkExpiredSubscriptions } from "../../server/cron/cron.api";
+import {
+  checkPendingSubscriptions,
+  checkExpiredSubscriptions,
+  sendReminders,
+} from "../../server/cron/cron.api";
 import { startScheduler, stopScheduler, isSchedulerRunning } from "../index";
 
 const cronScheduleMock = cron.schedule as unknown as ReturnType<typeof vi.fn>;
 
-function getCallbacks(): { pendingCb: () => Promise<void>; expiryCb: () => Promise<void> } {
+function getCallbacks(): {
+  pendingCb: () => Promise<void>;
+  expiryCb: () => Promise<void>;
+  remindersCb: () => Promise<void>;
+} {
   const pendingCb = cronScheduleMock.mock.calls[0]?.[1] as () => Promise<void>;
   const expiryCb = cronScheduleMock.mock.calls[1]?.[1] as () => Promise<void>;
-  return { pendingCb, expiryCb };
+  const remindersCb = cronScheduleMock.mock.calls[2]?.[1] as () => Promise<void>;
+  return { pendingCb, expiryCb, remindersCb };
 }
 
 function mockContext(): BirrJSContext {
@@ -55,29 +65,42 @@ beforeEach(() => {
 
 describe("startScheduler", () => {
   it("rejects invalid cron expressions using real node-cron validation", () => {
-    expect(() => startScheduler(mockContext(), "not-a-cron", "*/10 * * * *")).toThrow(
+    expect(() => startScheduler(mockContext(), "not-a-cron", "*/10 * * * *", "0 8 * * *")).toThrow(
       "Invalid cron expression for pending check: not-a-cron",
     );
 
-    expect(() => startScheduler(mockContext(), "*/5 * * * *", "bad")).toThrow(
+    expect(() => startScheduler(mockContext(), "*/5 * * * *", "bad", "0 8 * * *")).toThrow(
       "Invalid cron expression for expiry check: bad",
     );
 
-    expect(() => startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *")).not.toThrow();
+    expect(() => startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "bad")).toThrow(
+      "Invalid cron expression for reminder check: bad",
+    );
+
+    expect(() =>
+      startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *"),
+    ).not.toThrow();
   });
 
   it("invokes pending check via scheduled callback", async () => {
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { pendingCb } = getCallbacks();
     await pendingCb();
     expect(checkPendingSubscriptions).toHaveBeenCalledTimes(1);
   });
 
   it("invokes expiry check via scheduled callback", async () => {
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { expiryCb } = getCallbacks();
     await expiryCb();
     expect(checkExpiredSubscriptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("invokes reminders check via scheduled callback", async () => {
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
+    const { remindersCb } = getCallbacks();
+    await remindersCb();
+    expect(sendReminders).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -90,7 +113,7 @@ describe("scheduler run-locking", () => {
       }),
     );
 
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { pendingCb } = getCallbacks();
 
     const firstRun = pendingCb();
@@ -111,7 +134,7 @@ describe("scheduler run-locking", () => {
       }),
     );
 
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { expiryCb } = getCallbacks();
 
     const firstRun = expiryCb();
@@ -130,7 +153,7 @@ describe("scheduler run-locking", () => {
       new Error("DB connection lost"),
     );
 
-    startScheduler(ctx, "*/5 * * * *", "*/10 * * * *");
+    startScheduler(ctx, "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { pendingCb } = getCallbacks();
 
     await expect(pendingCb()).resolves.toBeUndefined();
@@ -146,7 +169,7 @@ describe("scheduler run-locking", () => {
       new Error("DB timeout"),
     );
 
-    startScheduler(ctx, "*/5 * * * *", "*/10 * * * *");
+    startScheduler(ctx, "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { expiryCb } = getCallbacks();
 
     await expect(expiryCb()).resolves.toBeUndefined();
@@ -161,7 +184,7 @@ describe("scheduler run-locking", () => {
       .mockRejectedValueOnce(new Error("Fail once"))
       .mockResolvedValueOnce(undefined);
 
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     const { pendingCb } = getCallbacks();
 
     await pendingCb();
@@ -173,7 +196,7 @@ describe("scheduler run-locking", () => {
 
 describe("stopScheduler", () => {
   it("clears all scheduled tasks", () => {
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
 
     expect(isSchedulerRunning()).toBe(true);
 
@@ -196,13 +219,13 @@ describe("isSchedulerRunning", () => {
   });
 
   it("returns true after startScheduler", () => {
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
 
     expect(isSchedulerRunning()).toBe(true);
   });
 
   it("returns false after stopScheduler", () => {
-    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *");
+    startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *");
     stopScheduler();
 
     expect(isSchedulerRunning()).toBe(false);

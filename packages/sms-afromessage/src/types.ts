@@ -6,5 +6,6 @@ export interface AfromessageConfig {
     paymentReceived?: string;
     paymentFailed?: string;
     subscriptionExpired?: string;
+    subscriptionReminder?: string;
   };
 }
