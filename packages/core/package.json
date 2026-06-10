@@ -17,6 +17,10 @@
     "./client": {
       "types": "./src/client/index.ts",
       "default": "./src/client/index.ts"
+    },
+    "./cli": {
+      "types": "./src/cli/index.ts",
+      "default": "./src/cli/index.ts"
     }
   },
   "publishConfig": {
@@ -28,6 +32,9 @@
       "./client": {
         "types": "./dist/client/index.d.ts",
         "default": "./dist/client/index.js"
+      },
+      "./cli": {
+        "default": "./dist/cli/index.js"
       }
     },
     "main": "./dist/index.js",

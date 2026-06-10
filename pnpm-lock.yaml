@@ -465,6 +465,12 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
+  packages/birrjs:
+    dependencies:
+      '@birrjs/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/chapa:
     dependencies:
       '@birrjs/core':

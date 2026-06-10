@@ -1,0 +1,17 @@
+{
+  "name": "birrjs",
+  "version": "0.0.1",
+  "description": "BirrJS CLI — subscription management for Ethiopian payments",
+  "license": "MIT",
+  "bin": {
+    "birrjs": "./bin.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "node --check bin.js",
+    "typecheck": "node -e \"\""
+  },
+  "dependencies": {
+    "@birrjs/core": "workspace:*"
+  }
+}
