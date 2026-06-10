@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66dd77 # v4.1.0
+
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2c # v4.2.0
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: npx changelogithub
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: pnpm turbo build --filter=./packages/*
+
+      - name: Determine npm tag
+        id: npm_tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" =~ -(alpha|beta|next|rc|canary) ]]; then
+            NPM_TAG="${BASH_REMATCH[1]}"
+          else
+            NPM_TAG="latest"
+          fi
+          echo "tag=$NPM_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        run: pnpm -r publish --access public --no-git-checks --tag ${{ steps.npm_tag.outputs.tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
