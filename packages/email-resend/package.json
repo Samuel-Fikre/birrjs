@@ -1,0 +1,38 @@
+{
+  "name": "@birrjs/email-resend",
+  "version": "0.1.2",
+  "description": "Resend email plugin for BirrJS",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsdown --config tsdown.config.ts",
+    "typecheck": "tsc --build",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@birrjs/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "^0.21.1",
+    "typescript": "5.9.2",
+    "vitest": "^4.1.6"
+  }
+}
