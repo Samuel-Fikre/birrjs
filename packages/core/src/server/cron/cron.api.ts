@@ -90,10 +90,23 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
   logger.info(`Marked ${updatedSubscriptions.length} subscriptions as expired`);
 
   for (const sub of updatedSubscriptions) {
+    const [subData] = await database
+      .select({
+        planName: plan.name,
+        customerEmail: customer.email,
+      })
+      .from(subscription)
+      .innerJoin(plan, eq(plan.internalId, subscription.planId))
+      .innerJoin(customer, eq(customer.id, subscription.customerId))
+      .where(eq(subscription.id, sub.id))
+      .limit(1);
+
     const eventPayload: BirrJSEventMap["subscription.expired"] = {
       customerId: sub.customerId,
       subscriptionId: sub.id,
       planId: sub.planId,
+      planName: subData?.planName ?? "",
+      customerEmail: subData?.customerEmail ?? null,
       expiredAt: sub.expiresAt ?? sub.endedAt ?? new Date(),
     };
     await runEventHandlers(ctx.options.on, "subscription.expired", eventPayload, logger);

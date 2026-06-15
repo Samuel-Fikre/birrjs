@@ -5,6 +5,8 @@ export interface BirrJSEventMap {
     customerId: string;
     subscriptionId: string;
     planId: string;
+    planName: string;
+    customerEmail: string | null;
     startedAt: Date | null;
     expiresAt: Date | null;
   };
@@ -12,6 +14,8 @@ export interface BirrJSEventMap {
     customerId: string;
     subscriptionId: string;
     planId: string;
+    planName: string;
+    customerEmail: string | null;
     canceledAt: Date | null;
     endedAt: Date | null;
   };
@@ -19,6 +23,8 @@ export interface BirrJSEventMap {
     customerId: string;
     subscriptionId: string;
     planId: string;
+    planName: string;
+    customerEmail: string | null;
     expiredAt: Date;
   };
   "subscription.reminder": {

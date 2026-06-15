@@ -4,7 +4,7 @@ import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
-import { reminderSent, subscription } from "../../database/schema";
+import { customer, plan, reminderSent, subscription } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -79,8 +79,12 @@ export const handleWebhookCallback = defineBirrJSMethod(
           planId: subscription.planId,
           startedAt: subscription.startedAt,
           expiresAt: subscription.expiresAt,
+          planName: plan.name,
+          customerEmail: customer.email,
         })
         .from(subscription)
+        .innerJoin(plan, eq(plan.internalId, subscription.planId))
+        .innerJoin(customer, eq(customer.id, subscription.customerId))
         .where(eq(subscription.id, result.subscriptionId!))
         .limit(1);
 
@@ -88,6 +92,8 @@ export const handleWebhookCallback = defineBirrJSMethod(
         customerId: activatedSub?.customerId ?? "",
         subscriptionId: result.subscriptionId!,
         planId: activatedSub?.planId ?? "",
+        planName: activatedSub?.planName ?? "",
+        customerEmail: activatedSub?.customerEmail ?? null,
         startedAt: activatedSub?.startedAt ?? null,
         expiresAt: activatedSub?.expiresAt ?? null,
       };

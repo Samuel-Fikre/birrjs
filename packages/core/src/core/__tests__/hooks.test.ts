@@ -124,6 +124,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       startedAt: new Date(),
       expiresAt: new Date(Date.now() + 86400000),
     };
@@ -138,6 +140,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       canceledAt: new Date(),
       endedAt: null,
     };
@@ -156,6 +160,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       expiredAt: new Date(),
     };
     await runEventHandlers(on, "subscription.expired", payload, mockLogger);
@@ -170,6 +176,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       startedAt: new Date(),
       expiresAt: new Date(Date.now() + 86400000),
     };
@@ -193,6 +201,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       startedAt: new Date(),
       expiresAt: new Date(Date.now() + 86400000),
     };
@@ -211,6 +221,8 @@ describe("runEventHandlers", () => {
       customerId: "c1",
       subscriptionId: "s1",
       planId: "p1",
+      planName: "Pro",
+      customerEmail: null,
       canceledAt: null,
       endedAt: null,
     };
