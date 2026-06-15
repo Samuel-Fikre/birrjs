@@ -54,7 +54,15 @@ describe("createAfromessagePlugin", () => {
     const plugin = afromessage({ apiKey: "sk-test", sender: "BirrJS" });
     const ctx = createMockCtx();
     await plugin.onEvent!["subscription.activated"]!(
-      { customerId: "c1", subscriptionId: "s1", planId: "p1", startedAt: null, expiresAt: null },
+      {
+        customerId: "c1",
+        subscriptionId: "s1",
+        planId: "p1",
+        planName: "Pro",
+        customerEmail: null,
+        startedAt: null,
+        expiresAt: null,
+      },
       ctx,
     );
     expect(mockFetch).not.toHaveBeenCalled();
@@ -74,7 +82,15 @@ describe("createAfromessagePlugin", () => {
       },
     });
     await plugin.onEvent!["subscription.activated"]!(
-      { customerId: "c1", subscriptionId: "s1", planId: "p1", startedAt: null, expiresAt: null },
+      {
+        customerId: "c1",
+        subscriptionId: "s1",
+        planId: "p1",
+        planName: "Pro",
+        customerEmail: null,
+        startedAt: null,
+        expiresAt: null,
+      },
       ctx,
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -106,7 +122,15 @@ describe("createAfromessagePlugin", () => {
       },
     });
     await plugin.onEvent!["subscription.cancelled"]!(
-      { customerId: "c1", subscriptionId: "s1", planId: "p1", canceledAt: null, endedAt: null },
+      {
+        customerId: "c1",
+        subscriptionId: "s1",
+        planId: "p1",
+        planName: "Pro",
+        customerEmail: null,
+        canceledAt: null,
+        endedAt: null,
+      },
       ctx,
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -126,7 +150,15 @@ describe("createAfromessagePlugin", () => {
     });
     await expect(
       plugin.onEvent!["subscription.activated"]!(
-        { customerId: "c1", subscriptionId: "s1", planId: "p1", startedAt: null, expiresAt: null },
+        {
+          customerId: "c1",
+          subscriptionId: "s1",
+          planId: "p1",
+          planName: "Pro",
+          customerEmail: null,
+          startedAt: null,
+          expiresAt: null,
+        },
         ctx,
       ),
     ).rejects.toThrow("Network error");

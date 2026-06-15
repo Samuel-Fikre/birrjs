@@ -36,8 +36,8 @@ function formatMessage(
   fallback: string,
   vars: Record<string, string>,
 ): string {
-  if (!template) return fallback;
-  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? `{${key}}`);
+  const tpl = template ?? fallback;
+  return tpl.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? `{${key}}`);
 }
 
 async function getPhone(customerId: string, ctx: BirrJSContext): Promise<string | undefined> {
@@ -58,17 +58,17 @@ export function afromessage(config: AfromessageConfig): BirrJSPlugin {
       "subscription.activated": async (payload, ctx) => {
         const phone = await getPhone(payload.customerId, ctx);
         if (!phone) return;
-        const message = formatMessage(
-          config.messages?.paymentReceived,
-          DEFAULT_PAYMENT_RECEIVED,
-          {},
-        );
+        const message = formatMessage(config.messages?.paymentReceived, DEFAULT_PAYMENT_RECEIVED, {
+          planName: payload.planName,
+        });
         await sendSms(config, phone, message);
       },
       "subscription.cancelled": async (payload, ctx) => {
         const phone = await getPhone(payload.customerId, ctx);
         if (!phone) return;
-        const message = formatMessage(config.messages?.paymentFailed, DEFAULT_PAYMENT_FAILED, {});
+        const message = formatMessage(config.messages?.paymentFailed, DEFAULT_PAYMENT_FAILED, {
+          planName: payload.planName,
+        });
         await sendSms(config, phone, message);
       },
       "subscription.expired": async (payload, ctx) => {
@@ -77,7 +77,7 @@ export function afromessage(config: AfromessageConfig): BirrJSPlugin {
         const message = formatMessage(
           config.messages?.subscriptionExpired,
           DEFAULT_SUBSCRIPTION_EXPIRED,
-          {},
+          { planName: payload.planName },
         );
         await sendSms(config, phone, message);
       },
@@ -86,7 +86,7 @@ export function afromessage(config: AfromessageConfig): BirrJSPlugin {
         const message = formatMessage(
           config.messages?.subscriptionReminder,
           DEFAULT_SUBSCRIPTION_REMINDER,
-          { daysUntil: String(payload.daysUntilExpiry) },
+          { daysUntil: String(payload.daysUntilExpiry), planName: payload.planName },
         );
         await sendSms(config, payload.customerPhone, message);
       },
