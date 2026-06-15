@@ -56,6 +56,11 @@ export interface TransactionRequest {
   customization?: {
     title?: string;
     description?: string;
+    logo?: string;
+  };
+  meta?: {
+    hide_receipt?: string;
+    invoices?: string;
   };
 }
 
