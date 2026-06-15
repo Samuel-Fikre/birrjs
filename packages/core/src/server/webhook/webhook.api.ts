@@ -7,7 +7,7 @@ import type { WebhookPayload } from "../../api/schemas";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
-import { reminderSent, subscription, webhookEvent } from "../../database/schema";
+import { customer, plan, reminderSent, subscription, webhookEvent } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -168,8 +168,15 @@ export const handleWebhook = defineBirrJSMethod(
             .where(eq(reminderSent.subscriptionId, result.subscriptionId!));
 
           const [activatedSub] = await database
-            .select({ startedAt: subscription.startedAt, expiresAt: subscription.expiresAt })
+            .select({
+              startedAt: subscription.startedAt,
+              expiresAt: subscription.expiresAt,
+              planName: plan.name,
+              customerEmail: customer.email,
+            })
             .from(subscription)
+            .innerJoin(plan, eq(plan.internalId, subscription.planId))
+            .innerJoin(customer, eq(customer.id, subscription.customerId))
             .where(eq(subscription.id, result.subscriptionId!))
             .limit(1);
 
@@ -177,6 +184,8 @@ export const handleWebhook = defineBirrJSMethod(
             customerId: subscriptionRecord.customerId,
             subscriptionId: subscriptionRecord.id,
             planId: subscriptionRecord.planId,
+            planName: activatedSub?.planName ?? "",
+            customerEmail: activatedSub?.customerEmail ?? null,
             startedAt: activatedSub?.startedAt ?? null,
             expiresAt: activatedSub?.expiresAt ?? null,
           };
@@ -259,8 +268,15 @@ export const handleWebhook = defineBirrJSMethod(
     );
 
     const [cancelledSub] = await database
-      .select({ canceledAt: subscription.canceledAt, endedAt: subscription.endedAt })
+      .select({
+        canceledAt: subscription.canceledAt,
+        endedAt: subscription.endedAt,
+        planName: plan.name,
+        customerEmail: customer.email,
+      })
       .from(subscription)
+      .innerJoin(plan, eq(plan.internalId, subscription.planId))
+      .innerJoin(customer, eq(customer.id, subscription.customerId))
       .where(eq(subscription.id, subscriptionRecord.id))
       .limit(1);
 
@@ -268,6 +284,8 @@ export const handleWebhook = defineBirrJSMethod(
       customerId: subscriptionRecord.customerId,
       subscriptionId: subscriptionRecord.id,
       planId: subscriptionRecord.planId,
+      planName: cancelledSub?.planName ?? "",
+      customerEmail: cancelledSub?.customerEmail ?? null,
       canceledAt: cancelledSub?.canceledAt ?? null,
       endedAt: cancelledSub?.endedAt ?? null,
     };

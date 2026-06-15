@@ -35,13 +35,14 @@ export function createChapaProvider(
           amount: toDecimalAmount(request.amount),
           currency: request.currency ?? defaultCurrency,
           email: request.email,
-          first_name: request.firstName ?? "",
-          last_name: request.lastName ?? "",
           phone_number: request.phoneNumber,
           tx_ref: request.txRef,
           callback_url: request.callbackUrl,
-          return_url: request.returnUrl ?? "",
           customization: request.customization,
+          ...(request.firstName && { first_name: request.firstName }),
+          ...(request.lastName && { last_name: request.lastName }),
+          ...(request.returnUrl && { return_url: request.returnUrl }),
+          ...(request.meta && { meta: request.meta }),
         };
 
         const response: ChapaTransactionResponse = await client.initializeTransaction(chapaRequest);

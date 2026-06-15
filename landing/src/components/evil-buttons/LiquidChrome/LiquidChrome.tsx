@@ -23,8 +23,15 @@ export function LiquidChrome({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    let renderer: Renderer;
+    try {
+      renderer = new Renderer({ antialias: true });
+    } catch {
+      console.warn("WebGL not available");
+      return;
+    }
+
     const container = containerRef.current;
-    const renderer = new Renderer({ antialias: true });
     const gl = renderer.gl;
     gl.clearColor(1, 1, 1, 1);
 

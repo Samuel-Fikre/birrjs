@@ -7,7 +7,7 @@ import type {
 } from "@birrjs/core";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { afromessage } from "../index";
+import { resend } from "../index";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -35,23 +35,17 @@ function createMockCtx(overrides?: Partial<BirrJSContext>): BirrJSContext {
   } as unknown as BirrJSContext;
 }
 
-describe("createAfromessagePlugin", () => {
+describe("resend plugin", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ acknowledge: "success", response: {} }),
+      json: async () => ({ id: "email_123" }),
     });
   });
 
-  it("returns a valid BirrJSPlugin with correct id", () => {
-    const plugin = afromessage({ apiKey: "sk-test", sender: "BirrJS" });
-    expect(plugin.id).toBe("sms-afromessage");
-    expect(plugin.onEvent).toBeDefined();
-  });
-
-  it("skips sending when customer has no phone in metadata", async () => {
-    const plugin = afromessage({ apiKey: "sk-test", sender: "BirrJS" });
+  it("skips sending when customer has no email", async () => {
+    const plugin = resend({ apiKey: "re_xxx", from: "test@example.com" });
     const ctx = createMockCtx();
     await plugin.onEvent!["subscription.activated"]!(
       {
@@ -68,15 +62,15 @@ describe("createAfromessagePlugin", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("sends SMS on subscription.activated when phone found", async () => {
-    const plugin = afromessage({ apiKey: "sk-test", from: "ID_1", sender: "BirrJS" });
+  it("sends email on subscription.activated when email found", async () => {
+    const plugin = resend({ apiKey: "re_xxx", from: "BirrJS <noreply@birrjs.dev>" });
     const ctx = createMockCtx({
       queries: {
         getCustomer: async () => ({
           id: "c1",
-          email: null,
+          email: "user@example.com",
           name: "Test User",
-          phone: "+251911111111",
+          phone: null,
         }),
         getSubscription: async () => null,
       },
@@ -95,56 +89,99 @@ describe("createAfromessagePlugin", () => {
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const call = mockFetch.mock.calls[0]! as [string, RequestInit];
-    const url = new URL(call[0]);
-    expect(url.origin + url.pathname).toBe("https://api.afromessage.com/api/send");
-    expect(url.searchParams.get("to")).toBe("+251911111111");
-    expect(url.searchParams.get("from")).toBe("ID_1");
-    expect(url.searchParams.get("sender")).toBe("BirrJS");
-    expect(url.searchParams.get("message")).toContain("Thank you");
-    expect(url.searchParams.get("template")).toBe("0");
-    expect(call[1]!.method).toBe("GET");
+    expect(call[0]).toBe("https://api.resend.com/emails");
+    expect(call[1]!.method).toBe("POST");
+    const body = JSON.parse(call[1]!.body as string);
+    expect(body.from).toBe("BirrJS <noreply@birrjs.dev>");
+    expect(body.to).toEqual(["user@example.com"]);
+    expect(body.subject).toBe("Payment received");
+    expect(body.html).toContain("Thank you");
     expect(call[1]!.headers).toEqual({
-      Authorization: "Bearer sk-test",
-      Accept: "application/json",
+      Authorization: "Bearer re_xxx",
+      "Content-Type": "application/json",
     });
   });
 
-  it("sends payment failed message on subscription.cancelled", async () => {
-    const plugin = afromessage({
-      apiKey: "sk-test",
-      sender: "BirrJS",
-      messages: { paymentFailed: "Oops {name}, payment failed!" },
+  it("uses custom subject and template", async () => {
+    const plugin = resend({
+      apiKey: "re_xxx",
+      from: "test@example.com",
+      subject: { paymentReceived: "Thanks {{name}}!" },
+      messages: { paymentReceived: "<h1>Hey {name}</h1>" },
     });
     const ctx = createMockCtx({
       queries: {
-        getCustomer: async () => ({ id: "c1", email: null, name: "Test", phone: "+251911111111" }),
+        getCustomer: async () => ({
+          id: "c1",
+          email: "user@example.com",
+          name: "Alice",
+          phone: null,
+        }),
         getSubscription: async () => null,
       },
     });
-    await plugin.onEvent!["subscription.cancelled"]!(
+    await plugin.onEvent!["subscription.activated"]!(
       {
         customerId: "c1",
         subscriptionId: "s1",
         planId: "p1",
         planName: "Pro",
         customerEmail: null,
-        canceledAt: null,
-        endedAt: null,
+        startedAt: null,
+        expiresAt: null,
+      },
+      ctx,
+    );
+    const call = mockFetch.mock.calls[0]! as [string, RequestInit];
+    const body = JSON.parse(call[1]!.body as string);
+    expect(body.subject).toBe("Thanks {{name}}!");
+    expect(body.html).toBe("<h1>Hey Alice</h1>");
+  });
+
+  it("sends reminder email with daysUntil", async () => {
+    const plugin = resend({ apiKey: "re_xxx", from: "test@example.com" });
+    const ctx = createMockCtx({
+      queries: {
+        getCustomer: async () => ({
+          id: "c1",
+          email: "user@example.com",
+          name: "Test User",
+          phone: null,
+        }),
+        getSubscription: async () => null,
+      },
+    });
+    await plugin.onEvent!["subscription.reminder"]!(
+      {
+        customerId: "c1",
+        subscriptionId: "s1",
+        planId: "p1",
+        planName: "Premium",
+        customerEmail: "user@example.com",
+        customerPhone: null,
+        expiresAt: new Date("2026-07-01"),
+        daysUntilExpiry: 3,
       },
       ctx,
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const call = mockFetch.mock.calls[0]! as [string, RequestInit];
-    const url = new URL(call[0]);
-    expect(url.searchParams.get("message")).toBe("Oops {name}, payment failed!");
+    const body = JSON.parse(call[1]!.body as string);
+    expect(body.to).toEqual(["user@example.com"]);
+    expect(body.html).toContain("3 days");
   });
 
-  it("throws on api failure when called directly", async () => {
+  it("throws on API failure", async () => {
     mockFetch.mockRejectedValue(new Error("Network error"));
-    const plugin = afromessage({ apiKey: "sk-test", sender: "BirrJS" });
+    const plugin = resend({ apiKey: "re_xxx", from: "test@example.com" });
     const ctx = createMockCtx({
       queries: {
-        getCustomer: async () => ({ id: "c1", email: null, name: null, phone: "+251911111111" }),
+        getCustomer: async () => ({
+          id: "c1",
+          email: "user@example.com",
+          name: null,
+          phone: null,
+        }),
         getSubscription: async () => null,
       },
     });

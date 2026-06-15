@@ -11,10 +11,18 @@ function mockDb(returnedRows: Array<Record<string, unknown>> = []) {
   const setMock = vi.fn(() => ({ where: whereMock }));
   const updateMock = vi.fn(() => ({ set: setMock }));
 
+  const limitMock = vi.fn().mockResolvedValue(returnedRows);
+  const whereQueryMock = vi.fn(() => ({ limit: limitMock }));
+  const innerJoinCustomerMock = vi.fn(() => ({ where: whereQueryMock }));
+  const innerJoinPlanMock = vi.fn(() => ({ innerJoin: innerJoinCustomerMock }));
+  const fromMock = vi.fn(() => ({ innerJoin: innerJoinPlanMock }));
+  const selectMock = vi.fn(() => ({ from: fromMock }));
+  const insertMock = vi.fn();
+
   const db = {
     update: updateMock,
-    select: vi.fn(),
-    insert: vi.fn(),
+    select: selectMock,
+    insert: insertMock,
     transaction: vi.fn(),
   } as unknown as BirrJSDatabase;
 

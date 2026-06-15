@@ -8,7 +8,12 @@ import {
   GetSubscriptionRequestSchema,
 } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
-import { runBeforeHooks, runAfterHooks } from "../../core/hooks";
+import {
+  runBeforeHooks,
+  runAfterHooks,
+  runEventHandlers,
+  runPluginEventHandlers,
+} from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import { plan, subscription, feature, planFeature, entitlement } from "../../database/schema";
 import { addResetInterval } from "../../entitlement/entitlement.service";
@@ -150,8 +155,45 @@ export const subscribe = defineBirrJSMethod(
       }
     }
 
+    // Free plan — activate immediately without payment
+    if (!planRecord.priceAmount) {
+      await database
+        .update(subscription)
+        .set({ status: "active", startedAt: new Date(), updatedAt: new Date() })
+        .where(eq(subscription.id, subscriptionId));
+
+      const eventPayload = {
+        customerId: customer.id,
+        subscriptionId,
+        planId: planRecord.internalId,
+        planName: planRecord.name,
+        customerEmail: customer.email ?? null,
+        startedAt: new Date(),
+        expiresAt: null,
+      };
+
+      Promise.resolve().then(() =>
+        runEventHandlers(
+          ctx.birrjs.options.on,
+          "subscription.activated",
+          eventPayload,
+          ctx.birrjs.logger,
+        ),
+      );
+      Promise.resolve().then(() =>
+        runPluginEventHandlers(
+          ctx.birrjs.options.plugins,
+          "subscription.activated",
+          eventPayload,
+          ctx.birrjs,
+        ),
+      );
+
+      return { success: true, subscriptionId };
+    }
+
     const transactionRequest: TransactionRequest = {
-      amount: planRecord.priceAmount || 0,
+      amount: planRecord.priceAmount,
       currency: planRecord.currency || "ETB",
       email: customer.email ?? "",
       firstName: customer.name?.split(" ").at(0),

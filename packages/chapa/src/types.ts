@@ -17,15 +17,16 @@ export interface ChapaTransactionRequest {
   amount: string;
   currency: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
   phone_number?: string;
   tx_ref: string;
   callback_url: string;
-  return_url: string;
+  return_url?: string;
   customization?: {
     title?: string;
     description?: string;
+    logo?: string;
   };
   meta?: {
     hide_receipt?: string;
