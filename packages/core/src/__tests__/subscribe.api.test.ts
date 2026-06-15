@@ -126,8 +126,8 @@ describe("subscribe error scenarios", () => {
 
   it("marks subscription as failed when initializeTransaction throws", async () => {
     const { db, push, updateMock } = createMockDb();
-    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([]); // plan features
     push([]); // no existing active subscription
     const ctx = {
@@ -163,8 +163,8 @@ describe("subscribe error scenarios", () => {
 
   it("throws TRANSACTION_INVALID_RESPONSE when checkoutUrl is missing", async () => {
     const { db, push } = createMockDb();
-    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([]); // plan features
     push([]); // no existing subscription
     const ctx = {
@@ -198,8 +198,8 @@ describe("subscribe error scenarios", () => {
 
   it("does NOT mark existing active subscription as failed on init failure", async () => {
     const { db, push, updateMock } = createMockDb();
-    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([{ id: "cus_1", email: "test@example.com" }]);
+    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
     push([]); // plan features
     push([
       {
