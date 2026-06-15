@@ -59,10 +59,10 @@ const DEFAULT_SUBJECT_PAYMENT_FAILED = "Payment failed";
 const DEFAULT_SUBJECT_EXPIRED = "Subscription expired";
 const DEFAULT_SUBJECT_REMINDER = "Reminder: subscription expires soon";
 
-const DEFAULT_HTML_PAYMENT_RECEIVED = `<h1>Payment received</h1><p>Thank you for your payment.</p>`;
-const DEFAULT_HTML_PAYMENT_FAILED = `<h1>Payment failed</h1><p>Your payment could not be processed. Please update your payment method.</p>`;
-const DEFAULT_HTML_EXPIRED = `<h1>Subscription expired</h1><p>Your subscription has expired. Renew now to continue access.</p>`;
-const DEFAULT_HTML_REMINDER = `<h1>Renewal reminder</h1><p>Your subscription expires in {daysUntil} days. Renew now to avoid interruption.</p>`;
+const DEFAULT_HTML_PAYMENT_RECEIVED = `<h1>Payment received</h1><p>Thank you, {name}. You are now subscribed to {planName}.</p>`;
+const DEFAULT_HTML_PAYMENT_FAILED = `<h1>Payment failed</h1><p>{name}, your payment for {planName} could not be processed. Please update your payment method.</p>`;
+const DEFAULT_HTML_EXPIRED = `<h1>Subscription expired</h1><p>{name}, your {planName} subscription has expired. Renew now to continue access.</p>`;
+const DEFAULT_HTML_REMINDER = `<h1>Renewal reminder</h1><p>{name}, your {planName} subscription expires in {daysUntil} days. Renew now to avoid interruption.</p>`;
 
 export function resend(config: ResendConfig): BirrJSPlugin {
   return {
