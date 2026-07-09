@@ -51,7 +51,19 @@ export const SubscribeRequestSchema = z.object({
 });
 
 export const SubscribeResponseSchema = z.object({
-  checkoutUrl: z.url(),
+  checkoutUrl: z.url().optional(),
+  paymentInstructions: z
+    .object({
+      amount: z.number(),
+      channels: z.array(
+        z.object({
+          type: z.string(),
+          label: z.string(),
+          value: z.string(),
+        }),
+      ),
+    })
+    .optional(),
   subscriptionId: z.string(),
   customerId: z.string(),
 });
@@ -59,6 +71,21 @@ export const SubscribeResponseSchema = z.object({
 // Inferred TypeScript types
 export type SubscribeRequest = z.infer<typeof SubscribeRequestSchema>;
 export type SubscribeResponse = z.infer<typeof SubscribeResponseSchema>;
+
+// Verify receipt
+export const VerifyReceiptRequestSchema = z.object({
+  subscriptionId: z.string().min(1),
+  receiptUrl: z.url(),
+});
+
+export const VerifyReceiptResponseSchema = z.object({
+  success: z.boolean(),
+  subscriptionId: z.string(),
+  alreadyActive: z.boolean().optional(),
+});
+
+export type VerifyReceiptRequest = z.infer<typeof VerifyReceiptRequestSchema>;
+export type VerifyReceiptResponse = z.infer<typeof VerifyReceiptResponseSchema>;
 
 // List subscriptions with pagination
 export const ListSubscriptionsRequestSchema = PaginationRequestSchema.extend({

@@ -29,6 +29,8 @@ import {
   getSubscription,
   checkSubscription,
 } from "./subscription/subscription.api";
+// Verify receipt method
+import { verifyReceipt } from "./subscription/verify-receipt.api";
 import { handleWebhookCallback } from "./webhook/handle-webhook-callback";
 // Webhook methods
 import { handleWebhook } from "./webhook/webhook.api";
@@ -50,6 +52,7 @@ export const methods = {
   report,
   handleWebhook,
   handleWebhookCallback,
+  verifyReceipt,
   checkPendingSubscriptions: checkPendingSubscriptionsEndpoint,
   checkExpiredSubscriptions: checkExpiredSubscriptionsEndpoint,
 } as const;

@@ -64,12 +64,26 @@ export interface TransactionRequest {
   };
 }
 
+export type PaymentChannelType = "telebirr" | "cbe" | "zemen" | "boa" | "awash";
+
+export interface PaymentChannel {
+  type: PaymentChannelType;
+  label: string;
+  value: string;
+}
+
+export interface PaymentInstructions {
+  amount: number;
+  channels: PaymentChannel[];
+}
+
 /**
  * Transaction initialization response
  */
 export interface TransactionResponse {
   success: boolean;
   checkoutUrl?: string;
+  paymentInstructions?: PaymentInstructions;
   txRef?: string;
   error?: string;
 }

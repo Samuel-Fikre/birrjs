@@ -226,6 +226,16 @@ export const handleWebhook = defineBirrJSMethod(
       case "charge.refunded":
         newStatus = "cancelled";
         break;
+      case "unsupported":
+        logger.info(
+          { providerId: ctx.birrjs.options.provider.id },
+          "Provider does not support webhooks",
+        );
+        await database
+          .update(webhookEvent)
+          .set({ status: "ignored", processedAt: new Date() })
+          .where(eq(webhookEvent.id, webhookEventId));
+        return { success: true, message: "Webhook not supported by provider" };
       default:
         logger.warn({ eventType }, "Unknown webhook event");
         await database
