@@ -98,15 +98,15 @@ importers:
 
   apps/demo:
     dependencies:
-      '@birrjs/chapa':
-        specifier: workspace:*
-        version: link:../../packages/chapa
       '@birrjs/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@birrjs/sms-afromessage':
         specifier: workspace:*
         version: link:../../packages/sms-afromessage
+      '@birrjs/vodit':
+        specifier: workspace:*
+        version: link:../../packages/provider-vodit
       '@demo/api':
         specifier: workspace:*
         version: link:packages/api
@@ -7993,6 +7993,7 @@ snapshots:
     optionalDependencies:
       msw: 2.14.6(@types/node@20.19.41)(typescript@6.0.3)
       vite: 8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)
+    optional: true
 
   '@vitest/mocker@4.1.6(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
@@ -8039,7 +8040,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vitest: 4.1.6(@types/node@20.19.41)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@20.19.41)(typescript@6.0.3))(vite@8.0.13(@types/node@20.19.41)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.6(@types/node@25.6.0)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/utils@4.1.6':
     dependencies:
@@ -11355,6 +11356,7 @@ snapshots:
       jiti: 2.7.0
       tsx: 4.21.0
       yaml: 2.8.3
+    optional: true
 
   vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
@@ -11398,6 +11400,7 @@ snapshots:
       '@vitest/ui': 4.1.6(vitest@4.1.6)
     transitivePeerDependencies:
       - msw
+    optional: true
 
   vitest@4.1.6(@types/node@25.6.0)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
