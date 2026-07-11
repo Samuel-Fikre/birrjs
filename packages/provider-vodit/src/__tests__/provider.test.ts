@@ -40,7 +40,9 @@ describe("initializeTransaction", () => {
     expect(result.paymentInstructions!.channels[0]!.type).toBe("telebirr");
     expect(result.paymentInstructions!.channels[0]!.label).toBe("Telebirr");
     expect(result.paymentInstructions!.channels[1]!.type).toBe("cbe");
-    expect(result.paymentInstructions!.channels[1]!.label).toBe("CBE Account");
+    expect(result.paymentInstructions!.channels[1]!.label).toBe("Commercial Bank Of Ethiopia");
+    expect(result.paymentInstructions!.channels[0]!.accountHolder).toBe("samuel");
+    expect(result.paymentInstructions!.channels[1]!.accountHolder).toBe("samuel");
     expect(result.txRef).toBe("tx_test");
   });
 });
@@ -207,7 +209,7 @@ describe("recipient verification", () => {
 
     expect(result.success).toBe(false);
     expect(result.status).toBe("failed");
-    expect(result.error).toContain("last 4 digits");
+    expect(result.error).toContain("doesn't match the payment account");
   });
 
   it("rejects when receipt name doesn't match channel name", async () => {
@@ -236,7 +238,7 @@ describe("recipient verification", () => {
 
     expect(result.success).toBe(false);
     expect(result.status).toBe("failed");
-    expect(result.error).toContain("name mismatch");
+    expect(result.error).toContain("doesn't match the payment account");
   });
 
   it("passes when both last 4 digits and name match", async () => {

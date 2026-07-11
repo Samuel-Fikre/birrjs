@@ -70,6 +70,7 @@ export interface PaymentChannel {
   type: PaymentChannelType;
   label: string;
   value: string;
+  accountHolder?: string;
 }
 
 export interface PaymentInstructions {

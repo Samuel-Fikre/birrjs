@@ -47,7 +47,12 @@ export const subscribe = defineBirrJSMethod(
     const { database, runtime } = ctx.birrjs;
 
     // Check if plan exists
-    const plans = await database.select().from(plan).where(eq(plan.id, planId)).limit(1);
+    const plans = await database
+      .select()
+      .from(plan)
+      .where(eq(plan.id, planId))
+      .orderBy(desc(plan.version))
+      .limit(1);
     const planRecord = plans[0];
     if (!planRecord) {
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);

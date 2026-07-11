@@ -17,6 +17,8 @@ export interface VoditProviderOptions {
 export type VoditProviderConfig = VoditProviderOptions & {
   id: string;
   kind: string;
+  secretKey: string;
+  callbackUrl: string;
   runtime: PaymentProvider;
 };
 
@@ -54,8 +56,8 @@ export interface VoditStatusResponse {
 
 export const CHANNEL_LABELS: Record<VoditChannelType, string> = {
   telebirr: "Telebirr",
-  cbe: "CBE Account",
-  zemen: "Zemen",
-  boa: "Abyssinia",
-  awash: "Awash",
+  cbe: "Commercial Bank Of Ethiopia",
+  zemen: "Zemen Bank",
+  boa: "Bank of Abyssinia",
+  awash: "Awash Bank",
 };

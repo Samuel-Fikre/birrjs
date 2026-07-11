@@ -60,6 +60,7 @@ export const SubscribeResponseSchema = z.object({
           type: z.string(),
           label: z.string(),
           value: z.string(),
+          accountHolder: z.string().optional(),
         }),
       ),
     })

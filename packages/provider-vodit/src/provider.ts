@@ -137,6 +137,7 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         type: ch.type,
         label: CHANNEL_LABELS[ch.type] ?? ch.type,
         value: ch.value,
+        accountHolder: ch.name,
       }));
 
       const paymentInstructions: PaymentInstructions = {
@@ -233,7 +234,8 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
           return {
             success: false,
             status: "failed",
-            error: `Recipient account mismatch: last 4 digits "${receiptLast4}" don't match channel "${channelLast4}"`,
+            error:
+              "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
           };
         }
 
@@ -241,7 +243,8 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
           return {
             success: false,
             status: "failed",
-            error: `Recipient name mismatch: "${receiptName}" doesn't match "${channel.name}"`,
+            error:
+              "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
           };
         }
       }

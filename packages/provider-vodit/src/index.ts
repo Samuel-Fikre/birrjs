@@ -22,6 +22,8 @@ export function vodit(options: VoditProviderOptions): VoditProviderConfig {
     ...options,
     id: "vodit",
     kind: "vodit",
+    secretKey: options.apiKey,
+    callbackUrl: "",
     runtime,
   };
 }

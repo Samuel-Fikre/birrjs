@@ -85,7 +85,7 @@ export const verifyReceipt = defineBirrJSMethod(
         throw BirrJSError.from(
           "BAD_REQUEST",
           BIRRJS_ERROR_CODES.RECEIPT_AMOUNT_MISMATCH,
-          `Receipt amount (${verification.amount}) is less than plan price (${planRecord.priceAmount})`,
+          `Receipt amount (${(verification.amount / 100).toFixed(2)} ETB) is less than plan price (${(planRecord.priceAmount / 100).toFixed(2)} ETB)`,
         );
       }
     }
