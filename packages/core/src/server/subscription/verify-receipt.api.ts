@@ -4,7 +4,9 @@ import { defineBirrJSMethod } from "../../api/endpoint";
 import { VerifyReceiptRequestSchema } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
-import { customer, plan, reminderSent, subscription } from "../../database/schema";
+import { generateId } from "../../core/utils";
+import type { BirrJSDatabase } from "../../database";
+import { customer, plan, reminderSent, subscription, usedReceipt } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
@@ -96,7 +98,21 @@ export const verifyReceipt = defineBirrJSMethod(
       );
     }
 
-    const result = await activateSubscriptionByTxRef(database, logger, sub.providerTxRef);
+    const txRef = sub.providerTxRef;
+
+    const result = await database.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(usedReceipt)
+        .values({ id: generateId("ur"), receiptUrl, subscriptionId })
+        .onConflictDoNothing()
+        .returning({ id: usedReceipt.id });
+
+      if (!inserted) {
+        throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.DUPLICATE_RECEIPT);
+      }
+
+      return await activateSubscriptionByTxRef(tx as unknown as BirrJSDatabase, logger, txRef);
+    });
 
     if (result.updated) {
       // Clear prior reminder records so new period starts fresh

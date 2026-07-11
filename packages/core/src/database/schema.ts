@@ -192,6 +192,21 @@ export const reminderSent = pgTable(
   (table) => [uniqueIndex("birrjs_reminder_sent_uniq").on(table.subscriptionId, table.reminderDay)],
 );
 
+export const usedReceipt = pgTable(
+  "used_receipt",
+  {
+    id: text("id").primaryKey(),
+    receiptUrl: text("receipt_url").notNull(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscription.id, { onDelete: "cascade" }),
+    usedAt: timestamp("used_at", { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex("birrjs_used_receipt_url_unique").on(table.receiptUrl)],
+);
+
 export const entitlement = pgTable(
   "entitlement",
   {
