@@ -130,6 +130,16 @@ function isTransactionCompleted(
 export type VoditProvider = PaymentProvider;
 
 export function createVoditProvider(client: VoditClient, channels: VoditChannel[]): VoditProvider {
+  for (const ch of channels) {
+    if (!ch.name?.trim()) {
+      throw new VoditError(
+        `Vodit channel "${ch.type}" requires a name for recipient verification`,
+        VODIT_ERROR_CODES.INVALID_CONFIG,
+        400,
+      );
+    }
+  }
+
   return {
     async initializeTransaction(request: TransactionRequest): Promise<TransactionResponse> {
       const amount = request.amount / 100;
