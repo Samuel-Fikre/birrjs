@@ -113,9 +113,7 @@ function getRecipientName(
 function isTransactionCompleted(
   receipt: Record<string, unknown> | null | undefined,
   providerKey: VoditChannelType,
-  httpStatus: number,
 ): boolean {
-  if (httpStatus === 502) return true;
   if (!receipt) return false;
 
   if (providerKey === "telebirr" || providerKey === "zemen") {
@@ -207,7 +205,7 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
 
       const providerKey = response.providerKey;
 
-      if (!isTransactionCompleted(response.receipt, providerKey, response.httpStatus)) {
+      if (!isTransactionCompleted(response.receipt, providerKey)) {
         return {
           success: false,
           status: "failed",
@@ -237,26 +235,34 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
       const receiptName = getRecipientName(rawReceipt, providerKey);
       const channel = channels.find((ch) => ch.type === providerKey);
 
-      if (channel) {
-        const channelLast4 = extractLast4(channel.value);
+      if (!channel) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            `No configured channel matches receipt type "${providerKey}". ` +
+            "Make sure you paid to one of the supported accounts listed on the payment page.",
+        };
+      }
 
-        if (receiptLast4 && channelLast4 && receiptLast4 !== channelLast4) {
-          return {
-            success: false,
-            status: "failed",
-            error:
-              "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
-          };
-        }
+      const channelLast4 = extractLast4(channel.value);
 
-        if (receiptName && !receiptName.toLowerCase().startsWith(channel.name.toLowerCase())) {
-          return {
-            success: false,
-            status: "failed",
-            error:
-              "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
-          };
-        }
+      if (receiptLast4 && channelLast4 && receiptLast4 !== channelLast4) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
+        };
+      }
+
+      if (receiptName && !receiptName.toLowerCase().startsWith(channel.name.toLowerCase())) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "The receipt doesn't match the payment account. Please make sure you paid to one of the accounts listed above.",
+        };
       }
 
       return {
