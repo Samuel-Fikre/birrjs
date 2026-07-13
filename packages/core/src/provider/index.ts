@@ -64,7 +64,7 @@ export interface TransactionRequest {
   };
 }
 
-export type PaymentChannelType = "telebirr" | "cbe" | "zemen" | "boa" | "awash";
+export type PaymentChannelType = "telebirr" | "cbe" | "awash";
 
 export interface PaymentChannel {
   type: PaymentChannelType;

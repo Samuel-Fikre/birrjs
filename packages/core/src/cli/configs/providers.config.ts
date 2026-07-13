@@ -35,7 +35,7 @@ export const PROVIDERS = [
       channels: [
         { type: "telebirr", value: "+251911111111", name: "My Account" },
         // TODO: configure your payment channels
-        // type: "telebirr" | "cbe" | "zemen" | "boa" | "awash"
+        // type: "telebirr" | "cbe" | "awash"
       ],
     })`;
     },

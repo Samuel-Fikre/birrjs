@@ -59,10 +59,7 @@ function parseReceiptAmount(
       return tryField(receipt, "totalPaidAmount") ?? tryField(receipt, "settledAmount");
     case "cbe":
       return tryField(receipt, "transferredAmount") ?? tryField(receipt, "totalAmount");
-    case "zemen":
-      return tryField(receipt, "totalAmountPaid") ?? tryField(receipt, "settledAmount");
-    case "boa":
-      return tryField(receipt, "totalAmount") ?? tryField(receipt, "transferredAmount");
+
     case "awash":
       return tryField(receipt, "amount");
     default:
@@ -79,10 +76,7 @@ function getRecipientAccountLast4(
       return extractLast4(receipt.creditedPartyAccountNo as string | undefined);
     case "cbe":
       return extractLast4(receipt.receiverAccount as string | undefined);
-    case "zemen":
-      return extractLast4(receipt.recipientAccount as string | undefined);
-    case "boa":
-      return extractLast4(receipt.receiverAccount as string | undefined);
+
     case "awash":
       return extractLast4(tryNestedField(receipt, ["transaction", "beneficiaryAccount"]));
     default:
@@ -99,10 +93,7 @@ function getRecipientName(
       return (receipt.creditedPartyName as string | undefined) ?? null;
     case "cbe":
       return (receipt.receiverName as string | undefined) ?? null;
-    case "zemen":
-      return (receipt.recipientName as string | undefined) ?? null;
-    case "boa":
-      return (receipt.receiverName as string | undefined) ?? null;
+
     case "awash":
       return tryNestedField(receipt, ["transaction", "beneficiaryName"]) ?? null;
     default:
@@ -116,7 +107,7 @@ function isTransactionCompleted(
 ): boolean {
   if (!receipt) return false;
 
-  if (providerKey === "telebirr" || providerKey === "zemen") {
+  if (providerKey === "telebirr") {
     const status = receipt.transactionStatus as string | undefined;
     if (!status) return false;
     return status.toLowerCase() === "completed";
@@ -210,7 +201,7 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
           success: false,
           status: "failed",
           error:
-            providerKey === "telebirr" || providerKey === "zemen"
+            providerKey === "telebirr"
               ? `Transaction not completed, expected "Completed" but got "${
                   (response.receipt?.transactionStatus as string | undefined) ?? "missing"
                 }"`

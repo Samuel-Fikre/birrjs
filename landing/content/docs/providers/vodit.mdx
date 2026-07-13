@@ -50,7 +50,7 @@ createBirr({
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | `"telebirr" \| "cbe" \| "zemen" \| "boa" \| "awash"` | The bank or mobile money provider |
+| `type` | `"telebirr" \| "cbe" \| "awash"` | The bank or mobile money provider |
 | `value` | `string` | Account number or phone number |
 | `name` | `string` | Account holder name as registered at the bank — **required**. Used for recipient verification. First name is fine if that's how it appears on receipts. |
 
@@ -87,8 +87,6 @@ Duplicate receipts are detected and rejected automatically — each receipt URL 
 |---------|------------|--------------|--------------|
 | Telebirr | `telebirr` | `totalPaidAmount` or `settledAmount` | Must be `"Completed"` |
 | CBE | `cbe` | `transferredAmount` or `totalAmount` | Always accepted |
-| Zemen | `zemen` | `totalAmountPaid` or `settledAmount` | Must be `"Completed"` |
-| Bank of Abyssinia | `boa` | `totalAmount` or `transferredAmount` | Always accepted |
 | Awash Bank | `awash` | `amount` (nested) | Always accepted |
 
 ## Receipt verification details

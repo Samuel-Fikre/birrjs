@@ -1,6 +1,6 @@
 import type { PaymentProvider } from "@birrjs/core";
 
-export type VoditChannelType = "telebirr" | "cbe" | "zemen" | "boa" | "awash";
+export type VoditChannelType = "telebirr" | "cbe" | "awash";
 
 export interface VoditChannel {
   type: VoditChannelType;
@@ -57,7 +57,5 @@ export interface VoditStatusResponse {
 export const CHANNEL_LABELS: Record<VoditChannelType, string> = {
   telebirr: "Telebirr",
   cbe: "Commercial Bank Of Ethiopia",
-  zemen: "Zemen Bank",
-  boa: "Bank of Abyssinia",
   awash: "Awash Bank",
 };
