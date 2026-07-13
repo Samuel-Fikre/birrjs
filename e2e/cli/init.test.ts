@@ -29,8 +29,9 @@ function createInitFixture() {
   return { cwd };
 }
 
-function runInit(cwd: string) {
-  execSync(`node "${cliBin}" init --defaults --skip-install --cwd "${cwd}"`, {
+function runInit(cwd: string, provider?: string) {
+  const providerFlag = provider ? ` --provider ${provider}` : "";
+  execSync(`node "${cliBin}" init --defaults --skip-install${providerFlag} --cwd "${cwd}"`, {
     cwd,
     stdio: "pipe",
     env: { ...process.env, NODE_ENV: "production" },
@@ -74,6 +75,43 @@ describe("birrjs init scaffolding", () => {
     expect(envContent).toContain("CHAPA_SECRET_KEY=");
     expect(envContent).toContain("CHAPA_WEBHOOK_SECRET=");
     expect(envContent).toContain("CALLBACK_URL=");
+  });
+
+  it("generates Vodit config when --provider vodit", async () => {
+    const { cwd } = createInitFixture();
+
+    runInit(cwd, "vodit");
+
+    // Config file — Vodit-specific
+    const configPath = path.join(cwd, "src/lib/birrjs.ts");
+    expect(fs.existsSync(configPath)).toBe(true);
+    const configContent = fs.readFileSync(configPath, "utf-8");
+    expect(configContent).toContain("vodit");
+    expect(configContent).toContain("@birrjs/vodit");
+    expect(configContent).toContain("VODIT_API_KEY");
+    expect(configContent).not.toContain("chapa");
+    expect(configContent).not.toContain("CHAPA_SECRET_KEY");
+
+    // Plans file (provider-agnostic)
+    const plansPath = path.join(cwd, "src/lib/birrjs-plans.ts");
+    expect(fs.existsSync(plansPath)).toBe(true);
+    const plansContent = fs.readFileSync(plansPath, "utf-8");
+    expect(plansContent).toContain('id: "free"');
+    expect(plansContent).toContain('id: "pro"');
+
+    // Route handler (provider-agnostic)
+    const routePath = path.join(cwd, "src/app/api/birrjs/[...slug]/route.ts");
+    expect(fs.existsSync(routePath)).toBe(true);
+    const routeContent = fs.readFileSync(routePath, "utf-8");
+    expect(routeContent).toContain("GET");
+    expect(routeContent).toContain("POST");
+
+    // .env — Vodit-specific, no Chapa vars
+    const envPath = path.join(cwd, ".env");
+    expect(fs.existsSync(envPath)).toBe(true);
+    const envContent = fs.readFileSync(envPath, "utf-8");
+    expect(envContent).toContain("VODIT_API_KEY=");
+    expect(envContent).not.toContain("CHAPA_SECRET_KEY=");
   });
 
   it("does not overwrite existing config files", async () => {

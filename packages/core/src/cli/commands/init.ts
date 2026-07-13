@@ -12,6 +12,7 @@ import picocolors from "picocolors";
 
 import type { Framework } from "../configs/frameworks.config";
 import { FRAMEWORKS } from "../configs/frameworks.config";
+import { PROVIDERS, getProviderById } from "../configs/providers.config";
 import { templates } from "../templates/index";
 import {
   defaultConfigPath,
@@ -56,7 +57,16 @@ function findExistingFile(cwd: string, candidates: string[]): string | null {
   return null;
 }
 
-function generateConfigFile(templateId: string, includeIdentify: boolean): string {
+function generateConfigFile(
+  templateId: string,
+  includeIdentify: boolean,
+  providerId: string,
+): string {
+  const provider = getProviderById(providerId);
+  if (!provider) {
+    throw new Error(`Unknown provider: ${providerId}`);
+  }
+
   const planImports =
     templateId === "saas-starter" || templateId === "usage-based" ? "free, pro" : "";
 
@@ -78,17 +88,12 @@ function generateConfigFile(templateId: string, includeIdentify: boolean): strin
   },`
     : "";
 
-  return `import { chapa } from "@birrjs/chapa";
+  return `import { ${provider.importName} } from "${provider.package}";
 import { createBirr } from "@birrjs/core";${importLine}
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
-  }),${plansLine}${identifyBlock}
+  provider: ${provider.generateConfig()},${plansLine}${identifyBlock}
 });
 `;
 }
@@ -143,14 +148,6 @@ interface FileToWrite {
   content: string;
 }
 
-const ENV_VARS = [
-  { key: "DATABASE_URL", line: "DATABASE_URL=" },
-  { key: "CHAPA_SECRET_KEY", line: "CHAPA_SECRET_KEY=" },
-  { key: "CHAPA_WEBHOOK_SECRET", line: "CHAPA_WEBHOOK_SECRET=" },
-  { key: "CALLBACK_URL", line: "CALLBACK_URL=" },
-  { key: "RETURN_URL", line: "RETURN_URL=" },
-];
-
 function frameworksList(): string {
   const c = picocolors.cyan;
   const dot = picocolors.dim(" · ");
@@ -191,6 +188,7 @@ async function initAction(options: {
   defaults: boolean;
   skipInstall: boolean;
   force: boolean;
+  provider?: string;
 }): Promise<void> {
   const cwd = path.resolve(options.cwd);
   const useDefaults = options.defaults;
@@ -246,24 +244,33 @@ async function initAction(options: {
   const existingConfig = findExistingFile(cwd, POSSIBLE_CONFIG_PATHS);
   const existingClient = findExistingFile(cwd, POSSIBLE_CLIENT_PATHS);
 
-  let provider: string | symbol = "chapa";
-  if (!existingConfig && !useDefaults) {
-    provider = await p.select({
+  let providerId: string | symbol = PROVIDERS[0].id;
+  if (options.provider) {
+    if (!getProviderById(options.provider)) {
+      p.cancel(
+        `Unknown provider "${options.provider}". Supported: ${PROVIDERS.map((p) => p.id).join(", ")}`,
+      );
+      process.exit(1);
+    }
+    providerId = options.provider;
+  } else if (!existingConfig && !useDefaults) {
+    providerId = await p.select({
       message: "Select payment provider",
-      options: [
-        { value: "chapa", label: "Chapa" },
-        { value: "arifpay", label: "ArifPay", hint: "coming soon", disabled: true },
-      ],
+      options: PROVIDERS.map((p) => ({
+        value: p.id,
+        label: p.name,
+      })),
     });
 
-    if (p.isCancel(provider)) {
+    if (p.isCancel(providerId)) {
       p.cancel("Aborted");
       process.exit(0);
     }
   }
 
+  const provider = getProviderById(providerId as string)!;
   const envFiles = getEnvFiles(cwd);
-  const envVarsToAdd = ENV_VARS.map((v) => v.key);
+  const envVarsToAdd = provider.envVars.map((v) => v.key);
 
   if (envFiles.length > 0) {
     const parsed = parseEnvFiles(envFiles);
@@ -283,9 +290,9 @@ async function initAction(options: {
       p.log.success(`Added missing env vars:\n${varList}`);
     }
   } else {
-    const lines = ENV_VARS.map((v) => v.line);
+    const lines = provider.envVars.map((v) => v.line);
     createEnvFile(cwd, lines);
-    p.log.success(`Created .env with ${String(ENV_VARS.length)} variables`);
+    p.log.success(`Created .env with ${String(provider.envVars.length)} variables`);
   }
 
   if (framework.id === "next" && framework.routeHandler) {
@@ -408,7 +415,7 @@ async function initAction(options: {
   }
 
   if (!skipInstall) {
-    const packages = ["@birrjs/core", "@birrjs/chapa"];
+    const packages = ["@birrjs/core", provider.package];
     const toInstall = packages.filter((pkg) => !isPackageInstalled(cwd, pkg));
 
     if (toInstall.length > 0) {
@@ -437,7 +444,11 @@ async function initAction(options: {
     if (conflict === "overwrite") {
       files.push({
         path: configPath,
-        content: generateConfigFile(templateId as string, clientPath !== null),
+        content: generateConfigFile(
+          templateId as string,
+          clientPath !== null,
+          providerId as string,
+        ),
       });
     }
   }
@@ -523,4 +534,5 @@ export const initCommand = new Command("init")
   .option("-y, --defaults", "skip prompts and use defaults", false)
   .option("--skip-install", "skip installing dependencies", false)
   .option("--force", "overwrite existing files without prompting", false)
+  .option("--provider <id>", "payment provider id (chapa, vodit) — skips the provider prompt")
   .action(initAction);
