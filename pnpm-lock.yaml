@@ -98,6 +98,9 @@ importers:
 
   apps/demo:
     dependencies:
+      '@birrjs/chapa':
+        specifier: workspace:*
+        version: link:../../packages/chapa
       '@birrjs/core':
         specifier: workspace:*
         version: link:../../packages/core

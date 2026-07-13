@@ -49,7 +49,7 @@ All 7 client-accessible methods:
 
 | Method | Input | Output |
 |--------|-------|--------|
-| `subscribe` | `{ planId }` | `{ checkoutUrl, subscriptionId, customerId }` |
+| `subscribe` | `{ planId }` | `{ checkoutUrl?, paymentInstructions?, subscriptionId, customerId }` |
 | `listSubscriptions` | `{ limit?, offset? }` | `{ subscriptions[], total, limit, offset }` |
 | `cancelSubscription` | `{ subscriptionId }` | `{ subscription }` |
 | `getSubscription` | `{ subscriptionId }` | `{ subscription }` |
@@ -59,7 +59,7 @@ All 7 client-accessible methods:
 
 ### Method details
 
-- **`subscribe`** — Creates a subscription and returns a `checkoutUrl` to redirect the customer for payment. The customer is resolved from the current session — do not pass a `customerId`.
+- **`subscribe`** — Creates a subscription. Redirect providers (e.g. Chapa) return a `checkoutUrl` for checkout. Manual verification providers (e.g. Vodit) return `paymentInstructions` with bank accounts for the customer to pay manually. The customer is resolved from the current session — do not pass a `customerId`.
 - **`listSubscriptions`** — Returns subscriptions for the current customer. Each subscription includes an `effectiveStatus` computed from the actual status and scheduling rules.
 - **`cancelSubscription`** — Marks the subscription for cancellation at period end. No provider API call is made. Idempotent — safe on already-cancelled subscriptions.
 - **`getSubscription`** — Fetches a single subscription by ID. Returns it with `effectiveStatus`. Only returns the subscription if it belongs to the current customer — throws `NOT_FOUND` otherwise.
@@ -73,24 +73,52 @@ All 7 client-accessible methods:
 
 ## Using in components
 
-```tsx
-"use client";
+<Tabs items={["Chapa", "Vodit"]}>
+  <Tab value="Chapa">
 
-import { client } from "@/lib/birrjs-client";
+  ```tsx
+  "use client";
 
-function SubscribeButton({ planId }: { planId: "free" | "pro" }) {
-  return (
-    <button
-      onClick={async () => {
-        const result = await client.subscribe({ planId });
-        window.location.href = result.checkoutUrl;
-      }}
-    >
-      Subscribe to {planId}
-    </button>
-  );
-}
-```
+  import { client } from "@/lib/birrjs-client";
+
+  function SubscribeButton({ planId }: { planId: "free" | "pro" }) {
+    return (
+      <button
+        onClick={async () => {
+          const result = await client.subscribe({ planId });
+          window.location.href = result.checkoutUrl;
+        }}
+      >
+        Subscribe to {planId}
+      </button>
+    );
+  }
+  ```
+
+  </Tab>
+  <Tab value="Vodit">
+
+  ```tsx
+  "use client";
+
+  import { client } from "@/lib/birrjs-client";
+
+  function SubscribeButton({ planId }: { planId: "free" | "pro" }) {
+    return (
+      <button
+        onClick={async () => {
+          const result = await client.subscribe({ planId });
+          // Display result.paymentInstructions.amount and channels to the user
+        }}
+      >
+        Subscribe to {planId}
+      </button>
+    );
+  }
+  ```
+
+  </Tab>
+</Tabs>
 
 <Callout type="info">
   When plans are defined inline in your configuration, `planId` and `featureId` are **narrowed to literal unions** — TypeScript will autocomplete valid plan IDs.

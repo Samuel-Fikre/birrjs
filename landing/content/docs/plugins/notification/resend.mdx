@@ -1,0 +1,96 @@
+---
+title: Resend Email
+description: Send email notifications on subscription events via Resend.
+---
+
+The `@birrjs/email-resend` plugin sends email notifications to customers when subscription events occur — payment received, payment failed, subscription expired, or expiring soon.
+
+## Installation
+
+```bash
+pnpm add @birrjs/email-resend
+```
+
+## Configuration
+
+```ts
+import { resend } from "@birrjs/email-resend";
+import { createBirr } from "@birrjs/core";
+
+createBirr({
+  // ... other options
+  plugins: [
+    resend({
+      apiKey: process.env.RESEND_API_KEY!,
+      from: "Acme <notifications@acme.com>",
+    }),
+  ],
+});
+```
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `RESEND_API_KEY` | Yes | API key from [resend.com](https://resend.com) |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | — | Resend API key |
+| `from` | `string` | — | Sender address, e.g. `"Acme <noreply@acme.com>"` |
+| `subject` | `object` | (defaults below) | Override email subjects per event |
+| `messages` | `object` | (defaults below) | Override HTML templates per event |
+
+## How it works
+
+The plugin listens to subscription lifecycle events via the `onEvent` hook system and sends an HTML email to the customer's email address.
+
+| Event | Default subject | Default body |
+|-------|----------------|--------------|
+| `subscription.activated` | Payment received | `<h1>Payment received</h1><p>Thank you, {name}. You are now subscribed to {planName}.</p>` |
+| `subscription.cancelled` | Payment failed | `<h1>Payment failed</h1><p>{name}, your payment for {planName} could not be processed. Please update your payment method.</p>` |
+| `subscription.expired` | Subscription expired | `<h1>Subscription expired</h1><p>{name}, your {planName} subscription has expired. Renew now to continue access.</p>` |
+| `subscription.reminder` | Reminder: subscription expires soon | `<h1>Renewal reminder</h1><p>{name}, your {planName} subscription expires in {daysUntil} days. Renew now to avoid interruption.</p>` |
+
+### Customer email
+
+The email address is read from the `birrjs_customer.email` column. Set it on your customer record — typically by returning `email` from your `identify` function:
+
+```ts
+identify: async (request) => {
+  const session = await auth.api.getSession({ headers: request.headers });
+  return {
+    customerId: session.user.id,
+    email: session.user.email, // [!code ++]
+  };
+},
+```
+
+If the customer has no email when an event fires, the email is silently skipped. For `subscription.reminder` events, the email comes directly from the event payload.
+
+## Custom messages
+
+Override default subjects and HTML templates:
+
+```ts
+resend({
+  subject: {
+    paymentReceived: "You're subscribed!",
+    paymentFailed: "Action needed: payment failed",
+  },
+  messages: {
+    paymentReceived: "<h1>Welcome!</h1><p>Thanks {name}.</p>",
+    paymentFailed: "<h1>Payment issue</h1><p>Please update your payment method.</p>",
+  },
+})
+```
+
+Template variables are enclosed in `{curly braces}`:
+
+| Variable | Available in |
+|----------|-------------|
+| `{name}` | All events |
+| `{planName}` | All events |
+| `{daysUntil}` | `subscription.reminder` only |

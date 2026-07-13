@@ -38,64 +38,61 @@ type TransactionRequest = {
 type TransactionResponse = {
   success: boolean;
   checkoutUrl?: string;
+  paymentInstructions?: PaymentInstructions;
   txRef?: string;
   error?: string;
 };
+
+type PaymentChannel = {
+  type: "telebirr" | "cbe" | "zemen" | "boa" | "awash";
+  label: string;
+  value: string;
+  accountHolder?: string;
+};
+
+type PaymentInstructions = {
+  amount: number;
+  channels: PaymentChannel[];
+};
 ```
 
-## Chapa Provider
+## Available providers
 
-The `@birrjs/chapa` package provides the Chapa integration:
+BirrJS ships with the following provider packages. Each has its own dedicated page with full setup and usage details.
+
+### [Chapa](/docs/providers/chapa) — redirect-based checkout
 
 ```ts
 import { chapa } from "@birrjs/chapa";
-
-createBirr({
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
-  }),
-});
 ```
 
-### Environment variables
+Redirect users to a Chapa checkout page for payment. Supports webhooks, callback URLs, and automatic subscription activation. See the [Chapa provider page](/docs/providers/chapa) for configuration, events, and known gaps.
 
-| Variable | Description |
-|----------|-------------|
-| `CHAPA_SECRET_KEY` | API key from [developer.chapa.co](https://developer.chapa.co) |
-| `CHAPA_WEBHOOK_SECRET` | Webhook signing secret |
+### [Vodit](/docs/providers/vodit) — receipt-based manual payment
 
-### Chapa-specific notes
+```ts
+import { vodit } from "@birrjs/vodit";
+```
 
-- **Amounts** are sent as decimal strings (e.g. `"29.90"`) — BirrJS converts from minor units automatically
-- **Callback URL** — Chapa sends a **GET** request here after payment with `?trx_ref=...&status=success`. BirrJS handles this on the same `/handle-webhook` path used by POST webhooks. Set up the webhook URL in your Chapa dashboard to point to the same endpoint for POST events.
-- **Return URL** — Optional. Where Chapa redirects the user's browser after payment completes. Set this to a frontend page like `/account` or `/plans?success=true`.
-- **Webhook signature** uses HMAC-SHA256, verified via timing-safe comparison
-- **Supported events**: `charge.success`, `charge.failed`, `charge.cancelled`, `charge.reversed`, `charge.refunded`
-
-### Chapa gaps (future)
-
-The following Chapa features are typed but not yet wired up:
-- `customization` (title, description, logo)
-- `meta` (hide_receipt, invoices)
-- `subaccounts` (split payments)
+Display bank account instructions for users to send money directly, then verify via receipt URL. Supports Telebirr, CBE, Zemen, BoA, and Awash. See the [Vodit provider page](/docs/providers/vodit) for setup, per-bank parsing details, and recipient verification.
 
 ## Switching Providers
 
-Your app code never references the provider directly — all calls go through the `PaymentProvider` interface. Swapping from Chapa to another provider means changing one import:
+Your app code never references the provider directly — all calls go through the `PaymentProvider` interface. Swapping from Chapa to Vodit means changing one import:
 
 ```ts
 // Before
 import { chapa } from "@birrjs/chapa";
 // After
-import { arifpay } from "@birrjs/arifpay";
+import { vodit } from "@birrjs/vodit";
 
 createBirr({
-  provider: arifpay({
-    secretKey: process.env.ARIFPAY_SECRET_KEY!,
-    callbackUrl: "https://your-app.com/api/birrjs/handle-webhook",
+  provider: vodit({
+    apiKey: process.env.VODIT_API_KEY!,
+    channels: [
+      { type: "telebirr", value: "0912345678", name: "Abebe Kebede" },
+      { type: "cbe", value: "1000200030004000", name: "Abebe Kebede" },
+    ],
   }),
   // Everything else stays the same
   database: process.env.DATABASE_URL,
@@ -114,7 +111,7 @@ Create a new package (e.g. `@birrjs/arifpay`) with:
 3. A Zod schema for webhook payload validation
 
 <Callout type="info">
-  Planned providers: ArifPay, Santim Pay and more. The provider system is designed to make adding new ones straightforward.
+  Chapa and Vodit are available now. The provider system is designed to make adding new ones straightforward — planned providers include ArifPay, Santim Pay and more.
 </Callout>
 
 
