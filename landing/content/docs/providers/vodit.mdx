@@ -1,0 +1,116 @@
+---
+title: Vodit
+description: Integrate v.odit.et for receipt-based payment verification with Ethiopian banks.
+---
+
+The `@birrjs/vodit` package provides receipt-based payment verification via [v.odit.et](https://v.odit.et) — a drop-in alternative to chapa for solo devs without a merchant license.
+
+## Installation
+
+```bash
+pnpm add @birrjs/vodit
+```
+
+## Configuration
+
+```ts
+import { vodit } from "@birrjs/vodit";
+
+createBirr({
+  provider: vodit({
+    apiKey: process.env.VODIT_API_KEY!,
+    channels: [
+      {
+        type: "telebirr",
+        value: "0912345678",
+        name: "Abebe", // Must match your account name exactly (first name is enough)
+      },
+      {
+        type: "cbe",
+        value: "1000200030004000",
+        name: "Abebe", // Must match your account name exactly (first name is enough)
+      },
+    ],
+  }),
+});
+```
+
+<Callout type="warning">
+  **The `name` field is required** and must match how your name appears on your bank or mobile money account. Vodit compares it against the receipt's recipient name — if they don't match, the verification fails.your registered first name is sufficient.
+</Callout>
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `apiKey` | `string` | Yes | API key from v.odit.et |
+| `channels` | `VoditChannel[]` | Yes | Bank accounts to display for payment |
+
+### `VoditChannel`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"telebirr" \| "cbe" \| "awash"` | The bank or mobile money provider |
+| `value` | `string` | Account number or phone number |
+| `name` | `string` | Account holder name as registered at the bank — **required**. Used for recipient verification. First name is fine if that's how it appears on receipts. |
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `VODIT_API_KEY` | API key from [v.odit.et](https://v.odit.et) |
+
+## How it works
+
+Instead of redirecting users to a checkout page, users see a list of bank accounts and pay directly from their banking app.
+
+### Subscribe flow
+
+1. Your app calls `subscribe()` → BirrJS calls `provider.initializeTransaction()`
+2. BirrJS returns `paymentInstructions` — an array of bank accounts with amounts (no `checkoutUrl`)
+3. Display the instructions to the user: "Send **29.00 ETB** to any of these accounts"
+4. The user pays via their banking app and gets a receipt (reference)
+5. The user submits their receipt URL via `client.verifyReceipt({ receiptUrl, planId })`
+
+### Verify receipt flow
+
+1. `verifyReceipt` calls `provider.verifyTransaction(receiptUrl)`
+2. Vodit fetches the receipt from the bank's website and parses the payment details
+3. BirrJS checks: transaction completed? amount ≥ plan price? recipient account matches?
+4. If all checks pass, the subscription is activated and `subscription.activated` events fire
+
+Duplicate receipts are detected and rejected automatically — each receipt URL can only be used once.
+
+## Supported channels
+
+| Channel | Type value | Amount field | Status check |
+|---------|------------|--------------|--------------|
+| Telebirr | `telebirr` | `totalPaidAmount` or `settledAmount` | Must be `"Completed"` |
+| CBE | `cbe` | `transferredAmount` or `totalAmount` | Always accepted |
+| Awash Bank | `awash` | `amount` (nested) | Always accepted |
+
+## Receipt verification details
+
+### Recipient verification
+
+Vodit validates the receipt against your configured channels:
+- **Last 4 digits** — extracts the credited account's last 4 digits and compares against your channel values
+- **Recipient name** — checks the recipient name starts with the configured account holder name
+
+If neither check matches, verification fails — preventing activation from payments sent to wrong accounts.
+
+### Amount check
+
+Users type the amount manually at the bank, so the exact amount can vary. Vodit checks that the paid amount is **≥ the plan price** (in minor units). Overpayment is allowed.
+
+## Error types
+
+| Error | Cause |
+|-------|-------|
+| `SERVER_ERROR` | Vodit API returned a 5xx error |
+| `UNAUTHORIZED` | Invalid or missing API key |
+| `RATE_LIMITED` | Too many requests |
+| `TIMEOUT_ERROR` | Request exceeded 30s timeout |
+| `NETWORK_ERROR` | Network connectivity issue |
+| `VERIFICATION_FAILED` | Receipt could not be verified |
+

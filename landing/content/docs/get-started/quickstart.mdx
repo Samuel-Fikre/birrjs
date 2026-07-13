@@ -101,41 +101,76 @@ import type { birrjs } from "./birrjs";
 export const client = createBirrJSClient<typeof birrjs>();
 ```
 
-Subscribe can be called from the client or the server. Both return a `checkoutUrl` to redirect the user to the payment gateway.
+Subscribe can be called from the client or the server. Depending on your provider, it returns either a `checkoutUrl` (redirect providers like Chapa) or `paymentInstructions` (Verification providers like Vodit).
 
 <Tabs items={["Client", "Server"]}>
   <Tab value="Client">
+  <Tabs items={["Chapa", "Vodit"]}>
+    <Tab value="Chapa">
 
-```tsx title="subscribe-button.tsx"
-import { client } from "./birrjs-client";
+    ```tsx title="subscribe-button.tsx"
+    import { client } from "./birrjs-client";
 
-async function handleSubscribe() {
-  const { checkoutUrl } = await client.subscribe({ planId: "pro" });
-  // redirect to Chapa checkout
-  window.location.href = checkoutUrl;
-}
-```
+    async function handleSubscribe() {
+      const { checkoutUrl } = await client.subscribe({ planId: "pro" });
+      window.location.href = checkoutUrl;
+    }
+    ```
 
+    </Tab>
+    <Tab value="Vodit">
+
+    ```tsx title="subscribe-button.tsx"
+    import { client } from "./birrjs-client";
+
+    async function handleSubscribe() {
+      const { paymentInstructions } = await client.subscribe({ planId: "pro" });
+      // Show paymentInstructions.amount and channels to the user
+    }
+    ```
+
+    </Tab>
+  </Tabs>
   </Tab>
   <Tab value="Server">
+  <Tabs items={["Chapa", "Vodit"]}>
+    <Tab value="Chapa">
 
-```ts title="app/api/subscribe/route.ts"
-import { birrjs } from "../lib/birrjs";
+    ```ts title="app/api/subscribe/route.ts"
+    import { birrjs } from "../lib/birrjs";
 
-export async function POST(req: Request) {
-  const { customerId } = await req.json();
-  const { checkoutUrl } = await birrjs.subscribe({
-    customerId,
-    planId: "pro",
-  });
-  return Response.json({ checkoutUrl });
-}
-```
+    export async function POST(req: Request) {
+      const { customerId } = await req.json();
+      const { checkoutUrl } = await birrjs.subscribe({
+        customerId,
+        planId: "pro",
+      });
+      return Response.json({ checkoutUrl });
+    }
+    ```
 
+    </Tab>
+    <Tab value="Vodit">
+
+    ```ts title="app/api/subscribe/route.ts"
+    import { birrjs } from "../lib/birrjs";
+
+    export async function POST(req: Request) {
+      const { customerId } = await req.json();
+      const { paymentInstructions } = await birrjs.subscribe({
+        customerId,
+        planId: "pro",
+      });
+      return Response.json({ paymentInstructions });
+    }
+    ```
+
+    </Tab>
+  </Tabs>
   </Tab>
 </Tabs>
 
-For free plans, the subscription activates immediately with no redirect.
+For free plans, the subscription activates immediately with no redirect or payment instructions.
 
 ## 6. Check usage
 

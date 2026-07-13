@@ -11,6 +11,7 @@ import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import {
   runBeforeHooks,
   runAfterHooks,
+  runPaymentReadyHooks,
   runEventHandlers,
   runPluginEventHandlers,
 } from "../../core/hooks";
@@ -46,7 +47,12 @@ export const subscribe = defineBirrJSMethod(
     const { database, runtime } = ctx.birrjs;
 
     // Check if plan exists
-    const plans = await database.select().from(plan).where(eq(plan.id, planId)).limit(1);
+    const plans = await database
+      .select()
+      .from(plan)
+      .where(eq(plan.id, planId))
+      .orderBy(desc(plan.version))
+      .limit(1);
     const planRecord = plans[0];
     if (!planRecord) {
       throw BirrJSError.from("NOT_FOUND", BIRRJS_ERROR_CODES.PLAN_NOT_FOUND);
@@ -219,7 +225,7 @@ export const subscribe = defineBirrJSMethod(
       throw error;
     }
 
-    if (!transaction.checkoutUrl) {
+    if (!transaction.checkoutUrl && !transaction.paymentInstructions) {
       if (!existingSubscription) {
         await database
           .update(subscription)
@@ -232,23 +238,39 @@ export const subscribe = defineBirrJSMethod(
       );
     }
 
-    // Schedule onCheckoutReady fire-and-forget after response
-    Promise.resolve().then(() =>
-      runAfterHooks(
-        ctx.birrjs.options.plugins,
-        {
-          customerId: customer.id,
-          planId: planRecord.id,
-          subscriptionId,
-          checkoutUrl: transaction.checkoutUrl!,
-          txRef,
-        },
-        ctx.birrjs.logger,
-      ),
-    );
+    if (transaction.paymentInstructions) {
+      Promise.resolve().then(() =>
+        runPaymentReadyHooks(
+          ctx.birrjs.options.plugins,
+          {
+            customerId: customer.id,
+            planId: planRecord.id,
+            subscriptionId,
+            paymentInstructions: transaction.paymentInstructions!,
+            txRef,
+          },
+          ctx.birrjs.logger,
+        ),
+      );
+    } else {
+      Promise.resolve().then(() =>
+        runAfterHooks(
+          ctx.birrjs.options.plugins,
+          {
+            customerId: customer.id,
+            planId: planRecord.id,
+            subscriptionId,
+            checkoutUrl: transaction.checkoutUrl!,
+            txRef,
+          },
+          ctx.birrjs.logger,
+        ),
+      );
+    }
 
     return {
       checkoutUrl: transaction.checkoutUrl,
+      paymentInstructions: transaction.paymentInstructions,
       subscriptionId,
       customerId: customer.id,
     };

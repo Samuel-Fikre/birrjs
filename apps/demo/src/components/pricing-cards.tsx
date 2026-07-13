@@ -8,15 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@demo/ui/components/card";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 import { client } from "@/lib/birrjs-client";
 
-type SubscribePlanId = Parameters<typeof client.subscribe>[0]["planId"];
-
 export function PricingCards() {
-  const queryClient = useQueryClient();
+  const router = useRouter();
   const { data, isLoading } = useQuery({
     queryKey: ["plans"],
     queryFn: () => client.listPlans({ limit: 10, offset: 0 }),
@@ -51,25 +49,7 @@ export function PricingCards() {
               ) : (
                 <p className="text-2xl font-bold">Free</p>
               )}
-              <Button
-                onClick={async () => {
-                  try {
-                    const { checkoutUrl } = await client.subscribe({
-                      planId: plan.id as SubscribePlanId,
-                    });
-                    if (checkoutUrl) {
-                      window.location.href = checkoutUrl;
-                    } else {
-                      toast.success(`Subscribed to ${plan.name}`);
-                      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
-                    }
-                  } catch (e) {
-                    toast.error("Subscribe failed");
-                    console.error(e);
-                  }
-                }}
-                className="w-full"
-              >
+              <Button onClick={() => router.push(`/checkout/${plan.id}` as any)} className="w-full">
                 Subscribe
               </Button>
             </CardContent>

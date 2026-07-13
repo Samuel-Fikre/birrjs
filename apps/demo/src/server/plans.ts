@@ -16,7 +16,7 @@ export const pro = plan({
   id: "pro",
   name: "Pro",
   group: "tier",
-  price: { amount: 100, interval: "monthly" },
+  price: { amount: 1500, interval: "monthly" },
   includes: [
     storage({ limit: 5000, reset: "month" }),
     apiCalls({ limit: 50000, reset: "month" }),

@@ -1,6 +1,11 @@
 import type { BirrJSContext } from "../context";
 import type { BirrJSEventHandlers, BirrJSEventMap, BirrJSEventName } from "../types/events";
-import type { BirrJSPlugin, BeforeSubscribeHookCtx, CheckoutReadyHookCtx } from "../types/plugin";
+import type {
+  BirrJSPlugin,
+  BeforeSubscribeHookCtx,
+  CheckoutReadyHookCtx,
+  PaymentReadyHookCtx,
+} from "../types/plugin";
 import type { BirrJSInternalLogger } from "./logger";
 
 export async function runBeforeHooks(
@@ -43,6 +48,29 @@ export async function runAfterHooks(
   for (const result of results) {
     if (result.status === "rejected") {
       logger.error({ err: result.reason }, "Plugin onCheckoutReady hook error");
+    }
+  }
+}
+
+export async function runPaymentReadyHooks(
+  plugins: BirrJSPlugin[] | undefined,
+  ctx: PaymentReadyHookCtx,
+  logger: BirrJSInternalLogger,
+): Promise<void> {
+  const hooks = (plugins ?? [])
+    .filter(
+      (
+        p,
+      ): p is BirrJSPlugin & {
+        onPaymentReady: NonNullable<BirrJSPlugin["onPaymentReady"]>;
+      } => !!p.onPaymentReady,
+    )
+    .map((p) => p.onPaymentReady(ctx));
+  if (hooks.length === 0) return;
+  const results = await Promise.allSettled(hooks);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      logger.error({ err: result.reason }, "Plugin onPaymentReady hook error");
     }
   }
 }

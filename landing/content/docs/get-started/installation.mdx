@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install BirrJS, configure Chapa, and mount the route handler in your app.
+description: Install BirrJS, configure a provider, and mount the route handler in your app.
 ---
 
 <Callout type="info">
@@ -14,26 +14,54 @@ description: Install BirrJS, configure Chapa, and mount the route handler in you
 
 BirrJS ships as a monorepo with a core package and separate provider packages.
 
-<Tabs items={["pnpm", "npm", "yarn", "bun"]}>
-  <Tab value="pnpm">
-  ```bash
-  pnpm add @birrjs/core @birrjs/chapa
-  ```
+<Tabs items={["Chapa", "Vodit"]}>
+  <Tab value="Chapa">
+  <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @birrjs/core @birrjs/chapa
+    ```
+    </Tab>
+    <Tab value="npm">
+    ```bash
+    npm install @birrjs/core @birrjs/chapa
+    ```
+    </Tab>
+    <Tab value="yarn">
+    ```bash
+    yarn add @birrjs/core @birrjs/chapa
+    ```
+    </Tab>
+    <Tab value="bun">
+    ```bash
+    bun add @birrjs/core @birrjs/chapa
+    ```
+    </Tab>
+  </Tabs>
   </Tab>
-  <Tab value="npm">
-  ```bash
-  npm install @birrjs/core @birrjs/chapa
-  ```
-  </Tab>
-  <Tab value="yarn">
-  ```bash
-  yarn add @birrjs/core @birrjs/chapa
-  ```
-  </Tab>
-  <Tab value="bun">
-  ```bash
-  bun add @birrjs/core @birrjs/chapa
-  ```
+  <Tab value="Vodit">
+  <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @birrjs/core @birrjs/vodit
+    ```
+    </Tab>
+    <Tab value="npm">
+    ```bash
+    npm install @birrjs/core @birrjs/vodit
+    ```
+    </Tab>
+    <Tab value="yarn">
+    ```bash
+    yarn add @birrjs/core @birrjs/vodit
+    ```
+    </Tab>
+    <Tab value="bun">
+    ```bash
+    bun add @birrjs/core @birrjs/vodit
+    ```
+    </Tab>
+  </Tabs>
   </Tab>
 </Tabs>
 </Step>
@@ -55,37 +83,67 @@ export const birrjs = createBirr({
 <Step>
 ### Configure provider
 
-BirrJS uses provider adapters for payment processing. Here's the setup for Chapa:
+BirrJS uses provider adapters for payment processing. Choose your provider:
 
-```ts title="src/lib/birrjs.ts"
-import { createBirr } from "@birrjs/core";
-import { chapa } from "@birrjs/chapa"; // [!code highlight]
+<Tabs items={["Chapa", "Vodit"]}>
+  <Tab value="Chapa">
 
-export const birrjs = createBirr({
-  provider: chapa({ // [!code highlight]
-    secretKey: process.env.CHAPA_SECRET_KEY!, // [!code highlight]
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!, // [!code highlight]
-    callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
-    returnUrl: process.env.RETURN_URL!, // [!code highlight]
-  }),
-});
-```
+  ```ts title="src/lib/birrjs.ts"
+  import { createBirr } from "@birrjs/core";
+  import { chapa } from "@birrjs/chapa"; // [!code highlight]
 
-<EnvBlock />
+  export const birrjs = createBirr({
+    provider: chapa({ // [!code highlight]
+      secretKey: process.env.CHAPA_SECRET_KEY!, // [!code highlight]
+      webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!, // [!code highlight]
+      callbackUrl: process.env.CALLBACK_URL!, // [!code highlight]
+      returnUrl: process.env.RETURN_URL!, // [!code highlight]
+    }),
+  });
+  ```
 
-<Callout type="info">
-  **`CHAPA_SECRET_KEY`** — get yours from the [Chapa dashboard](https://dashboard.chapa.co/) → Settings → API Keys. Use test mode keys for development.
+  <EnvBlock />
 
-  **`CALLBACK_URL`** — a publicly reachable URL for payment notifications. Chapa sends a **GET** callback here after payment (`?trx_ref=...&status=success`). Also paste this URL in your Chapa dashboard → Settings → Webhooks for POST notifications. For local testing, use a tunnel like [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
+  <Callout type="info">
+    **`CHAPA_SECRET_KEY`** — get yours from the [Chapa dashboard](https://dashboard.chapa.co/) → Settings → API Keys. Use test mode keys for development.
 
-  **`RETURN_URL`** *(optional)* — where Chapa sends the user's browser after payment. Set this to a frontend page like `/account` or `/plans?success=true`. Without it, users stay on Chapa's checkout page after paying.
+    **`CALLBACK_URL`** — a publicly reachable URL for payment notifications. Chapa sends a **GET** callback here after payment (`?trx_ref=...&status=success`). Also paste this URL in your Chapa dashboard → Settings → Webhooks for POST notifications. For local testing, use a tunnel like [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
 
-  **`CHAPA_WEBHOOK_SECRET`** — a secret you invent yourself. Click **Generate** above to create a random one (copied automatically).
+    **`RETURN_URL`** *(optional)* — where Chapa sends the user's browser after payment. Set this to a frontend page like `/account` or `/plans?success=true`. Without it, users stay on Chapa's checkout page after paying.
 
-  Don't forget to configure both `CALLBACK_URL` and `CHAPA_WEBHOOK_SECRET` in your **Chapa dashboard → Profile Settings → Webhooks**: paste your URL into **Webhook URL**, your generated string into **Secret Hash**, 
-  
-  Enable **Receive Webhook for failed Payments**. BirrJS handles `charge.failed` events to mark pending subscriptions as failed — without it, only success events arrive and `pending` subscriptions pile up until the scheduled cron sweep clears them.
-</Callout>
+    **`CHAPA_WEBHOOK_SECRET`** — a secret you invent yourself. Click **Generate** above to create a random one (copied automatically).
+
+    Don't forget to configure both `CALLBACK_URL` and `CHAPA_WEBHOOK_SECRET` in your **Chapa dashboard → Profile Settings → Webhooks**: paste your URL into **Webhook URL**, your generated string into **Secret Hash**,
+
+    Enable **Receive Webhook for failed Payments**. BirrJS handles `charge.failed` events to mark pending subscriptions as failed — without it, only success events arrive and `pending` subscriptions pile up until the scheduled cron sweep clears them.
+  </Callout>
+  </Tab>
+  <Tab value="Vodit">
+
+  ```ts title="src/lib/birrjs.ts"
+  import { createBirr } from "@birrjs/core";
+  import { vodit } from "@birrjs/vodit"; // [!code highlight]
+
+  export const birrjs = createBirr({
+    provider: vodit({ // [!code highlight]
+      apiKey: process.env.VODIT_API_KEY!, // [!code highlight]
+      channels: [ // [!code highlight]
+        { // [!code highlight]
+          type: "telebirr", // [!code highlight]
+          value: process.env.VODIT_TELEBIRR_ACCOUNT!, // [!code highlight]
+          name: "Abebe", // Must match your bank account name exactly // [!code highlight]
+        }, // [!code highlight]
+      ], // [!code highlight]
+    }),
+  });
+  ```
+
+  <Callout type="warning">
+    **The `name` field is required** — Vodit uses it to verify the receipt's recipient matches your account. Use the name as registered at the bank (first name is fine). See the [Vodit provider page](/docs/providers/vodit) for details.
+  </Callout>
+
+  </Tab>
+</Tabs>
 </Step>
 
 <Step>
@@ -95,16 +153,10 @@ BirrJS needs PostgreSQL to store subscriptions, entitlements, and customer data.
 
 ```ts title="src/lib/birrjs.ts"
 import { createBirr } from "@birrjs/core";
-import { chapa } from "@birrjs/chapa";
 
 export const birrjs = createBirr({
+  // ... provider from step 3
   database: process.env.DATABASE_URL!, // [!code highlight]
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
-  }),
 });
 ```
 
@@ -122,16 +174,10 @@ The `identify` function links HTTP requests to customers. Required for the clien
 
 ```ts title="src/lib/birrjs.ts"
 import { createBirr } from "@birrjs/core";
-import { chapa } from "@birrjs/chapa";
 
 export const birrjs = createBirr({
+  // ... provider from step 3
   database: process.env.DATABASE_URL!,
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
-  }),
   identify: async (request) => { // [!code highlight]
     // Replace with your auth logic // [!code highlight]
     return { customerId: "cus_abc123" }; // [!code highlight]
@@ -272,17 +318,11 @@ Then wire them into your instance:
 
 ```ts title="src/lib/birrjs.ts"
 import { createBirr } from "@birrjs/core";
-import { chapa } from "@birrjs/chapa";
 import { free, pro } from "./birrjs-plans"; // [!code highlight]
 
 export const birrjs = createBirr({
+  // ... provider from step 3
   database: process.env.DATABASE_URL!,
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
-  }),
   plans: [free, pro], // [!code highlight]
   identify: async (request) => {
     return { customerId: "cus_abc123" };
@@ -313,4 +353,4 @@ This checks your database connection, pending migrations, and plan sync status.
 
 __You're now ready to use BirrJS!__ 🚀
 
-Want SMS notifications on subscription events? Add the [Afromessage plugin](/docs/plugins/afromessage) — or build your own with the [Your First Plugin](/docs/guides/your-first-plugin) guide.
+Want SMS notifications on subscription events? Add the [Afromessage plugin](/docs/plugins/notification/afromessage) — or build your own with the [Your First Plugin](/docs/guides/your-first-plugin) guide.

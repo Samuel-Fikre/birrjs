@@ -1,17 +1,18 @@
-import { chapa } from "@birrjs/chapa";
 import { createBirr } from "@birrjs/core";
 import { afromessage } from "@birrjs/sms-afromessage";
+import { vodit } from "@birrjs/vodit";
 import { auth } from "@demo/auth";
 
 import { free, pro } from "@/server/plans";
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  provider: chapa({
-    secretKey: process.env.CHAPA_SECRET_KEY!,
-    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
-    callbackUrl: process.env.CALLBACK_URL!,
-    returnUrl: process.env.RETURN_URL!,
+  provider: vodit({
+    apiKey: process.env.VODIT_API_KEY!,
+    channels: [
+      { type: "telebirr", value: process.env.VODIT_TELEBIRR_ACCOUNT!, name: "Samuel Fikre" },
+      { type: "cbe", value: process.env.VODIT_CBE_ACCOUNT!, name: "Samuel Fikre" },
+    ],
   }),
   plans: [free, pro],
   plugins: [

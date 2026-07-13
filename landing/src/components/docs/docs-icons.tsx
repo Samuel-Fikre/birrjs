@@ -8,6 +8,7 @@ import {
   Database,
   Download,
   Landmark,
+  Mail,
   MessageSquare,
   Monitor,
   Package,
@@ -25,6 +26,7 @@ import type { ReactElement } from "react";
 const categoryIcons = {
   "get started": <Compass className="docs-category-icon size-3.5! shrink-0" />,
   concepts: <BookMarked className="docs-category-icon size-3.5! shrink-0" />,
+  providers: <CreditCard className="docs-category-icon size-3.5! shrink-0" />,
   plugins: <Blocks className="docs-category-icon size-3.5! shrink-0" />,
   guides: <BookOpen className="docs-category-icon size-3.5! shrink-0" />,
 } as const;
@@ -47,6 +49,7 @@ const pageIcons = {
   "your first plugin": <Code className="docs-category-icon size-3! shrink-0" />,
   fayda: <Landmark className="docs-category-icon size-3! shrink-0" />,
   coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
+  resend: <Mail className="docs-category-icon size-3! shrink-0" />,
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
 } as const;

@@ -1,0 +1,89 @@
+---
+title: Chapa
+description: Integrate Chapa payment gateway.
+---
+
+
+## Installation
+
+```bash
+pnpm add @birrjs/chapa
+```
+
+## Configuration
+
+```ts
+import { chapa } from "@birrjs/chapa";
+
+createBirr({
+  provider: chapa({
+    secretKey: process.env.CHAPA_SECRET_KEY!,
+    webhookSecret: process.env.CHAPA_WEBHOOK_SECRET!,
+    callbackUrl: process.env.CALLBACK_URL!,
+    returnUrl: process.env.RETURN_URL!,
+  }),
+});
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `secretKey` | `string` | Yes | API key from Chapa dashboard |
+| `webhookSecret` | `string` | No | Secret for verifying webhook signatures |
+| `callbackUrl` | `string` | Yes | Public URL where Chapa sends payment notifications |
+| `returnUrl` | `string` | No | Where the user's browser redirects after payment |
+| `currency` | `string` | No | Defaults to `"ETB"` |
+| `testMode` | `boolean` | No | Enable test mode |
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CHAPA_SECRET_KEY` | API key from [developer.chapa.co](https://developer.chapa.co) |
+| `CHAPA_WEBHOOK_SECRET` | Webhook signing secret |
+
+## How it works
+
+When a user subscribes:
+
+1. Your app calls `subscribe()` → BirrJS calls `provider.initializeTransaction()`
+2. Chapa returns a `checkoutUrl` — redirect the user there to complete payment
+3. After payment, Chapa sends a **GET callback** to your `callbackUrl` with `?trx_ref=...&status=success`
+4. Simultaneously, Chapa sends a **POST webhook** to the same URL with the signed event payload
+5. BirrJS processes the event, verifies the transaction via the Chapa API, and activates the subscription
+
+### Delivery paths
+
+| Mechanism | Method | Sender | Purpose |
+|-----------|--------|--------|---------|
+| `callback_url` | GET | Chapa server | Immediate notification with `trx_ref`, `ref_id`, `status` |
+| Webhook | POST | Chapa server | Signed event payload (HMAC). Verify + activate. |
+| `return_url` | GET | User's browser | Redirect user after payment |
+
+Both GET (callback) and POST (webhook) are server-to-server delivery — same logic, independent redundancy paths.
+
+## Webhook signatures
+
+Chapa sends two signature headers. BirrJS accepts either:
+
+- `chapa-signature` — `HMAC-SHA256(webhookSecret, webhookSecret)`
+- `x-chapa-signature` — `HMAC-SHA256(webhookSecret, rawBody)`
+
+Both are verified using timing-safe comparison. Webhook processing requires at least one valid signature.
+
+## Supported events
+
+- `charge.success` — payment completed, subscription activated
+- `charge.failed` — payment failed, pending subscription marked as failed
+- `charge.cancelled` — user cancelled payment
+- `charge.reversed` — transaction reversed
+- `charge.refunded` — payment refunded
+
+## Known gaps
+
+The following Chapa features are typed in `TransactionRequest` but not yet wired to the Chapa API:
+
+- `customization` (title, description, logo)
+- `meta` (hide_receipt, invoices)
+- `subaccounts` (split payments)

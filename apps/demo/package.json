@@ -15,6 +15,7 @@
     "@birrjs/chapa": "workspace:*",
     "@birrjs/core": "workspace:*",
     "@birrjs/sms-afromessage": "workspace:*",
+    "@birrjs/vodit": "workspace:*",
     "@demo/api": "workspace:*",
     "@demo/auth": "workspace:*",
     "@demo/env": "workspace:*",
