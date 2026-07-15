@@ -12,6 +12,7 @@ export const birrjs = createBirr({
     channels: [
       { type: "telebirr", value: process.env.VODIT_TELEBIRR_ACCOUNT!, name: "Samuel Fikre" },
       { type: "cbe", value: process.env.VODIT_CBE_ACCOUNT!, name: "Samuel Fikre" },
+      { type: "awash", value: process.env.VODIT_CBE_ACCOUNT!, name: "Samuel Fikre" },
     ],
   }),
   plans: [free, pro],
