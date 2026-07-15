@@ -1,0 +1,65 @@
+{
+  "name": "birrjs",
+  "homepage": "https://github.com/Samuel-fikre/birrjs",
+  "items": [
+    {
+      "name": "utils",
+      "type": "registry:lib",
+      "dependencies": ["clsx", "tailwind-merge"],
+      "files": [
+        {
+          "path": "registry/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "lib/utils.ts"
+        }
+      ]
+    },
+    {
+      "name": "bank-payment-card",
+      "type": "registry:ui",
+      "dependencies": ["clsx", "tailwind-merge"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/ui/bank-payment-card.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/bank-payment-card.tsx"
+        },
+        {
+          "path": "registry/ui/_logos.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/_logos.tsx"
+        },
+        {
+          "path": "registry/ui/cbe.svg",
+          "type": "registry:file",
+          "target": "components/ui/cbe.svg"
+        }
+      ]
+    },
+    {
+      "name": "reference-input",
+      "type": "registry:ui",
+      "registryDependencies": ["bank-payment-card"],
+      "files": [
+        {
+          "path": "registry/ui/reference-input.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/reference-input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "payment-block",
+      "type": "registry:ui",
+      "registryDependencies": ["bank-payment-card", "reference-input"],
+      "files": [
+        {
+          "path": "registry/ui/payment-block.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/payment-block.tsx"
+        }
+      ]
+    }
+  ]
+}
