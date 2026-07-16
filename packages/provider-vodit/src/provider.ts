@@ -18,6 +18,24 @@ function extractLast4(raw: string | undefined | null): string | null {
   return digits.length >= 4 ? digits.slice(-4) : null;
 }
 
+function extractLast3(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 3 ? digits.slice(-3) : null;
+}
+
+function normalizeName(name: string): string {
+  return name
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(DR|MRS|MR|MS|MISS|MISTER)\b\.?\s*/gi, "")
+    .replace(/[^A-Z\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function tryField(receipt: Record<string, unknown>, field: string): number | null {
   const val = receipt[field];
   if (val == null) return null;
@@ -60,8 +78,10 @@ function parseReceiptAmount(
     case "cbe":
       return tryField(receipt, "transferredAmount") ?? tryField(receipt, "totalAmount");
 
-    case "awash":
-      return tryField(receipt, "amount");
+    case "awash": {
+      const awashTx = receipt.transaction as Record<string, unknown> | undefined;
+      return awashTx ? tryField(awashTx, "amount") : null;
+    }
     default:
       return null;
   }
@@ -78,7 +98,10 @@ function getRecipientAccountLast4(
       return extractLast4(receipt.receiverAccount as string | undefined);
 
     case "awash":
-      return extractLast4(tryNestedField(receipt, ["transaction", "beneficiaryAccount"]));
+      return (
+        extractLast4(tryNestedField(receipt, ["transaction", "beneficiaryAccount"])) ??
+        extractLast3(tryNestedField(receipt, ["transaction", "extra", "Receiver Account"]))
+      );
     default:
       return null;
   }
@@ -95,7 +118,11 @@ function getRecipientName(
       return (receipt.receiverName as string | undefined) ?? null;
 
     case "awash":
-      return tryNestedField(receipt, ["transaction", "beneficiaryName"]) ?? null;
+      return (
+        tryNestedField(receipt, ["transaction", "beneficiaryName"]) ??
+        tryNestedField(receipt, ["transaction", "extra", "Receiver Name"]) ??
+        null
+      );
     default:
       return null;
   }
@@ -123,6 +150,13 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
     if (!ch.name?.trim()) {
       throw new VoditError(
         `Vodit channel "${ch.type}" requires a name for recipient verification`,
+        VODIT_ERROR_CODES.INVALID_CONFIG,
+        400,
+      );
+    }
+    if (normalizeName(ch.name).length < 3) {
+      throw new VoditError(
+        `Vodit channel "${ch.type}" name is too short (min 3 characters after normalization)`,
         VODIT_ERROR_CODES.INVALID_CONFIG,
         400,
       );
@@ -194,7 +228,8 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         };
       }
 
-      const providerKey = response.providerKey;
+      const providerKey =
+        (response.providerKey as string) === "awashbank" ? "awash" : response.providerKey;
 
       if (!isTransactionCompleted(response.receipt, providerKey)) {
         return {
@@ -236,9 +271,28 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         };
       }
 
-      const channelLast4 = extractLast4(channel.value);
+      if (!receiptLast4) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "Could not read the recipient account from the receipt. Please try again or contact support.",
+        };
+      }
 
-      if (receiptLast4 && channelLast4 && receiptLast4 !== channelLast4) {
+      if (!receiptName) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "Could not read the recipient name from the receipt. Please try again or contact support.",
+        };
+      }
+
+      const channelLast4 =
+        providerKey === "awash" ? extractLast3(channel.value) : extractLast4(channel.value);
+
+      if (receiptLast4 !== channelLast4) {
         return {
           success: false,
           status: "failed",
@@ -247,7 +301,7 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         };
       }
 
-      if (receiptName && !receiptName.toLowerCase().startsWith(channel.name.toLowerCase())) {
+      if (!normalizeName(receiptName).startsWith(normalizeName(channel.name))) {
         return {
           success: false,
           status: "failed",

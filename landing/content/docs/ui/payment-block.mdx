@@ -1,0 +1,81 @@
+---
+title: PaymentBlock
+description: Full payment UI composable — channel selector, virtual bank card, reference input, and verify button.
+---
+
+<PaymentBlockDemo />
+
+## Installation
+
+  ```bash
+  birrjs add payment-block
+  ```
+
+
+This adds the component and all its dependencies to your project:
+
+<Callout type="info">
+  **Non-Next.js users?** If TypeScript reports `Cannot find module './cbe.svg'`, add `"globals.d.ts"` to your `tsconfig.json` `include` array.
+</Callout>
+
+| Component | Description |
+|---|---|
+| `payment-block` | Top-level composable: channel grid, card, order summary, input, verify button |
+| `reference-input` | Animated input with bank logo transition on channel switch |
+| `bank-payment-card` | Tilt-card with gradient/mono variants, account number copy |
+| `utils` | `cn()` utility (`clsx` + `tailwind-merge`) |
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `channels` | `PaymentChannel[]` | required | Available payment channels |
+| `selected` | `PaymentChannelType \| null` | required | Currently selected channel |
+| `onSelect` | `(type: PaymentChannelType) => void` | required | Channel selection handler |
+| `receiptUrl?` | `string` | — | Bound to reference input |
+| `onReceiptUrlChange?` | `(value: string) => void` | — | Receipt URL input handler |
+| `onVerify?` | `() => void` | — | Verify button click handler |
+| `verifying?` | `boolean` | `false` | Shows spinner, disables input |
+| `amount?` | `number` | — | Shows order summary card with ETB total |
+| `className?` | `string` | — | Additional wrapper classes |
+
+## `PaymentChannel`
+
+```ts
+interface PaymentChannel {
+  type: "telebirr" | "cbe" | "awash";
+  label: string;
+  value: string;       // account number
+  accountHolder?: string;
+}
+```
+
+## Customization
+
+The components use Tailwind classes that reference your theme's CSS variables. The following variables are used:
+
+- `--card` / `--card-foreground`
+- `--border`
+- `--muted-foreground`
+- `--primary` / `--primary-foreground`
+- `--background`
+- `--radius-xl`
+
+Ensure these are defined in your `globals.css` to match your brand.
+
+## Variants
+
+`BankPaymentCard` accepts a `variant` prop:
+
+| Variant | Description |
+|---|---|
+| `mono` | Neutral card with subtle borders — respects `--card` and `--border` |
+| `gradient` | Brand-colored gradient |
+
+### Mono
+
+<BankPaymentCard channel={{ type: "telebirr", label: "Telebirr", value: "251911223344", accountHolder: "Abebe Kebede" }} variant="mono" />
+
+### Gradient
+
+<BankPaymentCard channel={{ type: "telebirr", label: "Telebirr", value: "251911223344", accountHolder: "Abebe Kebede" }} variant="gradient" />

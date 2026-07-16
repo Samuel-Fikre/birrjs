@@ -23,7 +23,7 @@
 
 ## About
 
-BirrJS sits between your app and local/regional payment providers (Chapa, etc.) providing a unified API for subscriptions, entitlements, and billing. Modeled after PayKit but tailored for Ethiopian payment providers and similar markets.
+BirrJS sits between your app and local/regional payment providers (Chapa, etc.) providing a unified API for subscriptions, entitlements, and billing.Tailored for Ethiopian payment providers and similar markets.
 
 ## Features
 

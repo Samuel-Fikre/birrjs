@@ -24,15 +24,24 @@ switch (commandName) {
     program.addCommand(initCommand);
     break;
   }
+  case "add": {
+    const { addCommand } = await import("./commands/add");
+    program.addCommand(addCommand);
+    break;
+  }
   default: {
-    const [{ statusCommand }, { pushCommand }, { initCommand }] = await Promise.all([
-      import("./commands/status"),
-      import("./commands/push"),
-      import("./commands/init"),
-    ]);
+    const [{ statusCommand }, { pushCommand }, { initCommand }, { addCommand }] = await Promise.all(
+      [
+        import("./commands/status"),
+        import("./commands/push"),
+        import("./commands/init"),
+        import("./commands/add"),
+      ],
+    );
     program.addCommand(statusCommand);
     program.addCommand(pushCommand);
     program.addCommand(initCommand);
+    program.addCommand(addCommand);
   }
 }
 

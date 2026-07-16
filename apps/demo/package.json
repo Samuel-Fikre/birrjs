@@ -9,7 +9,8 @@
     "birrjs": "tsx ../../packages/core/src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "push": "pnpm birrjs push && pnpm --filter @demo/db db:push",
-    "db:studio": "pnpm --filter @demo/db db:studio"
+    "db:studio": "pnpm --filter @demo/db db:studio",
+    "add": "cd ../../ && cross-env BIRRJS_DEV=1 tsx packages/core/src/cli/index.ts add --cwd apps/demo"
   },
   "dependencies": {
     "@birrjs/chapa": "workspace:*",
@@ -26,13 +27,16 @@
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "^11.16.0",
     "better-auth": "catalog:",
+    "clsx": "^2.1.1",
     "dotenv": "catalog:",
+    "geist": "^1.3.1",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "sonner": "catalog:",
+    "tailwind-merge": "^3.6.0",
     "zod": "catalog:"
   },
   "devDependencies": {

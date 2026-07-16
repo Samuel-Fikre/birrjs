@@ -4,10 +4,12 @@ import {
   BookOpen,
   Code,
   Compass,
+  Component,
   CreditCard,
   Database,
   Download,
   Landmark,
+  LayoutDashboard,
   Mail,
   MessageSquare,
   Monitor,
@@ -29,6 +31,8 @@ const categoryIcons = {
   providers: <CreditCard className="docs-category-icon size-3.5! shrink-0" />,
   plugins: <Blocks className="docs-category-icon size-3.5! shrink-0" />,
   guides: <BookOpen className="docs-category-icon size-3.5! shrink-0" />,
+  ui: <Component className="docs-category-icon size-3.5! shrink-0" />,
+  "ui components": <Component className="docs-category-icon size-3.5! shrink-0" />,
 } as const;
 
 const pageIcons = {
@@ -52,6 +56,7 @@ const pageIcons = {
   resend: <Mail className="docs-category-icon size-3! shrink-0" />,
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
+  "payment block": <LayoutDashboard className="docs-category-icon size-3! shrink-0" />,
 } as const;
 
 function normalizeName(name: string): string {

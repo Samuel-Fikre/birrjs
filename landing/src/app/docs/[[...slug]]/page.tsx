@@ -11,6 +11,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { CopyMarkdownButton } from "@/components/docs/copy-markdown-button";
 import { EnvBlock } from "@/components/docs/env-block";
+import { PaymentBlockDemo } from "@/components/docs/payment-block-demo";
+import { BankPaymentCard } from "@/components/ui/bank-payment-card";
 import { source } from "@/lib/source";
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
@@ -44,10 +46,12 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
         <MDXContent
           components={{
             ...defaultMdxComponents,
+            BankPaymentCard,
             Callout,
             Card,
             Cards,
             EnvBlock,
+            PaymentBlockDemo,
             Step,
             Steps,
             Tab,
