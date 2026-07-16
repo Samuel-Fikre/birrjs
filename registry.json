@@ -34,6 +34,11 @@
           "path": "registry/ui/cbe.svg",
           "type": "registry:file",
           "target": "components/ui/cbe.svg"
+        },
+        {
+          "path": "registry/globals.d.ts",
+          "type": "registry:lib",
+          "target": "globals.d.ts"
         }
       ]
     },
