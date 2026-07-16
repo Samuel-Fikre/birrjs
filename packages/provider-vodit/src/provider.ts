@@ -24,6 +24,18 @@ function extractLast3(raw: string | undefined | null): string | null {
   return digits.length >= 3 ? digits.slice(-3) : null;
 }
 
+function normalizeName(name: string): string {
+  return name
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(DR|MRS|MR|MS|MISS|MISTER)\b\.?\s*/gi, "")
+    .replace(/[^A-Z\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function tryField(receipt: Record<string, unknown>, field: string): number | null {
   const val = receipt[field];
   if (val == null) return null;
@@ -142,6 +154,13 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         400,
       );
     }
+    if (normalizeName(ch.name).length < 3) {
+      throw new VoditError(
+        `Vodit channel "${ch.type}" name is too short (min 3 characters after normalization)`,
+        VODIT_ERROR_CODES.INVALID_CONFIG,
+        400,
+      );
+    }
   }
 
   return {
@@ -252,10 +271,28 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         };
       }
 
+      if (!receiptLast4) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "Could not read the recipient account from the receipt. Please try again or contact support.",
+        };
+      }
+
+      if (!receiptName) {
+        return {
+          success: false,
+          status: "failed",
+          error:
+            "Could not read the recipient name from the receipt. Please try again or contact support.",
+        };
+      }
+
       const channelLast4 =
         providerKey === "awash" ? extractLast3(channel.value) : extractLast4(channel.value);
 
-      if (receiptLast4 && channelLast4 && receiptLast4 !== channelLast4) {
+      if (receiptLast4 !== channelLast4) {
         return {
           success: false,
           status: "failed",
@@ -264,7 +301,7 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
         };
       }
 
-      if (receiptName && !receiptName.toLowerCase().startsWith(channel.name.toLowerCase())) {
+      if (!normalizeName(receiptName).startsWith(normalizeName(channel.name))) {
         return {
           success: false,
           status: "failed",

@@ -59,6 +59,8 @@ describe("verifyTransaction", () => {
         payerName: "Abebe Kebede",
         transactionStatus: "Completed",
         totalPaidAmount: "100 Birr",
+        creditedPartyAccountNo: "2519****5678",
+        creditedPartyName: "samuel",
       },
       error: null,
     };
@@ -86,6 +88,8 @@ describe("verifyTransaction", () => {
         source: "cbe-pdf",
         payerName: "Abebe Kebede",
         transferredAmount: 100,
+        receiverAccount: "1000001234567",
+        receiverName: "samuel",
       },
       error: null,
     };
