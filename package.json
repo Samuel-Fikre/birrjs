@@ -47,7 +47,7 @@
     "!(**/migrations/**)": [
       "oxlint --fix"
     ],
-    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs,md}": [
       "oxfmt --write"
     ]
   },
