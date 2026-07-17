@@ -1,0 +1,147 @@
+---
+title: SMS-Gate
+description: Send SMS notifications on subscription events via SMS-Gate.
+---
+
+[SMS-Gate](https://sms-gate.app) is an open-source Android app that turns any phone with a SIM card into an SMS gateway. You install it on a device, connect it to their free cloud server (or self-host), and hit a REST API to send SMS through that phone's cellular connection. No carrier API subscriptions, no regulatory paperwork — just an Android phone and a SIM.
+
+The `@birrjs/sms-gate` plugin sends SMS messages to customers when subscription events occur — payment received, payment failed, subscription expired, or expiring soon.
+
+## Installation
+
+```bash
+pnpm add @birrjs/sms-gate
+```
+
+## Configuration
+
+```ts
+import { smsGate } from "@birrjs/sms-gate";
+import { createBirr } from "@birrjs/core";
+
+createBirr({
+  // ... other options
+  plugins: [
+    smsGate({
+      username: process.env.SMS_GATE_USERNAME!,
+      password: process.env.SMS_GATE_PASSWORD!,
+      deviceId: process.env.SMS_GATE_DEVICE_ID,       // optional
+      simNumber: 1,                                     // optional
+    }),
+  ],
+});
+```
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SMS_GATE_USERNAME` | Yes | Username from sms-gate.app credentials |
+| `SMS_GATE_PASSWORD` | Yes | Password from sms-gate.app credentials |
+| `SMS_GATE_DEVICE_ID` | No | Target a specific device (omit to let the server pick one) |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `username` | `string` | — | SMS-Gate account username |
+| `password` | `string` | — | SMS-Gate account password |
+| `baseUrl` | `string` | `"https://api.sms-gate.app"` | API base URL — change for self-hosted or private server |
+| `deviceId` | `string` | — | Target a specific device |
+| `simNumber` | `number` | — | SIM card slot (1–3) |
+| `messages` | `object` | (defaults below) | Override message templates per event |
+
+## How it works
+
+The plugin authenticates using your username and password, then manages JWT tokens automatically — refreshing them before expiry and re-authenticating if the refresh token expires. It listens to subscription lifecycle events and sends an SMS to the customer's phone number.
+
+| Event | Default message |
+|-------|----------------|
+| `subscription.activated` | "Your payment has been received. Thank you!" |
+| `subscription.cancelled` | "Your payment failed. Please update your payment method." |
+| `subscription.expired` | "Your subscription has expired. Renew now to continue access." |
+| `subscription.reminder` | "Reminder: your subscription expires in \{daysUntil\} days. Renew now!" |
+
+### Phone number
+
+The phone number is read from the `birrjs_customer.phone` column — except for `subscription.reminder` events, where the number comes directly from the event payload. Set it on your customer record:
+
+```ts
+import { db } from "./db";
+import { birrjsCustomer } from "./schema";
+
+export async function setPhone(customerId: string, phone: string) {
+  await db.insert(birrjsCustomer)
+    .values({ id: customerId, phone })
+    .onConflictDoUpdate({ target: birrjsCustomer.id, set: { phone } });
+}
+```
+
+If the customer has no phone number when an event fires, the SMS is silently skipped.
+
+### Authentication
+
+SMS-Gate uses JWT tokens for API access. The plugin handles the full token lifecycle internally:
+
+1. On first send, it authenticates with your username and password to obtain a JWT token pair (access token + refresh token)
+2. Before each send, it checks if the access token is close to expiry and refreshes it automatically
+3. If the refresh token expires (~30 days), it re-authenticates from scratch
+
+## Custom messages
+
+Override the default messages with your own templates:
+
+```ts
+smsGate({
+  messages: {
+    paymentReceived: "Payment confirmed! Your {planName} plan is active.",
+    paymentFailed: "Payment failed for {planName}. Please update your payment method.",
+    subscriptionExpired: "Your {planName} subscription has ended. Renew now.",
+    subscriptionReminder: "Hi! Your {planName} expires in {daysUntil} days.",
+  },
+})
+```
+
+Template variables are enclosed in `{curly braces}`:
+
+| Variable | Available in |
+|----------|-------------|
+| `{planName}` | All events |
+| `{daysUntil}` | `subscription.reminder` only |
+
+## Multi-device and multi-SIM
+
+If you have multiple Android devices running SMS-Gate or a device with multiple SIM cards:
+
+- Use `deviceId` to route messages to a specific device — useful for separating personal and business lines
+- Use `simNumber` to pick which SIM slot to send from (1, 2, or 3) — useful when carriers have different SMS rates or reliability
+- If neither is specified, the server picks an available device and the device uses its default SIM
+
+You can list your devices and their IDs via the API:
+
+```bash
+curl -u "username:password" https://api.sms-gate.app/3rdparty/v1/devices
+```
+
+## Self-hosted server
+
+If you're running a [private server](https://docs.sms-gate.app/getting-started/private-server/), set `baseUrl` to your server's address:
+
+```ts
+smsGate({
+  baseUrl: "https://sms-gate.yourcompany.com",
+  username: process.env.SMS_GATE_USERNAME!,
+  password: process.env.SMS_GATE_PASSWORD!,
+})
+```
+
+## Error handling
+
+The plugin throws typed errors that you can catch and handle programmatically:
+
+| Error class | When it occurs |
+|-------------|----------------|
+| `SmsGateAuthError` | Invalid credentials, expired token, missing scope |
+| `SmsGateValidationError` | Bad request (invalid phone number, missing fields) |
+| `SmsGateQueueError` | Device queue full (too many pending messages) |
+| `SmsGateDeviceError` | Device-side failure (SMS permission, no SIM, modem error) |

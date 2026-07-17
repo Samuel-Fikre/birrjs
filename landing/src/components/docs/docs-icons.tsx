@@ -50,6 +50,7 @@ const pageIcons = {
   providers: <CreditCard className="docs-category-icon size-3! shrink-0" />,
   plugins: <Blocks className="docs-category-icon size-3! shrink-0" />,
   afromessage: <MessageSquare className="docs-category-icon size-3! shrink-0" />,
+  "sms gate": <MessageSquare className="docs-category-icon size-3! shrink-0" />,
   "your first plugin": <Code className="docs-category-icon size-3! shrink-0" />,
   fayda: <Landmark className="docs-category-icon size-3! shrink-0" />,
   coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
