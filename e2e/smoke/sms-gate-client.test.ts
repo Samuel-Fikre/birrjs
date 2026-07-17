@@ -136,6 +136,16 @@ describe("SmsGateClient", () => {
       expect(sends).toHaveLength(2);
     });
 
+    it("throws SmsGateAuthError on second 401 instead of infinite retry", async () => {
+      mockFetch(201, jwtResponse());
+      mockFetch(401, {});
+      mockFetch(201, jwtResponse());
+      mockFetch(401, {});
+
+      const client = new SmsGateClient(config);
+      await expect(client.send("+251700000000", "retry")).rejects.toThrow(SmsGateAuthError);
+    });
+
     it("throws SmsGateValidationError on 400", async () => {
       mockFetch(201, jwtResponse());
       mockFetch(400, { message: "Invalid phone" });

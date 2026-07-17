@@ -77,7 +77,7 @@ export class SmsGateClient {
     this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
   }
 
-  async send(to: string, message: string): Promise<SendResponse> {
+  async send(to: string, message: string, retried?: boolean): Promise<SendResponse> {
     await this.ensureToken();
 
     const body: Record<string, unknown> = {
@@ -97,9 +97,13 @@ export class SmsGateClient {
     });
 
     if (response.status === 401) {
+      if (retried) {
+        this.accessToken = null;
+        throw new SmsGateAuthError("Authentication failed after retry", 401);
+      }
       this.accessToken = null;
       await this.ensureToken();
-      return this.send(to, message);
+      return this.send(to, message, true);
     }
 
     if (!response.ok) {
