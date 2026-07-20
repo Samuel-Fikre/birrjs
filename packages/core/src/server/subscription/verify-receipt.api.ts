@@ -7,7 +7,9 @@ import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
 import { customer, plan, reminderSent, subscription, usedReceipt } from "../../database/schema";
+import { renewSubscription } from "../../subscription";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
+import type { PlanInterval } from "../../types";
 import type { BirrJSEventMap } from "../../types/events";
 
 export const verifyReceipt = defineBirrJSMethod(
@@ -41,7 +43,7 @@ export const verifyReceipt = defineBirrJSMethod(
       return { success: true, subscriptionId, alreadyActive: true };
     }
 
-    if (sub.status !== "pending") {
+    if (!["pending", "trialing"].includes(sub.status)) {
       throw BirrJSError.from(
         "BAD_REQUEST",
         BIRRJS_ERROR_CODES.INVALID_INPUT,
@@ -90,29 +92,74 @@ export const verifyReceipt = defineBirrJSMethod(
       }
     }
 
-    if (!sub.providerTxRef) {
-      throw BirrJSError.from(
-        "BAD_REQUEST",
-        BIRRJS_ERROR_CODES.INVALID_INPUT,
-        "Subscription has no transaction reference",
-      );
-    }
+    let result: { updated: boolean; subscriptionId?: string };
 
-    const txRef = sub.providerTxRef;
+    if (sub.status === "trialing") {
+      // Trial conversion: activate + extend subscription directly
+      result = await database.transaction(async (tx) => {
+        const [inserted] = await tx
+          .insert(usedReceipt)
+          .values({ id: generateId("ur"), receiptUrl, subscriptionId })
+          .onConflictDoNothing()
+          .returning({ id: usedReceipt.id });
 
-    const result = await database.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(usedReceipt)
-        .values({ id: generateId("ur"), receiptUrl, subscriptionId })
-        .onConflictDoNothing()
-        .returning({ id: usedReceipt.id });
+        if (!inserted) {
+          throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.DUPLICATE_RECEIPT);
+        }
 
-      if (!inserted) {
-        throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.DUPLICATE_RECEIPT);
+        await tx
+          .update(subscription)
+          .set({
+            status: "active",
+            trialEndsAt: null,
+            trialStart: null,
+            startedAt: new Date(),
+            expiresAt: sub.interval
+              ? renewSubscription({
+                  currentExpiresAt: new Date(),
+                  interval: sub.interval as PlanInterval,
+                })
+              : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(subscription.id, subscriptionId));
+
+        return { updated: true, subscriptionId };
+      });
+    } else {
+      // Pending subscription: activate via txRef
+      if (!sub.providerTxRef) {
+        throw BirrJSError.from(
+          "BAD_REQUEST",
+          BIRRJS_ERROR_CODES.INVALID_INPUT,
+          "Subscription has no transaction reference",
+        );
       }
 
-      return await activateSubscriptionByTxRef(tx as unknown as BirrJSDatabase, logger, txRef);
-    });
+      if (!sub.providerTxRef) {
+        throw BirrJSError.from(
+          "BAD_REQUEST",
+          BIRRJS_ERROR_CODES.INVALID_INPUT,
+          "Subscription has no transaction reference",
+        );
+      }
+
+      const txRef: string = sub.providerTxRef;
+
+      result = await database.transaction(async (tx) => {
+        const [inserted] = await tx
+          .insert(usedReceipt)
+          .values({ id: generateId("ur"), receiptUrl, subscriptionId })
+          .onConflictDoNothing()
+          .returning({ id: usedReceipt.id });
+
+        if (!inserted) {
+          throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.DUPLICATE_RECEIPT);
+        }
+
+        return await activateSubscriptionByTxRef(tx as unknown as BirrJSDatabase, logger, txRef);
+      });
+    }
 
     if (result.updated) {
       // Clear prior reminder records so new period starts fresh

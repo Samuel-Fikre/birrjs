@@ -1,12 +1,19 @@
 import type { NormalizedPlan } from "../plans/schema";
 import type { PaymentInstructions } from "../provider";
 import type { BirrJSPluginEventHandlers } from "./events";
+import type { BirrJSQueries } from "./queries";
+
+export interface BeforeSubscribeResult {
+  isTrialEligible?: boolean;
+}
 
 export interface BeforeSubscribeHookCtx {
   readonly customerId: string;
   readonly plan: NormalizedPlan;
   readonly customerEmail?: string;
+  readonly customerPhone?: string;
   readonly ip?: string;
+  readonly queries: BirrJSQueries;
 }
 
 export interface CheckoutReadyHookCtx {
@@ -28,7 +35,7 @@ export interface PaymentReadyHookCtx {
 export interface BirrJSPlugin {
   id: string;
   endpoints?: Record<string, unknown>;
-  onBeforeSubscribe?: (hookCtx: BeforeSubscribeHookCtx) => Promise<void>;
+  onBeforeSubscribe?: (hookCtx: BeforeSubscribeHookCtx) => Promise<void | BeforeSubscribeResult>;
   onCheckoutReady?: (hookCtx: CheckoutReadyHookCtx) => Promise<void>;
   onPaymentReady?: (hookCtx: PaymentReadyHookCtx) => Promise<void>;
   onEvent?: BirrJSPluginEventHandlers;

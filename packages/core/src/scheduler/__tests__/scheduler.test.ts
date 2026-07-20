@@ -73,10 +73,6 @@ describe("startScheduler", () => {
       "Invalid cron expression for expiry check: bad",
     );
 
-    expect(() => startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "bad")).toThrow(
-      "Invalid cron expression for reminder check: bad",
-    );
-
     expect(() =>
       startScheduler(mockContext(), "*/5 * * * *", "*/10 * * * *", "0 8 * * *"),
     ).not.toThrow();

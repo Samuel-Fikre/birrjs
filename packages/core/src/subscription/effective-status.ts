@@ -1,6 +1,13 @@
 import type { Subscription } from "../types/models";
 
-export type SubscriptionStatus = "pending" | "active" | "canceled" | "failed" | "expired" | "none";
+export type SubscriptionStatus =
+  | "pending"
+  | "active"
+  | "canceled"
+  | "failed"
+  | "expired"
+  | "none"
+  | "trialing";
 
 export interface GetEffectiveStatusOptions {
   pendingTimeoutMinutes?: number;
@@ -24,6 +31,16 @@ export function getEffectiveStatus(
   if (subscription.status === "pending") {
     if (createdAt + pendingTimeoutMs <= now) {
       return "failed";
+    }
+  }
+
+  // If trialing but past trial end, treat as expired
+  if (subscription.status === "trialing") {
+    const trialEndsAt = subscription.trialEndsAt
+      ? new Date(subscription.trialEndsAt).getTime()
+      : null;
+    if (trialEndsAt !== null && trialEndsAt <= now) {
+      return "expired";
     }
   }
 

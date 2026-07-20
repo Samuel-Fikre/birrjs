@@ -98,13 +98,14 @@ describe("checkPendingSubscriptions", () => {
 });
 
 describe("checkExpiredSubscriptions", () => {
-  it("marks expired active subscriptions", async () => {
+  it("marks expired active and trialing subscriptions", async () => {
     const { db, returningMock, setMock } = mockDb([{ id: "sub_3", status: "active" }]);
     const c = ctx({ database: db });
 
     const result = await checkExpiredSubscriptions(c);
 
-    expect(result).toEqual({ checked: 1, updated: 1 });
+    // Mock returns same rows for both active and trialing queries
+    expect(result).toEqual({ checked: 2, updated: 2 });
     expect(returningMock).toHaveBeenCalled();
     expect(setMock).toHaveBeenCalledWith(
       expect.objectContaining({

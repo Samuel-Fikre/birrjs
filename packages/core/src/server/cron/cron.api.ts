@@ -72,24 +72,33 @@ export async function checkPendingSubscriptions(ctx: BirrJSContext) {
 }
 
 /**
- * Check expired subscriptions
+ * Check expired subscriptions (active + trialing)
  */
 export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
   const { database, logger } = ctx;
-
-  // Find active subscriptions that have passed their expiresAt
   const now = new Date();
 
-  // Mark expired subscriptions and get the updated rows
-  const updatedSubscriptions = await database
+  // Mark expired active subscriptions
+  const expiredActive = await database
     .update(subscription)
     .set({ status: "expired", endedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(subscription.status, "active"), lt(subscription.expiresAt, now)))
     .returning();
 
-  logger.info(`Marked ${updatedSubscriptions.length} subscriptions as expired`);
+  // Mark expired trialing subscriptions
+  const expiredTrials = await database
+    .update(subscription)
+    .set({ status: "expired", endedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(subscription.status, "trialing"), lt(subscription.trialEndsAt, now)))
+    .returning();
 
-  for (const sub of updatedSubscriptions) {
+  const allExpired = [...expiredActive, ...expiredTrials];
+
+  logger.info(
+    `Marked ${allExpired.length} subscriptions as expired (${expiredActive.length} active, ${expiredTrials.length} trials)`,
+  );
+
+  for (const sub of allExpired) {
     const [subData] = await database
       .select({
         planName: plan.name,
@@ -107,15 +116,15 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
       planId: sub.planId,
       planName: subData?.planName ?? "",
       customerEmail: subData?.customerEmail ?? null,
-      expiredAt: sub.expiresAt ?? sub.endedAt ?? new Date(),
+      expiredAt: sub.expiresAt ?? sub.trialEndsAt ?? sub.endedAt ?? new Date(),
     };
     await runEventHandlers(ctx.options.on, "subscription.expired", eventPayload, logger);
     await runPluginEventHandlers(ctx.options.plugins, "subscription.expired", eventPayload, ctx);
   }
 
   return {
-    checked: updatedSubscriptions.length,
-    updated: updatedSubscriptions.length,
+    checked: allExpired.length,
+    updated: allExpired.length,
   };
 }
 

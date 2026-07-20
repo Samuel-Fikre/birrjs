@@ -55,6 +55,7 @@ export const plan = pgTable(
     priceAmount: integer("price_amount"),
     priceInterval: text("price_interval"),
     currency: text("currency").default("ETB"),
+    trialDays: integer("trial_days"),
     features: jsonb("features").$type<Record<string, unknown> | null>(),
     provider: jsonb("provider").$type<ProviderProductMap>().notNull().default({}),
     isDefault: boolean("is_default").notNull().default(false),
@@ -110,6 +111,8 @@ export const subscription = pgTable(
     status: text("status").notNull(),
     interval: text("interval"),
     startedAt: timestamp("started_at", { withTimezone: true }),
+    trialStart: timestamp("trial_start", { withTimezone: true }),
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     canceledAt: timestamp("canceled_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
@@ -205,6 +208,31 @@ export const usedReceipt = pgTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [uniqueIndex("birrjs_used_receipt_url_unique").on(table.receiptUrl)],
+);
+
+export const trialRedemption = pgTable(
+  "trial_redemption",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customer.id, { onDelete: "cascade" }),
+    customerEmail: text("customer_email"),
+    phoneHash: text("phone_hash"),
+    planId: text("plan_id").notNull(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscription.id, { onDelete: "cascade" }),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("birrjs_trial_redemption_customer_plan_unique").on(table.customerId, table.planId),
+    index("birrjs_trial_redemption_customer_idx").on(table.customerId),
+    index("birrjs_trial_redemption_email_idx").on(table.customerEmail),
+    index("birrjs_trial_redemption_phone_hash_idx").on(table.phoneHash),
+  ],
 );
 
 export const entitlement = pgTable(

@@ -207,10 +207,10 @@ export const handleWebhook = defineBirrJSMethod(
       case "charge.failed/cancelled":
         // Don't mark active subscriptions as failed (renewal attempt failed,
         // but current access is still valid until current expiry)
-        if (subscriptionRecord.status === "active") {
+        if (subscriptionRecord.status === "active" || subscriptionRecord.status === "trialing") {
           logger.info(
             { subscriptionId: subscriptionRecord.id },
-            "Renewal payment failed, current subscription remains active",
+            "Renewal payment failed, current subscription unchanged",
           );
           await database
             .update(webhookEvent)

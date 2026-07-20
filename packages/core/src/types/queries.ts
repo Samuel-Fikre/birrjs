@@ -20,7 +20,14 @@ export interface SubscriptionQueryResult {
   cancelAtPeriodEnd: boolean;
 }
 
+export interface CountRedemptionsParams {
+  customerId: string;
+  customerEmail?: string;
+  phoneHash?: string;
+}
+
 export interface BirrJSQueries {
   getCustomer: (id: string) => Promise<CustomerQueryResult | null>;
   getSubscription: (id: string) => Promise<SubscriptionQueryResult | null>;
+  countRedemptions: (params: CountRedemptionsParams) => Promise<number>;
 }

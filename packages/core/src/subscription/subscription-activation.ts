@@ -32,6 +32,8 @@ export async function activateSubscriptionByTxRef(
     status: "active",
     updatedAt: new Date(),
     lastPaymentAt: new Date(),
+    trialEndsAt: null,
+    trialStart: null,
   };
 
   if (!sub.startedAt) {

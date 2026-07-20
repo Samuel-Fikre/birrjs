@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { count, eq, or } from "drizzle-orm";
 import { Pool } from "pg";
 
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../core/error-codes";
 import { createBirrJSLogger, type BirrJSInternalLogger } from "../core/logger";
+import { normalizeEmail } from "../core/utils";
 import { createDatabase, type BirrJSDatabase } from "../database";
-import { customer, subscription } from "../database/schema";
+import { customer, subscription, trialRedemption } from "../database/schema";
 import type { PaymentProvider, PaymentProviderConfig } from "../provider";
 import { startScheduler, stopScheduler } from "../scheduler";
 import type { BirrJSQueries, BirrJSOptions, SubscriptionStatus } from "../types";
@@ -90,6 +91,20 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
         endedAt: row.endedAt,
         cancelAtPeriodEnd: row.cancelAtPeriodEnd,
       };
+    },
+    countRedemptions: async ({ customerId, customerEmail, phoneHash }) => {
+      const conditions = [eq(trialRedemption.customerId, customerId)];
+      if (customerEmail) {
+        conditions.push(eq(trialRedemption.customerEmail, normalizeEmail(customerEmail)));
+      }
+      if (phoneHash) {
+        conditions.push(eq(trialRedemption.phoneHash, phoneHash));
+      }
+      const [result] = await database
+        .select({ count: count() })
+        .from(trialRedemption)
+        .where(or(...conditions));
+      return result?.count ?? 0;
     },
   };
 

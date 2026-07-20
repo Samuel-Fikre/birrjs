@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { BirrJSInternalLogger } from "../../core/logger";
 import type { BirrJSEventHandlers, BirrJSEventMap } from "../../types/events";
-import type { BirrJSPlugin } from "../../types/plugin";
+import type { BeforeSubscribeHookCtx, BirrJSPlugin } from "../../types/plugin";
 import { runBeforeHooks, runAfterHooks, runEventHandlers } from "../hooks";
 
 const mockErrorFn = vi.fn();
@@ -26,11 +26,13 @@ const defaultBeforeCtx = {
     isDefault: false,
     priceAmount: 2999,
     priceInterval: "monthly" as const,
+    trialDays: null,
     currency: "ETB",
     hash: "abc123",
   },
   customerEmail: "user@example.com",
   ip: "192.168.1.1",
+  queries: {} as BeforeSubscribeHookCtx["queries"],
 };
 
 const defaultAfterCtx = {
@@ -42,7 +44,7 @@ const defaultAfterCtx = {
 };
 
 describe("runBeforeHooks", () => {
-  it("rejects when a hook throws", async () => {
+  it("swallows hook error and resolves undefined (fail-isolated)", async () => {
     const plugins = [
       createPlugin("p1", {
         onBeforeSubscribe: async () => {
@@ -50,10 +52,10 @@ describe("runBeforeHooks", () => {
         },
       }),
     ];
-    await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).rejects.toThrow("blocked");
+    await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).resolves.toBeUndefined();
   });
 
-  it("rejects when any hook in a group throws", async () => {
+  it("swallows error from one hook, others still resolve", async () => {
     const plugins = [
       createPlugin("p1", { onBeforeSubscribe: async () => {} }),
       createPlugin("p2", {
@@ -63,7 +65,7 @@ describe("runBeforeHooks", () => {
       }),
       createPlugin("p3", { onBeforeSubscribe: async () => {} }),
     ];
-    await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).rejects.toThrow("no access");
+    await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).resolves.toBeUndefined();
   });
 
   it("applies timeout when hook takes too long", async () => {

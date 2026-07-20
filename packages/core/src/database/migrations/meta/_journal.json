@@ -71,6 +71,13 @@
       "when": 1783759017935,
       "tag": "0009_flowery_rachel_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784394438055,
+      "tag": "0010_tan_screwball",
+      "breakpoints": true
     }
   ]
 }

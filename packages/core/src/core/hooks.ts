@@ -3,6 +3,7 @@ import type { BirrJSEventHandlers, BirrJSEventMap, BirrJSEventName } from "../ty
 import type {
   BirrJSPlugin,
   BeforeSubscribeHookCtx,
+  BeforeSubscribeResult,
   CheckoutReadyHookCtx,
   PaymentReadyHookCtx,
 } from "../types/plugin";
@@ -12,7 +13,7 @@ export async function runBeforeHooks(
   plugins: BirrJSPlugin[] | undefined,
   ctx: BeforeSubscribeHookCtx,
   timeoutMs: number,
-): Promise<void> {
+): Promise<BeforeSubscribeResult | undefined> {
   const hooks = (plugins ?? [])
     .filter(
       (
@@ -21,12 +22,13 @@ export async function runBeforeHooks(
         onBeforeSubscribe: NonNullable<BirrJSPlugin["onBeforeSubscribe"]>;
       } => !!p.onBeforeSubscribe,
     )
-    .map((p) => p.onBeforeSubscribe(ctx));
+    .map((p) => Promise.resolve(p.onBeforeSubscribe(ctx)).catch(() => undefined));
   if (hooks.length === 0) return;
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error("Plugin hook timed out")), timeoutMs);
   });
-  await Promise.race([Promise.all(hooks), timeout]);
+  const results = await Promise.race([Promise.all(hooks), timeout]);
+  return results.find((r): r is BeforeSubscribeResult => r !== undefined);
 }
 
 export async function runAfterHooks(

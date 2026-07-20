@@ -1,6 +1,14 @@
 import type { BirrJSContext } from "../context";
 
 export interface BirrJSEventMap {
+  "subscription.trial_started": {
+    customerId: string;
+    subscriptionId: string;
+    planId: string;
+    planName: string;
+    customerEmail: string | null;
+    trialEndsAt: Date;
+  };
   "subscription.activated": {
     customerId: string;
     subscriptionId: string;
