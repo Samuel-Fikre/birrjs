@@ -54,6 +54,7 @@ export const CustomerInputSchema = z.object({
 // Subscribe to a plan
 export const SubscribeRequestSchema = z.object({
   planId: z.string().min(1),
+  fingerprint: z.string().optional(),
 });
 
 export const SubscribeResponseSchema = z.object({

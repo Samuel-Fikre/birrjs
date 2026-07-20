@@ -22,7 +22,11 @@ export async function runBeforeHooks(
         onBeforeSubscribe: NonNullable<BirrJSPlugin["onBeforeSubscribe"]>;
       } => !!p.onBeforeSubscribe,
     )
-    .map((p) => Promise.resolve(p.onBeforeSubscribe(ctx)).catch(() => undefined));
+    .map((p) =>
+      Promise.resolve()
+        .then(() => p.onBeforeSubscribe(ctx))
+        .catch(() => undefined),
+    );
   if (hooks.length === 0) return;
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error("Plugin hook timed out")), timeoutMs);

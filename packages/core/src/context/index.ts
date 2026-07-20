@@ -92,13 +92,16 @@ export async function createContext(options: BirrJSOptions): Promise<BirrJSConte
         cancelAtPeriodEnd: row.cancelAtPeriodEnd,
       };
     },
-    countRedemptions: async ({ customerId, customerEmail, phoneHash }) => {
+    countRedemptions: async ({ customerId, customerEmail, phoneHash, fingerprint }) => {
       const conditions = [eq(trialRedemption.customerId, customerId)];
       if (customerEmail) {
         conditions.push(eq(trialRedemption.customerEmail, normalizeEmail(customerEmail)));
       }
       if (phoneHash) {
         conditions.push(eq(trialRedemption.phoneHash, phoneHash));
+      }
+      if (fingerprint) {
+        conditions.push(eq(trialRedemption.fingerprint, fingerprint));
       }
       const [result] = await database
         .select({ count: count() })

@@ -17,10 +17,11 @@ export function normalizePhone(phone: string): string {
 }
 
 export function normalizeEmail(email: string): string {
-  const atIndex = email.indexOf("@");
-  if (atIndex === -1) return email;
-  const local = email.slice(0, atIndex);
-  const domain = email.slice(atIndex);
+  const trimmed = email.trim();
+  const atIndex = trimmed.indexOf("@");
+  if (atIndex === -1) return trimmed;
+  const local = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex);
   const stripped = local.split("+")[0]!;
-  return `${stripped}${domain}`;
+  return `${stripped}${domain}`.toLowerCase();
 }

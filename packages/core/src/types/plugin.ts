@@ -13,6 +13,7 @@ export interface BeforeSubscribeHookCtx {
   readonly customerEmail?: string;
   readonly customerPhone?: string;
   readonly ip?: string;
+  readonly fingerprint?: string;
   readonly queries: BirrJSQueries;
 }
 

@@ -137,6 +137,7 @@ export const subscribe = defineBirrJSMethod(
         customerEmail: customer.email ?? undefined,
         customerPhone: customer.phone ?? undefined,
         ip,
+        fingerprint: ctx.input.fingerprint,
         queries: ctx.birrjs.queries,
       },
       hookTimeout,
@@ -191,6 +192,7 @@ export const subscribe = defineBirrJSMethod(
             customerId: customer.id,
             customerEmail: customer.email ? normalizeEmail(customer.email) : null,
             phoneHash,
+            fingerprint: ctx.input.fingerprint ?? null,
             planId: planRecord.id,
             subscriptionId,
           })

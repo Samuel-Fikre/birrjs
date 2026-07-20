@@ -24,6 +24,7 @@ export interface CountRedemptionsParams {
   customerId: string;
   customerEmail?: string;
   phoneHash?: string;
+  fingerprint?: string;
 }
 
 export interface BirrJSQueries {

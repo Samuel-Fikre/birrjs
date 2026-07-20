@@ -68,6 +68,17 @@ describe("runBeforeHooks", () => {
     await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).resolves.toBeUndefined();
   });
 
+  it("catches synchronously thrown error (non-async throw)", async () => {
+    const plugins = [
+      createPlugin("p1", {
+        onBeforeSubscribe: () => {
+          throw new Error("sync crash");
+        },
+      }),
+    ];
+    await expect(runBeforeHooks(plugins, defaultBeforeCtx, 5000)).resolves.toBeUndefined();
+  });
+
   it("applies timeout when hook takes too long", async () => {
     let resolveHook: () => void;
     const hookPromise = new Promise<void>((resolve) => {

@@ -21,6 +21,7 @@ export function trial(config?: TrialConfig): BirrJSPlugin {
         customerId: ctx.customerId,
         customerEmail: ctx.customerEmail,
         phoneHash,
+        fingerprint: ctx.fingerprint,
       });
 
       if (redemptionCount >= maxTrials) return;
