@@ -21,6 +21,7 @@ export interface BirrJSSchedulingOptions {
   expirySweepCron?: string;
   reminderSweepCron?: string;
   reminderLeadDays?: number[];
+  trialReminderLeadDays?: number[];
 }
 
 export interface BirrJSOptions {

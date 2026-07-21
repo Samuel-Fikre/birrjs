@@ -6,11 +6,13 @@ export interface ResendConfig {
     paymentFailed?: string;
     subscriptionExpired?: string;
     subscriptionReminder?: string;
+    trialEnding?: string;
   };
   messages?: {
     paymentReceived?: string;
     paymentFailed?: string;
     subscriptionExpired?: string;
     subscriptionReminder?: string;
+    trialEnding?: string;
   };
 }

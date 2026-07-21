@@ -45,6 +45,16 @@ export interface BirrJSEventMap {
     expiresAt: Date;
     daysUntilExpiry: number;
   };
+  "subscription.trial_ending": {
+    customerId: string;
+    subscriptionId: string;
+    planId: string;
+    planName: string;
+    customerEmail: string | null;
+    customerPhone: string | null;
+    trialEndsAt: Date;
+    daysUntilTrialEnd: number;
+  };
 }
 
 export type BirrJSEventName = keyof BirrJSEventMap;

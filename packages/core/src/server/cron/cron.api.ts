@@ -129,7 +129,7 @@ export async function checkExpiredSubscriptions(ctx: BirrJSContext) {
 }
 
 /**
- * Send reminders for subscriptions approaching expiry
+ * Send reminders for subscriptions approaching expiry or trial end
  */
 export async function sendReminders(ctx: BirrJSContext) {
   const { database, logger, options } = ctx;
@@ -143,10 +143,23 @@ export async function sendReminders(ctx: BirrJSContext) {
     logger.warn({ leadDays }, "Invalid reminderLeadDays, skipping reminder sweep");
     return { checked: 0, updated: 0 };
   }
+  const trialLeadDays = options.scheduling?.trialReminderLeadDays ?? [3, 1];
+  if (
+    !Array.isArray(trialLeadDays) ||
+    trialLeadDays.length === 0 ||
+    trialLeadDays.some((d) => !Number.isInteger(d) || d < 1)
+  ) {
+    logger.warn({ trialLeadDays }, "Invalid trialReminderLeadDays, skipping reminder sweep");
+    return { checked: 0, updated: 0 };
+  }
+
   const maxLeadDays = Math.max(...leadDays);
+  const maxTrialLeadDays = Math.max(...trialLeadDays);
   const now = new Date();
   const maxExpiry = new Date(now.getTime() + maxLeadDays * 24 * 60 * 60 * 1000);
+  const maxTrialExpiry = new Date(now.getTime() + maxTrialLeadDays * 24 * 60 * 60 * 1000);
 
+  // Query active subscriptions approaching expiry
   const expiringSubscriptions = await database
     .select({
       id: subscription.id,
@@ -168,10 +181,36 @@ export async function sendReminders(ctx: BirrJSContext) {
       ),
     );
 
+  // Query trialing subscriptions approaching trial end
+  const trialingSubscriptions = await database
+    .select({
+      id: subscription.id,
+      customerId: subscription.customerId,
+      planId: subscription.planId,
+      trialEndsAt: subscription.trialEndsAt,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      planName: plan.name,
+    })
+    .from(subscription)
+    .innerJoin(customer, eq(customer.id, subscription.customerId))
+    .innerJoin(plan, eq(plan.internalId, subscription.planId))
+    .where(
+      and(
+        eq(subscription.status, "trialing"),
+        gte(subscription.trialEndsAt, now),
+        lte(subscription.trialEndsAt, maxTrialExpiry),
+      ),
+    );
+
   // Batch check which reminders were already sent
-  const subscriptionIds = expiringSubscriptions.map((s) => s.id);
+  const allSubscriptionIds = [
+    ...expiringSubscriptions.map((s) => s.id),
+    ...trialingSubscriptions.map((s) => s.id),
+  ];
+  const allLeadDayValues = [...new Set([...leadDays, ...trialLeadDays])];
   const existingReminders =
-    expiringSubscriptions.length > 0
+    allSubscriptionIds.length > 0
       ? await database
           .select({
             subscriptionId: reminderSent.subscriptionId,
@@ -180,10 +219,10 @@ export async function sendReminders(ctx: BirrJSContext) {
           .from(reminderSent)
           .where(
             and(
-              inArray(reminderSent.subscriptionId, subscriptionIds),
+              inArray(reminderSent.subscriptionId, allSubscriptionIds),
               inArray(
                 reminderSent.reminderDay,
-                leadDays.map((d) => -d),
+                allLeadDayValues.map((d) => -d),
               ),
             ),
           )
@@ -193,6 +232,7 @@ export async function sendReminders(ctx: BirrJSContext) {
   const newRecords: Array<typeof reminderSent.$inferInsert> = [];
   const eventPromises: Promise<void>[] = [];
 
+  // Process active subscriptions approaching expiry
   for (const sub of expiringSubscriptions) {
     if (!sub.expiresAt) continue;
 
@@ -226,6 +266,40 @@ export async function sendReminders(ctx: BirrJSContext) {
     );
   }
 
+  // Process trialing subscriptions approaching trial end
+  for (const sub of trialingSubscriptions) {
+    if (!sub.trialEndsAt) continue;
+
+    const daysUntilTrialEnd = Math.ceil(
+      (sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (!trialLeadDays.includes(daysUntilTrialEnd)) continue;
+    if (sentSet.has(`${sub.id}:${-daysUntilTrialEnd}`)) continue;
+
+    newRecords.push({
+      id: generateId("rem"),
+      subscriptionId: sub.id,
+      reminderDay: -daysUntilTrialEnd,
+      sentAt: new Date(),
+    });
+
+    const eventPayload: BirrJSEventMap["subscription.trial_ending"] = {
+      customerId: sub.customerId,
+      subscriptionId: sub.id,
+      planId: sub.planId,
+      planName: sub.planName ?? "",
+      customerEmail: sub.customerEmail,
+      customerPhone: sub.customerPhone,
+      trialEndsAt: sub.trialEndsAt,
+      daysUntilTrialEnd,
+    };
+    eventPromises.push(
+      runEventHandlers(ctx.options.on, "subscription.trial_ending", eventPayload, logger),
+      runPluginEventHandlers(ctx.options.plugins, "subscription.trial_ending", eventPayload, ctx),
+    );
+  }
+
   // Batch insert all dedup records
   if (newRecords.length > 0) {
     await database.insert(reminderSent).values(newRecords);
@@ -235,11 +309,11 @@ export async function sendReminders(ctx: BirrJSContext) {
   await Promise.allSettled(eventPromises);
 
   logger.info(
-    `Sent ${newRecords.length} reminders (${expiringSubscriptions.length} expiring subscriptions checked)`,
+    `Sent ${newRecords.length} reminders (${expiringSubscriptions.length} expiring, ${trialingSubscriptions.length} trials ending)`,
   );
 
   return {
-    checked: expiringSubscriptions.length,
+    checked: expiringSubscriptions.length + trialingSubscriptions.length,
     updated: newRecords.length,
   };
 }

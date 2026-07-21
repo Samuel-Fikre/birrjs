@@ -9,5 +9,6 @@ export interface SmsGateConfig {
     paymentFailed?: string;
     subscriptionExpired?: string;
     subscriptionReminder?: string;
+    trialEnding?: string;
   };
 }

@@ -7,6 +7,7 @@ import {
   DEFAULT_PAYMENT_FAILED,
   DEFAULT_SUBSCRIPTION_EXPIRED,
   DEFAULT_SUBSCRIPTION_REMINDER,
+  DEFAULT_TRIAL_ENDING,
 } from "./messages";
 import type { SmsGateConfig } from "./types";
 import { getPhone } from "./utils";
@@ -60,6 +61,14 @@ export function smsGate(config: SmsGateConfig): BirrJSPlugin {
           DEFAULT_SUBSCRIPTION_REMINDER,
           { daysUntil: String(payload.daysUntilExpiry), planName: payload.planName },
         );
+        await client.send(payload.customerPhone, message);
+      },
+      "subscription.trial_ending": async (payload, _ctx) => {
+        if (!payload.customerPhone) return;
+        const message = formatMessage(config.messages?.trialEnding, DEFAULT_TRIAL_ENDING, {
+          daysUntil: String(payload.daysUntilTrialEnd),
+          planName: payload.planName,
+        });
         await client.send(payload.customerPhone, message);
       },
     },
