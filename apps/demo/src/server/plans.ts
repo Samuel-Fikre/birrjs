@@ -17,6 +17,7 @@ export const pro = plan({
   name: "Pro",
   group: "tier",
   price: { amount: 1500, interval: "monthly" },
+  trialDays: 7,
   includes: [
     storage({ limit: 5000, reset: "month" }),
     apiCalls({ limit: 50000, reset: "month" }),

@@ -122,9 +122,18 @@ importers:
       '@birrjs/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@birrjs/email-resend':
+        specifier: workspace:*
+        version: link:../../packages/email-resend
+      '@birrjs/fingerprint':
+        specifier: workspace:*
+        version: link:../../packages/fingerprint
       '@birrjs/sms-afromessage':
         specifier: workspace:*
         version: link:../../packages/sms-afromessage
+      '@birrjs/trial':
+        specifier: workspace:*
+        version: link:../../packages/trial
       '@birrjs/vodit':
         specifier: workspace:*
         version: link:../../packages/provider-vodit

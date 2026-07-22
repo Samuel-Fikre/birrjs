@@ -1,7 +1,8 @@
 "use client";
 
+import { collectFingerprint } from "@birrjs/fingerprint";
 import { Button } from "@demo/ui/components/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,16 +25,19 @@ export default function CheckoutPage() {
   const [verifying, setVerifying] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<PaymentChannelType | null>(null);
 
-  const subscribe = useMutation({
-    mutationFn: () =>
-      client.subscribe({ planId: planId as Parameters<typeof client.subscribe>[0]["planId"] }),
-    onSuccess: (res) => {
+  const handleSubscribe = async (useTrial?: boolean) => {
+    const fingerprint = await collectFingerprint();
+    try {
+      const res = await client.subscribe({
+        planId: planId as Parameters<typeof client.subscribe>[0]["planId"],
+        fingerprint: fingerprint ?? undefined,
+        useTrial,
+      });
       setSubResult(res);
-    },
-    onError: () => {
+    } catch {
       toast.error("Subscribe failed");
-    },
-  });
+    }
+  };
 
   const handleVerify = async () => {
     if (!subResult) return;
@@ -66,13 +70,26 @@ export default function CheckoutPage() {
       {!subResult ? (
         <div className="space-y-4 rounded-lg border p-6">
           <p className="text-muted-foreground">Plan ID: {planId}</p>
-          <Button
-            onClick={() => subscribe.mutate()}
-            disabled={subscribe.isPending}
-            className="w-full"
+          <div className="flex flex-col gap-3">
+            <Button onClick={() => handleSubscribe(true)} className="w-full">
+              Start 7-day free trial
+            </Button>
+            <Button onClick={() => handleSubscribe()} variant="outline" className="w-full">
+              Pay now
+            </Button>
+          </div>
+        </div>
+      ) : subResult.checkoutUrl ? (
+        <div className="space-y-4 rounded-lg border p-6">
+          <p>Complete payment via your bank to activate your subscription.</p>
+          <a
+            href={subResult.checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 w-full"
           >
-            {subscribe.isPending ? "Subscribing..." : "Subscribe"}
-          </Button>
+            Pay Now
+          </a>
         </div>
       ) : subResult.paymentInstructions ? (
         <PaymentBlock
@@ -90,6 +107,13 @@ export default function CheckoutPage() {
           verifying={verifying}
           amount={subResult.paymentInstructions.amount}
         />
+      ) : subResult.trialEndsAt ? (
+        <div className="space-y-4 rounded-lg border p-6">
+          <p>Trial active — expires {new Date(subResult.trialEndsAt).toLocaleDateString()}</p>
+          <Button onClick={() => handleSubscribe()} variant="outline" className="w-full">
+            Pay now to upgrade
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4 rounded-lg border p-6">
           <p>Subscribed successfully! No payment required.</p>
