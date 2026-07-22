@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Ethiopian payment billing and subscription management for TypeScript",
   "license": "MIT",
   "bin": {
