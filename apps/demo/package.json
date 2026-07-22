@@ -15,7 +15,10 @@
   "dependencies": {
     "@birrjs/chapa": "workspace:*",
     "@birrjs/core": "workspace:*",
+    "@birrjs/email-resend": "workspace:*",
+    "@birrjs/fingerprint": "workspace:*",
     "@birrjs/sms-afromessage": "workspace:*",
+    "@birrjs/trial": "workspace:*",
     "@birrjs/vodit": "workspace:*",
     "@demo/api": "workspace:*",
     "@demo/auth": "workspace:*",

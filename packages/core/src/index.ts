@@ -13,3 +13,4 @@ export { feature, plan } from "./plans";
 export * from "./plans/schema";
 export * from "./entitlement";
 export { createBirr, isBirrInstance, type BirrInstance } from "./core/create-birr";
+export * from "./core/utils";

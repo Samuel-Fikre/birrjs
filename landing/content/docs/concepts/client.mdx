@@ -45,11 +45,12 @@ Defaults to `/api/birrjs`. This must match the full path prefix where your BirrJ
 
 ## Client methods
 
-All 7 client-accessible methods:
+All 8 client-accessible methods:
 
 | Method | Input | Output |
 |--------|-------|--------|
-| `subscribe` | `{ planId }` | `{ checkoutUrl?, paymentInstructions?, subscriptionId, customerId }` |
+| `subscribe` | `{ planId, useTrial?, fingerprint? }` | `{ checkoutUrl?, paymentInstructions?, trialEndsAt?, subscriptionId, customerId }` |
+| `verifyReceipt` | `{ subscriptionId, receiptUrl }` | `{ success, subscriptionId, alreadyActive? }` |
 | `listSubscriptions` | `{ limit?, offset? }` | `{ subscriptions[], total, limit, offset }` |
 | `cancelSubscription` | `{ subscriptionId }` | `{ subscription }` |
 | `getSubscription` | `{ subscriptionId }` | `{ subscription }` |
@@ -59,7 +60,8 @@ All 7 client-accessible methods:
 
 ### Method details
 
-- **`subscribe`** — Creates a subscription. Redirect providers (e.g. Chapa) return a `checkoutUrl` for checkout. Manual verification providers (e.g. Vodit) return `paymentInstructions` with bank accounts for the customer to pay manually. The customer is resolved from the current session — do not pass a `customerId`.
+- **`subscribe`** — Creates a subscription. Redirect providers (e.g. Chapa) return a `checkoutUrl` for checkout. Manual verification providers (e.g. Vodit) return `paymentInstructions` with bank accounts for the customer to pay manually. Pass `useTrial: true` + a browser `fingerprint` to start a free trial (requires plan with `trialDays` and the `@birrjs/trial` plugin). The customer is resolved from the current session — do not pass a `customerId`.
+- **`verifyReceipt`** — Validates a payment receipt via the provider (Vodit). After the user pays to a bank account and gets a receipt URL, call this to verify the transaction. Checks receipt amount >= plan price and activates the subscription on success. Returns `alreadyActive: true` if the subscription is already active (idempotent).
 - **`listSubscriptions`** — Returns subscriptions for the current customer. Each subscription includes an `effectiveStatus` computed from the actual status and scheduling rules.
 - **`cancelSubscription`** — Marks the subscription for cancellation at period end. No provider API call is made. Idempotent — safe on already-cancelled subscriptions.
 - **`getSubscription`** — Fetches a single subscription by ID. Returns it with `effectiveStatus`. Only returns the subscription if it belongs to the current customer — throws `NOT_FOUND` otherwise.

@@ -122,9 +122,18 @@ importers:
       '@birrjs/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@birrjs/email-resend':
+        specifier: workspace:*
+        version: link:../../packages/email-resend
+      '@birrjs/fingerprint':
+        specifier: workspace:*
+        version: link:../../packages/fingerprint
       '@birrjs/sms-afromessage':
         specifier: workspace:*
         version: link:../../packages/sms-afromessage
+      '@birrjs/trial':
+        specifier: workspace:*
+        version: link:../../packages/trial
       '@birrjs/vodit':
         specifier: workspace:*
         version: link:../../packages/provider-vodit
@@ -612,6 +621,22 @@ importers:
         specifier: ^4.1.6
         version: 4.1.6(@types/node@25.6.0)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
 
+  packages/fingerprint:
+    dependencies:
+      '@thumbmarkjs/thumbmarkjs':
+        specifier: ^1.10.1
+        version: 1.10.1
+    devDependencies:
+      tsdown:
+        specifier: ^0.21.1
+        version: 0.21.7(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.9.2)
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.6.0)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/provider-vodit:
     dependencies:
       '@birrjs/core':
@@ -649,6 +674,25 @@ importers:
       '@birrjs/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      tsdown:
+        specifier: ^0.21.1
+        version: 0.21.7(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(typescript@5.9.2)
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.6.0)(@vitest/ui@4.1.6)(msw@2.14.6(@types/node@25.6.0)(typescript@5.9.2))(vite@8.0.13(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/trial:
+    dependencies:
+      '@birrjs/core':
+        specifier: workspace:*
+        version: link:../core
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.2(@types/pg@8.20.0)(kysely@0.28.17)(pg@8.20.0)
     devDependencies:
       tsdown:
         specifier: ^0.21.1
@@ -2930,6 +2974,9 @@ packages:
 
   '@tanstack/store@0.11.0':
     resolution: {integrity: sha512-WlzzCt3xi0G6pCAJu1U+2jiECwabETDpQDi3hfkFZvJii9AuZqEKbOiVarX1/bWhTNjU486yQtJCCasi/0q+Cw==}
+
+  '@thumbmarkjs/thumbmarkjs@1.10.1':
+    resolution: {integrity: sha512-BH7HP3g+NeIXgcYDxtNjx2wfO5cHaH6DjkoDzi4adYe0fknkQZABtKag+2j75p5p8mGMhl9mq2Ee5m1UosYPUw==}
 
   '@trpc/client@11.17.0':
     resolution: {integrity: sha512-KpJBFrbKTDeVCFv/3ckL1XBBH5Yssn8hethI/rUy7GIpTj+VzjtPjykDqJpzobuVOz+d26cXCSu1t4I6MYI5Zg==}
@@ -7902,6 +7949,8 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.7)
 
   '@tanstack/store@0.11.0': {}
+
+  '@thumbmarkjs/thumbmarkjs@1.10.1': {}
 
   '@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:

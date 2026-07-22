@@ -58,11 +58,15 @@ const DEFAULT_SUBJECT_PAYMENT_RECEIVED = "Payment received";
 const DEFAULT_SUBJECT_PAYMENT_FAILED = "Payment failed";
 const DEFAULT_SUBJECT_EXPIRED = "Subscription expired";
 const DEFAULT_SUBJECT_REMINDER = "Reminder: subscription expires soon";
+const DEFAULT_SUBJECT_TRIAL_STARTED = "Trial started";
+const DEFAULT_SUBJECT_TRIAL_ENDING = "Trial ending soon";
 
 const DEFAULT_HTML_PAYMENT_RECEIVED = `<h1>Payment received</h1><p>Thank you, {name}. You are now subscribed to {planName}.</p>`;
 const DEFAULT_HTML_PAYMENT_FAILED = `<h1>Payment failed</h1><p>{name}, your payment for {planName} could not be processed. Please update your payment method.</p>`;
 const DEFAULT_HTML_EXPIRED = `<h1>Subscription expired</h1><p>{name}, your {planName} subscription has expired. Renew now to continue access.</p>`;
 const DEFAULT_HTML_REMINDER = `<h1>Renewal reminder</h1><p>{name}, your {planName} subscription expires in {daysUntil} days. Renew now to avoid interruption.</p>`;
+const DEFAULT_HTML_TRIAL_STARTED = `<h1>Trial started</h1><p>Welcome, {name}! Your {planName} trial is now active. Explore all features during your trial period.</p>`;
+const DEFAULT_HTML_TRIAL_ENDING = `<h1>Trial ending soon</h1><p>{name}, your {planName} trial ends in {daysUntil} days. Subscribe now to keep access.</p>`;
 
 export function resend(config: ResendConfig): BirrJSPlugin {
   return {
@@ -99,12 +103,33 @@ export function resend(config: ResendConfig): BirrJSPlugin {
         });
         await sendEmail(config, customer.email, subject, html);
       },
+      "subscription.trial_started": async (payload, ctx) => {
+        if (!payload.customerEmail) return;
+        const customer = await getEmail(payload.customerId, ctx);
+        const subject = config.subject?.trialStarted ?? DEFAULT_SUBJECT_TRIAL_STARTED;
+        const html = formatMessage(config.messages?.trialStarted, DEFAULT_HTML_TRIAL_STARTED, {
+          planName: payload.planName,
+          name: customer?.name ?? "",
+        });
+        await sendEmail(config, payload.customerEmail, subject, html);
+      },
       "subscription.reminder": async (payload, ctx) => {
         if (!payload.customerEmail) return;
         const customer = await getEmail(payload.customerId, ctx);
         const subject = config.subject?.subscriptionReminder ?? DEFAULT_SUBJECT_REMINDER;
         const html = formatMessage(config.messages?.subscriptionReminder, DEFAULT_HTML_REMINDER, {
           daysUntil: String(payload.daysUntilExpiry),
+          planName: payload.planName,
+          name: customer?.name ?? "",
+        });
+        await sendEmail(config, payload.customerEmail, subject, html);
+      },
+      "subscription.trial_ending": async (payload, ctx) => {
+        if (!payload.customerEmail) return;
+        const customer = await getEmail(payload.customerId, ctx);
+        const subject = config.subject?.trialEnding ?? DEFAULT_SUBJECT_TRIAL_ENDING;
+        const html = formatMessage(config.messages?.trialEnding, DEFAULT_HTML_TRIAL_ENDING, {
+          daysUntil: String(payload.daysUntilTrialEnd),
           planName: payload.planName,
           name: customer?.name ?? "",
         });

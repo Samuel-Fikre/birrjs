@@ -1,4 +1,6 @@
-import { eq, desc, count, and } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
+import { eq, desc, count, and, inArray } from "drizzle-orm";
 import * as z from "zod";
 
 import { defineBirrJSMethod } from "../../api/endpoint";
@@ -15,8 +17,15 @@ import {
   runEventHandlers,
   runPluginEventHandlers,
 } from "../../core/hooks";
-import { generateId } from "../../core/utils";
-import { plan, subscription, feature, planFeature, entitlement } from "../../database/schema";
+import { generateId, normalizeEmail, normalizePhone } from "../../core/utils";
+import {
+  plan,
+  subscription,
+  feature,
+  planFeature,
+  entitlement,
+  trialRedemption,
+} from "../../database/schema";
 import { addResetInterval } from "../../entitlement/entitlement.service";
 import type { ResetInterval, NormalizedPlan, PriceInterval, FeatureType } from "../../plans/schema";
 import type { TransactionRequest } from "../../provider";
@@ -27,6 +36,7 @@ import {
 import { getEffectiveStatus } from "../../subscription/effective-status";
 import type { PlanInterval } from "../../types";
 import type { Subscription } from "../../types/models";
+import type { BeforeSubscribeResult } from "../../types/plugin";
 
 /**
  * Subscribe to a plan
@@ -84,13 +94,15 @@ export const subscribe = defineBirrJSMethod(
         type: pf.type as FeatureType,
       })),
       isDefault: planRecord.isDefault,
+      trialDays: planRecord.trialDays,
+      resetOnTrialConversion: planRecord.resetOnTrialConversion,
       priceAmount: planRecord.priceAmount,
       priceInterval: planRecord.priceInterval as PriceInterval | null,
       currency: planRecord.currency ?? "ETB",
       hash: planRecord.hash ?? "",
     };
 
-    // Check for existing active subscription (renewal path)
+    // Check for existing active or trialing subscription (renewal / duplicate trial path)
     const existingSubscriptions = await database
       .select()
       .from(subscription)
@@ -98,29 +110,200 @@ export const subscribe = defineBirrJSMethod(
         and(
           eq(subscription.customerId, customer.id),
           eq(subscription.planId, planRecord.internalId),
-          eq(subscription.status, "active"),
+          inArray(subscription.status, ["active", "trialing"]),
         ),
       )
       .limit(1);
     const existingSubscription = existingSubscriptions[0];
+
+    // If already trialing, return trial info or payment channels
+    if (existingSubscription?.status === "trialing") {
+      // "Start trial" button — just return existing trial, no payment
+      if (ctx.input.useTrial) {
+        return {
+          subscriptionId: existingSubscription.id,
+          customerId: customer.id,
+          trialEndsAt: existingSubscription.trialEndsAt,
+        };
+      }
+
+      // "Pay now" button — store txRef and return payment channels/checkoutUrl
+      const txRef = existingSubscription.providerTxRef ?? generateId("tx");
+
+      if (!existingSubscription.providerTxRef) {
+        await database
+          .update(subscription)
+          .set({ providerTxRef: txRef, updatedAt: new Date() })
+          .where(eq(subscription.id, existingSubscription.id));
+      }
+
+      const transactionRequest: TransactionRequest = {
+        amount: planRecord.priceAmount!,
+        currency: planRecord.currency || "ETB",
+        email: customer.email ?? "",
+        firstName: customer.name?.split(" ").at(0),
+        lastName: customer.name?.split(" ").slice(1).join(" ") || undefined,
+        phoneNumber: customer.phone ?? undefined,
+        txRef,
+        callbackUrl: ctx.birrjs.options.provider.callbackUrl,
+        returnUrl: ctx.birrjs.options.provider.returnUrl,
+      };
+      const transaction = await runtime.initializeTransaction(transactionRequest);
+
+      if (transaction.paymentInstructions) {
+        Promise.resolve().then(() =>
+          runPaymentReadyHooks(
+            ctx.birrjs.options.plugins,
+            {
+              customerId: customer.id,
+              planId: planRecord.id,
+              subscriptionId: existingSubscription.id,
+              paymentInstructions: transaction.paymentInstructions!,
+              txRef,
+            },
+            ctx.birrjs.logger,
+          ),
+        );
+      } else if (transaction.checkoutUrl) {
+        Promise.resolve().then(() =>
+          runAfterHooks(
+            ctx.birrjs.options.plugins,
+            {
+              customerId: customer.id,
+              planId: planRecord.id,
+              subscriptionId: existingSubscription.id,
+              checkoutUrl: transaction.checkoutUrl!,
+              txRef,
+            },
+            ctx.birrjs.logger,
+          ),
+        );
+      }
+
+      return {
+        subscriptionId: existingSubscription.id,
+        customerId: customer.id,
+        trialEndsAt: existingSubscription.trialEndsAt,
+        checkoutUrl: transaction.checkoutUrl,
+        paymentInstructions: transaction.paymentInstructions,
+      };
+    }
 
     // Run onBeforeSubscribe hooks (fail-closed gate)
     const cfIp = ctx.request?.headers.get("cf-connecting-ip");
     const xForwardedFor = ctx.request?.headers.get("x-forwarded-for");
     const ip = cfIp ?? xForwardedFor?.split(",")[0]?.trim() ?? undefined;
     const hookTimeout = ctx.birrjs.options.hookTimeout ?? 5000;
-    await runBeforeHooks(
+    const hookResult: BeforeSubscribeResult | undefined = await runBeforeHooks(
       ctx.birrjs.options.plugins,
       {
         customerId: customer.id,
         plan: normalizedPlan,
         customerEmail: customer.email ?? undefined,
+        customerPhone: customer.phone ?? undefined,
         ip,
+        fingerprint: ctx.input.fingerprint,
+        queries: ctx.birrjs.queries,
       },
       hookTimeout,
     );
 
     const subscriptionId = existingSubscription?.id ?? generateId("sub");
+
+    // trial-path
+    if (
+      ctx.input.useTrial &&
+      hookResult?.isTrialEligible &&
+      planRecord.trialDays &&
+      !existingSubscription
+    ) {
+      const trialEndsAt = new Date(Date.now() + planRecord.trialDays * 24 * 60 * 60 * 1000);
+
+      await database.transaction(async (tx) => {
+        await tx.insert(subscription).values({
+          ...createSubscription({
+            id: subscriptionId,
+            customerId: customer.id,
+            planId: planRecord.internalId,
+            interval: (planRecord.priceInterval ?? "monthly") as PlanInterval,
+          }),
+          status: "trialing",
+          startedAt: new Date(),
+          trialStart: new Date(),
+          trialEndsAt,
+          cancelAtPeriodEnd: false,
+          providerTxRef: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        for (const pf of planFeatures) {
+          await tx.insert(entitlement).values({
+            id: generateId("ent"),
+            subscriptionId,
+            customerId: customer.id,
+            featureId: pf.featureId,
+            limit: pf.limit,
+            balance: pf.limit,
+            nextResetAt: pf.resetInterval
+              ? addResetInterval(new Date(), pf.resetInterval as ResetInterval)
+              : null,
+          });
+        }
+
+        const phoneHash = customer.phone
+          ? createHash("sha256").update(normalizePhone(customer.phone)).digest("hex")
+          : undefined;
+
+        const [inserted] = await tx
+          .insert(trialRedemption)
+          .values({
+            id: generateId("trr"),
+            customerId: customer.id,
+            customerEmail: customer.email ? normalizeEmail(customer.email) : null,
+            phoneHash,
+            fingerprint: ctx.input.fingerprint ?? null,
+            planId: planRecord.id,
+            subscriptionId,
+          })
+          .onConflictDoNothing()
+          .returning({ id: trialRedemption.id });
+
+        if (!inserted) {
+          throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.TRIAL_ALREADY_REDEEMED);
+        }
+      });
+
+      const eventPayload = {
+        customerId: customer.id,
+        subscriptionId,
+        planId: planRecord.internalId,
+        planName: planRecord.name,
+        customerEmail: customer.email ?? null,
+        trialEndsAt,
+      };
+
+      Promise.resolve().then(() =>
+        runEventHandlers(
+          ctx.birrjs.options.on,
+          "subscription.trial_started",
+          eventPayload,
+          ctx.birrjs.logger,
+        ),
+      );
+      Promise.resolve().then(() =>
+        runPluginEventHandlers(
+          ctx.birrjs.options.plugins,
+          "subscription.trial_started",
+          eventPayload,
+          ctx.birrjs,
+        ),
+      );
+
+      return { subscriptionId, customerId: customer.id, trialEndsAt };
+    }
+
+    // pay path
     const txRef = `tx_${crypto.randomUUID()}`;
 
     if (existingSubscription) {
@@ -131,7 +314,7 @@ export const subscribe = defineBirrJSMethod(
         .where(eq(subscription.id, existingSubscription.id));
     } else {
       // New subscription: create pending record + entitlements
-      const newSubscription = {
+      await database.insert(subscription).values({
         ...createSubscription({
           id: subscriptionId,
           customerId: customer.id,
@@ -142,8 +325,7 @@ export const subscribe = defineBirrJSMethod(
         providerTxRef: txRef,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
-      await database.insert(subscription).values(newSubscription);
+      });
 
       // create Entitlement record
       for (const pf of planFeatures) {
@@ -463,8 +645,8 @@ export const checkSubscription = defineBirrJSMethod(
       pendingTimeoutMinutes: options.scheduling?.pendingTimeoutMinutes,
     });
 
-    // Allowed only if effective status is active
-    const allowed = effectiveStatus === "active";
+    // Allowed if effective status is active or trialing
+    const allowed = effectiveStatus === "active" || effectiveStatus === "trialing";
 
     return {
       allowed,

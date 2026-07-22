@@ -24,13 +24,11 @@ function createMockDb(): {
   }));
 
   const insertMock = vi.fn((_table: unknown) => ({
-    values: vi.fn((_v: unknown) => {
-      const promise = Promise.resolve(undefined) as Promise<void> & {
-        onConflictDoNothing: ReturnType<typeof vi.fn>;
-      };
-      promise.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-      return promise;
-    }),
+    values: vi.fn((_v: unknown) => ({
+      onConflictDoNothing: vi.fn(() => ({
+        returning: vi.fn().mockResolvedValue([{ id: "mock_id" }]),
+      })),
+    })),
   }));
 
   function query(): Record<string, unknown> {
@@ -234,5 +232,252 @@ describe("subscribe error scenarios", () => {
     );
     // Renewal path should not mark the sub as failed
     expect(updateMock.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("subscribe trial path", () => {
+  it("creates trialing subscription when trial is eligible", async () => {
+    const { db, push } = createMockDb();
+    push([{ id: "cus_1", email: "test@example.com" }]);
+    push([
+      { id: "plan_1", internalId: "plan_int_1", trialDays: 7, priceAmount: 5000, currency: "ETB" },
+    ]);
+    push([]); // plan features
+    push([]); // no existing active/trialing sub
+    const ctx = {
+      database: db as BirrJSDatabase,
+      runtime: {
+        initializeTransaction: vi.fn(),
+        handleWebhook: vi.fn(),
+        verifyTransaction: vi.fn(),
+      } as unknown as BirrJSContext["runtime"],
+      options: {
+        provider: { callbackUrl: "https://example.com/cb" },
+        plugins: [{ id: "test-trial", onBeforeSubscribe: () => ({ isTrialEligible: true }) }],
+      } as unknown as BirrJSContext["options"],
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnValue({}),
+      } as unknown as BirrJSContext["logger"],
+      queries: { countRedemptions: vi.fn().mockResolvedValue(0) },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } as unknown as BirrJSContext;
+
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1", useTrial: true });
+
+    expect(result).toHaveProperty("trialEndsAt");
+    expect(result).toHaveProperty("subscriptionId");
+    // initializeTransaction should NOT be called (trial returns early)
+    expect(ctx.runtime.initializeTransaction).not.toHaveBeenCalled();
+    // transaction should have been called (trial wraps in transaction)
+    expect(db.transaction).toHaveBeenCalled();
+  });
+
+  it("skips trial and creates pending sub when plan has no trialDays", async () => {
+    const { db, push } = createMockDb();
+    push([{ id: "cus_1", email: "test@example.com" }]);
+    push([{ id: "plan_1", internalId: "plan_int_1", priceAmount: 5000, currency: "ETB" }]);
+    push([]); // plan features
+    push([]); // no existing sub
+    const runtime = {
+      initializeTransaction: vi
+        .fn()
+        .mockResolvedValue({ success: true, checkoutUrl: "https://checkout.url", txRef: "tx_123" }),
+      handleWebhook: vi.fn(),
+      verifyTransaction: vi.fn(),
+    };
+    const ctx = {
+      database: db as BirrJSDatabase,
+      runtime: runtime as unknown as BirrJSContext["runtime"],
+      options: {
+        provider: { callbackUrl: "https://example.com/cb" },
+        plugins: [{ id: "test-trial", onBeforeSubscribe: () => ({ isTrialEligible: true }) }],
+      } as unknown as BirrJSContext["options"],
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnValue({}),
+      } as unknown as BirrJSContext["logger"],
+      queries: { countRedemptions: vi.fn().mockResolvedValue(0) },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } as unknown as BirrJSContext;
+
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1" });
+
+    // Should have gone through pay path
+    expect(runtime.initializeTransaction).toHaveBeenCalled();
+    expect(result).toHaveProperty("checkoutUrl");
+  });
+
+  it("skips trial and creates pending sub when hook returns undefined", async () => {
+    const { db, push } = createMockDb();
+    push([{ id: "cus_1", email: "test@example.com" }]);
+    push([
+      { id: "plan_1", internalId: "plan_int_1", trialDays: 7, priceAmount: 5000, currency: "ETB" },
+    ]);
+    push([]); // plan features
+    push([]); // no existing sub
+    const runtime = {
+      initializeTransaction: vi
+        .fn()
+        .mockResolvedValue({ success: true, checkoutUrl: "https://checkout.url", txRef: "tx_123" }),
+      handleWebhook: vi.fn(),
+      verifyTransaction: vi.fn(),
+    };
+    const ctx = {
+      database: db as BirrJSDatabase,
+      runtime: runtime as unknown as BirrJSContext["runtime"],
+      options: {
+        provider: { callbackUrl: "https://example.com/cb" },
+        plugins: [{ id: "test-noop", onBeforeSubscribe: () => undefined }],
+      } as unknown as BirrJSContext["options"],
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnValue({}),
+      } as unknown as BirrJSContext["logger"],
+      queries: { countRedemptions: vi.fn().mockResolvedValue(0) },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } as unknown as BirrJSContext;
+
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1" });
+
+    expect(runtime.initializeTransaction).toHaveBeenCalled();
+    expect(result).toHaveProperty("checkoutUrl");
+  });
+
+  it("returns existing trialing sub on duplicate subscribe", async () => {
+    const { db, push, insertMock } = createMockDb();
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    push([{ id: "cus_1", email: "test@example.com" }]);
+    push([
+      { id: "plan_1", internalId: "plan_int_1", trialDays: 7, priceAmount: 5000, currency: "ETB" },
+    ]);
+    push([]); // plan features
+    push([
+      {
+        id: "sub_trialing",
+        customerId: "cus_1",
+        planId: "plan_int_1",
+        status: "trialing",
+        trialEndsAt,
+        interval: "monthly",
+      },
+    ]); // existing trialing sub
+    const ctx = {
+      database: db as BirrJSDatabase,
+      runtime: {
+        initializeTransaction: vi.fn().mockResolvedValue({
+          success: true,
+          paymentInstructions: { amount: 50, channels: [] },
+          txRef: "tx_test",
+        }),
+        handleWebhook: vi.fn(),
+        verifyTransaction: vi.fn(),
+      } as unknown as BirrJSContext["runtime"],
+      options: {
+        provider: { callbackUrl: "https://example.com/cb" },
+        plugins: [{ id: "test-trial", onBeforeSubscribe: () => ({ isTrialEligible: true }) }],
+      } as unknown as BirrJSContext["options"],
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnValue({}),
+      } as unknown as BirrJSContext["logger"],
+      queries: { countRedemptions: vi.fn().mockResolvedValue(0) },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } as unknown as BirrJSContext;
+
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1" });
+
+    expect(result).toMatchObject({
+      subscriptionId: "sub_trialing",
+      trialEndsAt,
+      paymentInstructions: { amount: 50, channels: [] },
+    });
+    // No new subscription should be inserted
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("skips trial for renewal (existing active sub)", async () => {
+    const { db, push } = createMockDb();
+    push([{ id: "cus_1", email: "test@example.com" }]);
+    push([
+      { id: "plan_1", internalId: "plan_int_1", trialDays: 7, priceAmount: 5000, currency: "ETB" },
+    ]);
+    push([]); // plan features
+    push([
+      {
+        id: "sub_active",
+        customerId: "cus_1",
+        planId: "plan_int_1",
+        status: "active",
+        interval: "monthly",
+      },
+    ]); // existing active sub
+    const updateMock = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+    }));
+    const insertMock = vi.fn(() => ({
+      values: vi.fn(() => {
+        const promise = Promise.resolve(undefined) as Promise<void> & {
+          onConflictDoNothing: ReturnType<typeof vi.fn>;
+        };
+        promise.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+        return promise;
+      }),
+    }));
+    const dbRenewal = {
+      ...db,
+      update: updateMock,
+      insert: insertMock,
+    } as unknown as BirrJSDatabase;
+    const runtime = {
+      initializeTransaction: vi
+        .fn()
+        .mockResolvedValue({ success: true, checkoutUrl: "https://checkout.url", txRef: "tx_123" }),
+      handleWebhook: vi.fn(),
+      verifyTransaction: vi.fn(),
+    };
+    const ctx = {
+      database: dbRenewal,
+      runtime: runtime as unknown as BirrJSContext["runtime"],
+      options: {
+        provider: { callbackUrl: "https://example.com/cb" },
+        plugins: [{ id: "test-trial", onBeforeSubscribe: () => ({ isTrialEligible: true }) }],
+      } as unknown as BirrJSContext["options"],
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn().mockReturnValue({}),
+      } as unknown as BirrJSContext["logger"],
+      queries: { countRedemptions: vi.fn().mockResolvedValue(0) },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } as unknown as BirrJSContext;
+
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1" });
+
+    // Should go through pay path (renewal: update txRef + init txn)
+    expect(runtime.initializeTransaction).toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalled();
+    // Should NOT insert a new subscription
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(result).toHaveProperty("checkoutUrl");
   });
 });

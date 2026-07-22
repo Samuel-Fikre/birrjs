@@ -92,6 +92,8 @@ async function insertPlanVersion(
       name: input.name,
       priceAmount: input.priceAmount,
       priceInterval: input.priceInterval,
+      trialDays: input.trialDays,
+      resetOnTrialConversion: input.resetOnTrialConversion,
       currency: input.currency,
       hash: input.hash,
       provider: {},
@@ -150,6 +152,8 @@ async function upsertPlanVersion(database: BirrJSDatabase, np: NormalizedPlan, v
       name: np.name,
       priceAmount: np.priceAmount,
       priceInterval: np.priceInterval,
+      trialDays: np.trialDays,
+      resetOnTrialConversion: np.resetOnTrialConversion,
       version,
       currency: np.currency,
     });

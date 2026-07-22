@@ -1,0 +1,115 @@
+---
+title: Reminders
+description: Notify customers before their subscription expires.
+---
+
+Reminders fire `subscription.reminder` events ahead of expiry so you can send emails, SMS, or in-app notifications.
+
+## How it works
+
+A daily cron sweep checks subscriptions expiring on the exact days listed in `reminderLeadDays`. For each match, it fires `subscription.reminder` with `daysUntilExpiry`. A `reminder_sent` table prevents duplicate sends — the same subscription on the same day only fires once.
+
+Reminder records are automatically cleared when a subscription is reactivated, so renewed subscriptions get fresh reminders for the new period.
+
+## Configuration
+
+```ts
+createBirr({
+  scheduling: {
+    reminderSweepCron: "0 8 * * *",   // daily at 8am UTC
+    reminderLeadDays: [7, 3, 1],       // send 7, 3, and 1 day before
+  },
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `reminderSweepCron` | `string` | `0 8 * * *` | Cron expression for the reminder sweep |
+| `reminderLeadDays` | `number[]` | `[7, 3, 1]` | Which days before expiry trigger a reminder. Sub expires June 20 → reminders on June 13, June 17, June 19 |
+
+## Event payload
+
+```ts
+"subscription.reminder": {
+  customerId: string;
+  subscriptionId: string;
+  planId: string;
+  planName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  expiresAt: Date;
+  daysUntilExpiry: number;
+}
+```
+
+## Examples
+
+### Email via Resend
+
+```ts
+import { resend } from "@birrjs/email-resend";
+
+createBirr({
+  plugins: [
+    resend({
+      apiKey: process.env.RESEND_API_KEY!,
+      from: "BirrJS <noreply@birrjs.dev>",
+      subscriptionReminder: {
+        subject: "Your {plan} expires in {days} days",
+        text: "Renew now: https://myapp.com/renew?sid={subscriptionId}",
+      },
+    }),
+  ],
+});
+```
+
+### Custom handler
+
+```ts
+createBirr({
+  on: {
+    "subscription.reminder": async (payload) => {
+      await resend.emails.send({
+        to: payload.customerEmail,
+        subject: `Your ${payload.planName} expires in ${payload.daysUntilExpiry} days`,
+        text: `Renew here: https://myapp.com/renew?sid=${payload.subscriptionId}`,
+      });
+
+      if (payload.daysUntilExpiry === 1) {
+        // Also send SMS for last-day reminder
+        await sms.send(payload.customerPhone, "Last day! Renew now.");
+      }
+    },
+  },
+});
+```
+
+### SMS via Afromessage
+
+```ts
+import { afromessage } from "@birrjs/sms-afromessage";
+
+createBirr({
+  plugins: [
+    afromessage({
+      apiKey: process.env.AFROMESSAGE_API_KEY!,
+      sender: process.env.AFROMESSAGE_SENDER!,
+      messages: {
+        subscriptionReminder: "Your {plan} expires in {days} days. Renew now!",
+      },
+    }),
+  ],
+});
+```
+
+## Scheduling modes
+
+Reminders run in all scheduling modes:
+
+| Mode | How reminders run |
+|------|-------------------|
+| Auto | Internal cron (default daily at 8am UTC) |
+| External | HTTP endpoint: `POST /api/birrjs/send-reminders` |
+| Manual | Call `birrjs.sendReminders()` directly |
+
+See [Scheduling](/docs/concepts/cron) for mode setup and external auth.

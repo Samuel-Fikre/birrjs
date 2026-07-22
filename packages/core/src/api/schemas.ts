@@ -8,7 +8,13 @@ export const CustomerSchema = createSelectSchema(customer);
 export const PlanSchema = createSelectSchema(plan);
 
 // Status enums
-export const SubscriptionStatusSchema = z.enum(["active", "expired", "canceled", "pending"]);
+export const SubscriptionStatusSchema = z.enum([
+  "active",
+  "expired",
+  "canceled",
+  "pending",
+  "trialing",
+]);
 export const InvoiceStatusSchema = z.enum(["draft", "pending", "paid", "failed", "void"]);
 
 // Standard error response format
@@ -48,6 +54,8 @@ export const CustomerInputSchema = z.object({
 // Subscribe to a plan
 export const SubscribeRequestSchema = z.object({
   planId: z.string().min(1),
+  fingerprint: z.string().optional(),
+  useTrial: z.boolean().optional(),
 });
 
 export const SubscribeResponseSchema = z.object({
@@ -184,7 +192,15 @@ export const CheckSubscriptionRequestSchema = z.object({
 
 export const CheckSubscriptionResponseSchema = z.object({
   allowed: z.boolean(),
-  effectiveStatus: z.enum(["pending", "active", "canceled", "failed", "expired", "none"]),
+  effectiveStatus: z.enum([
+    "pending",
+    "active",
+    "canceled",
+    "failed",
+    "expired",
+    "none",
+    "trialing",
+  ]),
 });
 
 export type CheckSubscriptionRequest = z.infer<typeof CheckSubscriptionRequestSchema>;

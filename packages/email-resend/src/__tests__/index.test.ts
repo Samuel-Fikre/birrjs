@@ -19,6 +19,7 @@ function createMockCtx(overrides?: Partial<BirrJSContext>): BirrJSContext {
     queries: {
       getCustomer: async () => null,
       getSubscription: async () => null,
+      countRedemptions: async () => 0,
     },
     provider: undefined as unknown as PaymentProviderConfig,
     runtime: undefined as unknown as PaymentProvider,
@@ -66,6 +67,7 @@ describe("resend plugin", () => {
     const plugin = resend({ apiKey: "re_xxx", from: "BirrJS <noreply@birrjs.dev>" });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({
           id: "c1",
           email: "user@example.com",
@@ -111,6 +113,7 @@ describe("resend plugin", () => {
     });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({
           id: "c1",
           email: "user@example.com",
@@ -142,6 +145,7 @@ describe("resend plugin", () => {
     const plugin = resend({ apiKey: "re_xxx", from: "test@example.com" });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({
           id: "c1",
           email: "user@example.com",
@@ -176,6 +180,7 @@ describe("resend plugin", () => {
     const plugin = resend({ apiKey: "re_xxx", from: "test@example.com" });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({
           id: "c1",
           email: "user@example.com",

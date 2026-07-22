@@ -88,6 +88,7 @@ export const BIRRJS_ERROR_CODES = defineErrorCodes({
   RECEIPT_VERIFICATION_FAILED: "Receipt verification failed",
   RECEIPT_AMOUNT_MISMATCH: "Receipt amount is less than plan price",
   DUPLICATE_RECEIPT: "This receipt has already been used to activate a subscription",
+  TRIAL_ALREADY_REDEEMED: "Trial already redeemed for this customer and plan",
 
   DATABASE_ERROR: "Database error",
   INVALID_INPUT: "Invalid input",

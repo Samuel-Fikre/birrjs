@@ -11,6 +11,7 @@ export const env = createEnv({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     AFROMESSAGE_API_KEY: z.string().min(1).optional(),
     AFROMESSAGE_SENDER: z.string().min(1).optional(),
+    RESEND_API_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

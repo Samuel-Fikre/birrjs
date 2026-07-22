@@ -76,6 +76,8 @@ export const pro = plan({
 | `default` | `boolean` | Default plan for a group. A customer without an active subscription is treated as being on this plan — no subscription record is created |
 | `price` | `{ amount, interval, currency? }` | Price in ETB (decimal). E.g. `29` = 29 ETB. Currency defaults to `"ETB"`. Stored as minor units internally — `29` becomes `2900` in the database |
 | `price.currency` | `string` | Currency code (e.g. `"ETB"`, `"USD"`) |
+| `trialDays` | `number` | Number of free trial days. Requires `@birrjs/trial` plugin. |
+| `resetOnTrialConversion` | `boolean` | `false` (default, carryover) = old balance + new limit on trial→paid. `true` (reset) = fresh limit only. |
 | `includes` | `FeatureInclude[]` | Feature definitions with limits and resets |
 
 ### Price intervals

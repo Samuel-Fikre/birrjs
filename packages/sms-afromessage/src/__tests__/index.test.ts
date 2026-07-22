@@ -19,6 +19,7 @@ function createMockCtx(overrides?: Partial<BirrJSContext>): BirrJSContext {
     queries: {
       getCustomer: async () => null,
       getSubscription: async () => null,
+      countRedemptions: async () => 0,
     },
     provider: undefined as unknown as PaymentProviderConfig,
     runtime: undefined as unknown as PaymentProvider,
@@ -72,6 +73,7 @@ describe("createAfromessagePlugin", () => {
     const plugin = afromessage({ apiKey: "sk-test", from: "ID_1", sender: "BirrJS" });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({
           id: "c1",
           email: null,
@@ -117,6 +119,7 @@ describe("createAfromessagePlugin", () => {
     });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({ id: "c1", email: null, name: "Test", phone: "+251911111111" }),
         getSubscription: async () => null,
       },
@@ -144,6 +147,7 @@ describe("createAfromessagePlugin", () => {
     const plugin = afromessage({ apiKey: "sk-test", sender: "BirrJS" });
     const ctx = createMockCtx({
       queries: {
+        countRedemptions: async () => 0,
         getCustomer: async () => ({ id: "c1", email: null, name: null, phone: "+251911111111" }),
         getSubscription: async () => null,
       },

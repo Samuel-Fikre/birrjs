@@ -1,4 +1,4 @@
-export type SubscriptionStatus = "active" | "expired" | "canceled" | "pending";
+export type SubscriptionStatus = "active" | "expired" | "canceled" | "pending" | "trialing";
 
 export type InvoiceStatus = "draft" | "pending" | "paid" | "failed" | "void";
 

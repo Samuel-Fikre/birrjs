@@ -23,7 +23,8 @@ export function canTransitionStatus(from: SubscriptionStatus, to: SubscriptionSt
     active: ["expired", "canceled"],
     expired: ["active"],
     canceled: [],
-    pending: ["active", "canceled", "expired"],
+    pending: ["active", "canceled", "expired", "trialing"],
+    trialing: ["active", "expired", "canceled"],
   };
 
   return validTransitions[from]?.includes(to) ?? false;

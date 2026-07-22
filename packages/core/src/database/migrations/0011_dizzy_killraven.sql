@@ -1,0 +1,2 @@
+ALTER TABLE "birrjs_trial_redemption" ADD COLUMN "fingerprint" text;--> statement-breakpoint
+CREATE INDEX "birrjs_trial_redemption_fingerprint_idx" ON "birrjs_trial_redemption" USING btree ("fingerprint");

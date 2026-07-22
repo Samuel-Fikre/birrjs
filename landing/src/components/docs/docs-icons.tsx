@@ -1,4 +1,5 @@
 import {
+  Bell,
   Blocks,
   BookMarked,
   BookOpen,
@@ -8,6 +9,7 @@ import {
   CreditCard,
   Database,
   Download,
+  Gift,
   Landmark,
   LayoutDashboard,
   Mail,
@@ -51,6 +53,8 @@ const pageIcons = {
   plugins: <Blocks className="docs-category-icon size-3! shrink-0" />,
   afromessage: <MessageSquare className="docs-category-icon size-3! shrink-0" />,
   "sms gate": <MessageSquare className="docs-category-icon size-3! shrink-0" />,
+  trial: <Gift className="docs-category-icon size-3! shrink-0" />,
+  reminders: <Bell className="docs-category-icon size-3! shrink-0" />,
   "your first plugin": <Code className="docs-category-icon size-3! shrink-0" />,
   fayda: <Landmark className="docs-category-icon size-3! shrink-0" />,
   coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
