@@ -116,12 +116,76 @@ export const subscribe = defineBirrJSMethod(
       .limit(1);
     const existingSubscription = existingSubscriptions[0];
 
-    // If already trialing, return as-is (duplicate subscribe during trial)
+    // If already trialing, return trial info or payment channels
     if (existingSubscription?.status === "trialing") {
+      // "Start trial" button — just return existing trial, no payment
+      if (ctx.input.useTrial) {
+        return {
+          subscriptionId: existingSubscription.id,
+          customerId: customer.id,
+          trialEndsAt: existingSubscription.trialEndsAt,
+        };
+      }
+
+      // "Pay now" button — store txRef and return payment channels/checkoutUrl
+      const txRef = existingSubscription.providerTxRef ?? generateId("tx");
+
+      if (!existingSubscription.providerTxRef) {
+        await database
+          .update(subscription)
+          .set({ providerTxRef: txRef, updatedAt: new Date() })
+          .where(eq(subscription.id, existingSubscription.id));
+      }
+
+      const transactionRequest: TransactionRequest = {
+        amount: planRecord.priceAmount!,
+        currency: planRecord.currency || "ETB",
+        email: customer.email ?? "",
+        firstName: customer.name?.split(" ").at(0),
+        lastName: customer.name?.split(" ").slice(1).join(" ") || undefined,
+        phoneNumber: customer.phone ?? undefined,
+        txRef,
+        callbackUrl: ctx.birrjs.options.provider.callbackUrl,
+        returnUrl: ctx.birrjs.options.provider.returnUrl,
+      };
+      const transaction = await runtime.initializeTransaction(transactionRequest);
+
+      if (transaction.paymentInstructions) {
+        Promise.resolve().then(() =>
+          runPaymentReadyHooks(
+            ctx.birrjs.options.plugins,
+            {
+              customerId: customer.id,
+              planId: planRecord.id,
+              subscriptionId: existingSubscription.id,
+              paymentInstructions: transaction.paymentInstructions!,
+              txRef,
+            },
+            ctx.birrjs.logger,
+          ),
+        );
+      } else if (transaction.checkoutUrl) {
+        Promise.resolve().then(() =>
+          runAfterHooks(
+            ctx.birrjs.options.plugins,
+            {
+              customerId: customer.id,
+              planId: planRecord.id,
+              subscriptionId: existingSubscription.id,
+              checkoutUrl: transaction.checkoutUrl!,
+              txRef,
+            },
+            ctx.birrjs.logger,
+          ),
+        );
+      }
+
       return {
         subscriptionId: existingSubscription.id,
         customerId: customer.id,
         trialEndsAt: existingSubscription.trialEndsAt,
+        checkoutUrl: transaction.checkoutUrl,
+        paymentInstructions: transaction.paymentInstructions,
       };
     }
 

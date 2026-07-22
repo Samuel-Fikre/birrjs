@@ -377,7 +377,11 @@ describe("subscribe trial path", () => {
     const ctx = {
       database: db as BirrJSDatabase,
       runtime: {
-        initializeTransaction: vi.fn(),
+        initializeTransaction: vi.fn().mockResolvedValue({
+          success: true,
+          paymentInstructions: { amount: 50, channels: [] },
+          txRef: "tx_test",
+        }),
         handleWebhook: vi.fn(),
         verifyTransaction: vi.fn(),
       } as unknown as BirrJSContext["runtime"],
@@ -402,6 +406,7 @@ describe("subscribe trial path", () => {
     expect(result).toMatchObject({
       subscriptionId: "sub_trialing",
       trialEndsAt,
+      paymentInstructions: { amount: 50, channels: [] },
     });
     // No new subscription should be inserted
     expect(insertMock).not.toHaveBeenCalled();
