@@ -3,6 +3,7 @@
     "plans",
     "customers",
     "subscriptions",
+    "reminders",
     "cron",
     "entitlements",
     "webhooks",

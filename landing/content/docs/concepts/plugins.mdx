@@ -24,12 +24,21 @@ interface BirrJSPlugin {
     ip?: string;
   }) => Promise<void>;
 
-  /** Called after checkout is ready (before redirect) */
+  /** Called after checkout is ready (before redirect) — fires for redirect providers (Chapa) */
   onCheckoutReady?: (hookCtx: {
     customerId: string;
     planId: string;
     subscriptionId: string;
     checkoutUrl: string;
+    txRef: string;
+  }) => Promise<void>;
+
+  /** Called when payment instructions are ready — fires for receipt-based providers (Vodit) */
+  onPaymentReady?: (hookCtx: {
+    customerId: string;
+    planId: string;
+    subscriptionId: string;
+    paymentInstructions: PaymentInstructions;
     txRef: string;
   }) => Promise<void>;
 
@@ -64,7 +73,8 @@ Plugins can intercept the subscription flow at two points:
 | Hook | When | Can abort? |
 |------|------|-----------|
 | `onBeforeSubscribe` | Before a subscription record is created | Yes (throw to abort) |
-| `onCheckoutReady` | After checkout URL is generated, before redirect | No (errors logged) |
+| `onCheckoutReady` | After checkout URL is generated (redirect providers like Chapa) | No (errors logged) |
+| `onPaymentReady` | After payment instructions are generated (receipt-based providers like Vodit) | No (errors logged) |
 
 ```ts
 const myPlugin: BirrJSPlugin = {

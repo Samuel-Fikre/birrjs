@@ -1,0 +1,179 @@
+---
+title: Trial
+description: Free trial subscriptions with fingerprint-based abuse prevention.
+---
+
+The `@birrjs/trial` plugin adds free trial support to your subscriptions. It hooks into the subscribe flow to check eligibility before creating a subscription.
+
+## Installation
+
+```bash
+pnpm add @birrjs/trial
+```
+
+On the client (your frontend app):
+
+```bash
+pnpm add @birrjs/fingerprint
+```
+
+<Callout type="info">
+  `@birrjs/fingerprint` collects browser signals (canvas, WebGL, fonts) and only works in the browser. Server-side calls to `subscribe` won't have a fingerprint — trials started server-side rely on customer ID, email, and phone for abuse prevention.
+</Callout>
+
+## Usage
+
+Add the plugin to your BirrJS instance:
+
+```ts
+import { trial } from "@birrjs/trial";
+
+createBirr({
+  plans: [pro],
+  plugins: [trial()],
+});
+```
+
+### Plan configuration
+
+Enable trials on a plan by setting `trialDays`:
+
+```ts
+const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: { amount: 29, interval: "monthly" },
+  trialDays: 7,
+  resetOnTrialConversion: true,
+  includes: [storage({ limit: 5000, reset: "month" })],
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `trialDays` | `number` | — | Number of days the trial lasts. Required to enable trials. |
+| `resetOnTrialConversion` | `boolean` | `false` | `false` (carryover) = old balance + new limit on conversion. `true` (reset) = fresh limit only. |
+
+### Client-side
+
+Pass `useTrial: true` and a `fingerprint` to subscribe:
+
+```ts
+import { collectFingerprint } from "@birrjs/fingerprint";
+
+const fingerprint = await collectFingerprint();
+const result = await client.subscribe({
+  planId: "pro",
+  useTrial: true,
+  fingerprint: fingerprint ?? undefined,
+});
+
+if (result.trialEndsAt) {
+  // Trial started — show countdown to user
+}
+```
+
+The `@birrjs/fingerprint` package creates a device fingerprint using browser signals (canvas, WebGL, fonts, screen size). Same device + same browser = same fingerprint. This prevents a user from starting a new trial in the same browser after redeeming one.
+
+<Callout type="info">
+  Use `useTrial: true` for the "Start free trial" button and omit it for the "Pay now" button. If the user already has a trial sub and clicks "Pay now", they go straight to payment. If they click "Start trial" again, the existing trial info is returned.
+</Callout>
+
+## Config
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxTrialsPerCustomer` | `number` | `1` | Maximum number of trials per customer across all plans. |
+
+```ts
+trial({ maxTrialsPerCustomer: 1 })
+```
+
+## How it works
+
+### 1. Eligibility check
+
+When `useTrial: true` is passed and the plan has `trialDays`, the trial plugin's `onBeforeSubscribe` hook queries the `trialRedemption` table for any matching records. The check uses four identifiers:
+
+| Identifier | How it's used | Format |
+|------------|---------------|--------|
+| `customerId` | Your app's user ID | Plain text (internal ID, not PII) |
+| `email` | Normalized, then SHA-256 hashed | Lowercased, trimmed |
+| `phone` | Normalized, then SHA-256 hashed | `251911234567` → hash |
+| `fingerprint` | Browser device fingerprint, SHA-256 hashed | Canvas + WebGL + fonts hash |
+
+If any of these match an existing `trialRedemption` record, the user has already used their trial on that account, email, phone, or device — and the eligibility check returns `false`.
+
+<Callout type="info">
+  **No PII is stored in plaintext.** Email and phone are hashed before storage. The fingerprint is a device-derived hash, not a tracking cookie.
+</Callout>
+
+### 2. Trial subscription
+
+If eligible, a subscription is created in `trialing` status with `trialEndsAt` set to `now + trialDays`. A `trialRedemption` record is created with the hashed identifiers so the same user cannot start another trial.
+
+### 3. Trial ends
+
+The expiry cron sweep (every 10 minutes by default) checks for trialing subscriptions where `trialEndsAt` has passed and marks them as `expired`. This fires the `subscription.expired` event — use it to send a trial-ended notification:
+
+```ts
+createBirr({
+  on: {
+    "subscription.expired": async (payload) => {
+      await resend.emails.send({
+        to: payload.customerEmail,
+        subject: "Your trial has ended",
+        text: `Upgrade to keep access to ${payload.planName}.`,
+      });
+    },
+  },
+});
+```
+
+To warn users before the trial ends, configure the reminder system:
+
+```ts
+createBirr({
+  scheduling: { reminderLeadDays: [3, 1] },
+  on: {
+    "subscription.reminder": async (payload) => {
+      await resend.emails.send({
+        to: payload.customerEmail,
+        subject: `Trial ends in ${payload.daysUntilExpiry} days`,
+      });
+    },
+  },
+});
+```
+
+### 4. Trial to paid conversion
+
+When the user pays, the subscription transitions from `trialing` to `active`. This triggers entitlement recalculation controlled by `resetOnTrialConversion`:
+
+#### Carry Over (`resetOnTrialConversion: false`)
+
+The user's remaining balance carries forward: `new balance = old balance + plan limit`.
+
+```text
+Before trial conversion: 3000 / 5000 messages remaining
+Plan limit:              5000 messages
+After conversion:        8000 / 5000 messages remaining
+```
+
+Use this when you want to reward users who didn't use much during their trial — they keep their unused balance.
+
+#### Reset (`resetOnTrialConversion: true`)
+
+The user's entitlements are reset to the plan's full limit:
+
+```text
+Before trial conversion: 3000 / 5000 messages remaining
+Plan limit:              5000 messages
+After conversion:        5000 / 5000 messages remaining
+```
+
+Use this when you want all paying users to start on equal footing with a fresh allocation.
+
+<Callout type="info">
+  Default is `false` (carryover). Most SaaS apps prefer carryover — trial users who barely used the product don't lose their unused quota when they upgrade.
+</Callout>
