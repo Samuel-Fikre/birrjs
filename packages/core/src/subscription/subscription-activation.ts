@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 
 import type { BirrJSInternalLogger } from "../core/logger";
 import type { BirrJSDatabase } from "../database";
-import { subscription } from "../database/schema";
+import { plan, subscription } from "../database/schema";
+import { resetTrialEntitlements } from "../entitlement/entitlement.service";
 import type { PlanInterval } from "../types";
 import { renewSubscription } from "./index";
 
@@ -48,6 +49,21 @@ export async function activateSubscriptionByTxRef(
   }
 
   await database.update(subscription).set(updateFields).where(eq(subscription.id, sub.id));
+
+  if (sub.status === "trialing") {
+    const plans = await database
+      .select({ resetOnTrialConversion: plan.resetOnTrialConversion })
+      .from(plan)
+      .where(eq(plan.internalId, sub.planId))
+      .limit(1);
+
+    const planRecord = plans[0];
+    await resetTrialEntitlements(
+      database,
+      sub.id,
+      planRecord?.resetOnTrialConversion ? "reset" : "carryover",
+    );
+  }
 
   logger.info(
     { subscriptionId: sub.id, oldStatus: sub.status, newStatus: "active" },

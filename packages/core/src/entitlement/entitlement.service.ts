@@ -1,4 +1,4 @@
-import { type SQL, and, eq, inArray, sql, lte } from "drizzle-orm";
+import { type SQL, and, eq, inArray, isNotNull, sql, lte } from "drizzle-orm";
 
 import type { BirrJSDatabase, BirrJSTransaction } from "../database";
 import { entitlement, planFeature, subscription } from "../database/schema";
@@ -108,6 +108,61 @@ async function getActiveEntitlements(
       ),
     );
   return rows as ActiveEntitlementRow[];
+}
+
+export async function resetTrialEntitlements(
+  db: BirrJSDatabase | BirrJSTransaction,
+  subscriptionId: string,
+  mode: "reset" | "carryover" = "carryover",
+): Promise<void> {
+  const rows = await db
+    .select({
+      id: entitlement.id,
+      limit: entitlement.limit,
+      resetInterval: planFeature.resetInterval,
+    })
+    .from(entitlement)
+    .innerJoin(subscription, eq(entitlement.subscriptionId, subscription.id))
+    .innerJoin(
+      planFeature,
+      and(
+        eq(planFeature.planId, subscription.planId),
+        eq(planFeature.featureId, entitlement.featureId),
+      ),
+    )
+    .where(and(eq(entitlement.subscriptionId, subscriptionId), isNotNull(entitlement.limit)));
+
+  if (rows.length === 0) return;
+
+  const ids: string[] = [];
+  const balanceChunks: SQL[] = [sql`(case`];
+  const resetAtChunks: SQL[] = [sql`(case`];
+
+  for (const row of rows) {
+    ids.push(row.id);
+    if (mode === "carryover") {
+      balanceChunks.push(
+        sql`when ${entitlement.id} = ${row.id} then ${entitlement.balance} + ${row.limit}`,
+      );
+    } else {
+      balanceChunks.push(sql`when ${entitlement.id} = ${row.id} then ${row.limit}`);
+    }
+    const nextReset = row.resetInterval
+      ? addResetInterval(new Date(), row.resetInterval as ResetInterval)
+      : null;
+    resetAtChunks.push(sql`when ${entitlement.id} = ${row.id} then ${nextReset}`);
+  }
+
+  balanceChunks.push(sql`end)::integer`);
+  resetAtChunks.push(sql`end)::timestamp`);
+
+  await db
+    .update(entitlement)
+    .set({
+      balance: sql.join(balanceChunks, sql.raw(" ")),
+      nextResetAt: sql.join(resetAtChunks, sql.raw(" ")),
+    })
+    .where(inArray(entitlement.id, ids));
 }
 
 async function resetStaleEntitlements(

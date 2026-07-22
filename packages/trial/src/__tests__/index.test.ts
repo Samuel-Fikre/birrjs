@@ -24,6 +24,7 @@ const baseCtx = {
     currency: "ETB",
     hash: "abc123",
     includes: [],
+    resetOnTrialConversion: false,
   },
   customerEmail: "test@example.com",
 } satisfies Omit<BeforeSubscribeHookCtx, "queries">;

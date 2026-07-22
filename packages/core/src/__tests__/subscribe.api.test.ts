@@ -267,7 +267,7 @@ describe("subscribe trial path", () => {
       destroy: vi.fn().mockResolvedValue(undefined),
     } as unknown as BirrJSContext;
 
-    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1" });
+    const result = await subscribe(ctx, { planId: "plan_1", customerId: "cus_1", useTrial: true });
 
     expect(result).toHaveProperty("trialEndsAt");
     expect(result).toHaveProperty("subscriptionId");

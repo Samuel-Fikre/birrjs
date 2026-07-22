@@ -7,6 +7,7 @@ import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
 import type { BirrJSDatabase } from "../../database";
 import { customer, plan, reminderSent, subscription, usedReceipt } from "../../database/schema";
+import { resetTrialEntitlements } from "../../entitlement/entitlement.service";
 import { renewSubscription } from "../../subscription";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { PlanInterval } from "../../types";
@@ -72,7 +73,10 @@ export const verifyReceipt = defineBirrJSMethod(
 
     // verify amount
     const plans = await database
-      .select({ priceAmount: plan.priceAmount })
+      .select({
+        priceAmount: plan.priceAmount,
+        resetOnTrialConversion: plan.resetOnTrialConversion,
+      })
       .from(plan)
       .where(eq(plan.internalId, sub.planId))
       .limit(1);
@@ -123,6 +127,12 @@ export const verifyReceipt = defineBirrJSMethod(
             updatedAt: new Date(),
           })
           .where(eq(subscription.id, subscriptionId));
+
+        await resetTrialEntitlements(
+          tx as unknown as BirrJSDatabase,
+          subscriptionId,
+          planRecord?.resetOnTrialConversion ? "reset" : "carryover",
+        );
 
         return { updated: true, subscriptionId };
       });

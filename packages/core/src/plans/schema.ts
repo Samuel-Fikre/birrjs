@@ -59,6 +59,7 @@ export const planConfigSchema = z.object({
   default: z.boolean().optional(),
   price: priceSchema.optional(),
   trialDays: z.number().int().positive().optional(),
+  resetOnTrialConversion: z.boolean().optional(),
   includes: z.array(z.unknown()).optional(),
 });
 
@@ -121,6 +122,7 @@ export interface NormalizedPlan {
   priceAmount: number | null;
   priceInterval: PriceInterval | null;
   trialDays: number | null;
+  resetOnTrialConversion: boolean;
   currency: string;
   hash: string;
 }
@@ -132,6 +134,7 @@ export function computePlanHash(plan: Omit<NormalizedPlan, "hash">): string {
     priceAmount: plan.priceAmount,
     priceInterval: plan.priceInterval,
     trialDays: plan.trialDays,
+    resetOnTrialConversion: plan.resetOnTrialConversion,
     features: plan.includes.map((f) => ({
       id: f.id,
       limit: f.limit,
@@ -184,6 +187,7 @@ export function normalizePlan(plan: BirrJSPlan, currency: string): NormalizedPla
     priceAmount: plan.price?.amount != null ? plan.price.amount * 100 : null,
     priceInterval: plan.price?.interval ?? null,
     trialDays: plan.trialDays ?? null,
+    resetOnTrialConversion: plan.resetOnTrialConversion ?? false,
     currency: plan.price?.currency ?? currency,
   };
 

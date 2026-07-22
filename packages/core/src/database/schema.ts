@@ -56,6 +56,7 @@ export const plan = pgTable(
     priceInterval: text("price_interval"),
     currency: text("currency").default("ETB"),
     trialDays: integer("trial_days"),
+    resetOnTrialConversion: boolean("reset_on_trial_conversion").notNull().default(false),
     features: jsonb("features").$type<Record<string, unknown> | null>(),
     provider: jsonb("provider").$type<ProviderProductMap>().notNull().default({}),
     isDefault: boolean("is_default").notNull().default(false),

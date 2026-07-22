@@ -27,6 +27,7 @@ const defaultBeforeCtx = {
     priceAmount: 2999,
     priceInterval: "monthly" as const,
     trialDays: null,
+    resetOnTrialConversion: false,
     currency: "ETB",
     hash: "abc123",
   },

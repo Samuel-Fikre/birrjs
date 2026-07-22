@@ -95,6 +95,7 @@ export const subscribe = defineBirrJSMethod(
       })),
       isDefault: planRecord.isDefault,
       trialDays: planRecord.trialDays,
+      resetOnTrialConversion: planRecord.resetOnTrialConversion,
       priceAmount: planRecord.priceAmount,
       priceInterval: planRecord.priceInterval as PriceInterval | null,
       currency: planRecord.currency ?? "ETB",
@@ -146,7 +147,12 @@ export const subscribe = defineBirrJSMethod(
     const subscriptionId = existingSubscription?.id ?? generateId("sub");
 
     // trial-path
-    if (hookResult?.isTrialEligible && planRecord.trialDays && !existingSubscription) {
+    if (
+      ctx.input.useTrial &&
+      hookResult?.isTrialEligible &&
+      planRecord.trialDays &&
+      !existingSubscription
+    ) {
       const trialEndsAt = new Date(Date.now() + planRecord.trialDays * 24 * 60 * 60 * 1000);
 
       await database.transaction(async (tx) => {

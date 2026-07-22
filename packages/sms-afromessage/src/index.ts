@@ -50,6 +50,8 @@ const DEFAULT_PAYMENT_FAILED = "Your payment failed. Please update your payment 
 const DEFAULT_SUBSCRIPTION_EXPIRED = "Your subscription has expired. Renew now to continue access.";
 const DEFAULT_SUBSCRIPTION_REMINDER =
   "Reminder: your subscription expires in {daysUntil} days. Renew now!";
+const DEFAULT_TRIAL_STARTED =
+  "Welcome! Your {planName} trial has started. Explore all features during your trial.";
 const DEFAULT_TRIAL_ENDING =
   "Reminder: your trial ends in {daysUntil} days. Subscribe now to keep your access.";
 
@@ -81,6 +83,14 @@ export function afromessage(config: AfromessageConfig): BirrJSPlugin {
           DEFAULT_SUBSCRIPTION_EXPIRED,
           { planName: payload.planName },
         );
+        await sendSms(config, phone, message);
+      },
+      "subscription.trial_started": async (payload, ctx) => {
+        const phone = await getPhone(payload.customerId, ctx);
+        if (!phone) return;
+        const message = formatMessage(config.messages?.trialStarted, DEFAULT_TRIAL_STARTED, {
+          planName: payload.planName,
+        });
         await sendSms(config, phone, message);
       },
       "subscription.reminder": async (payload, _ctx) => {

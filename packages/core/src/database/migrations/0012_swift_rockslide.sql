@@ -1,0 +1,1 @@
+ALTER TABLE "birrjs_plan" ADD COLUMN "reset_on_trial_conversion" boolean DEFAULT false NOT NULL;
