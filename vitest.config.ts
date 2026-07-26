@@ -11,6 +11,7 @@ export default defineConfig({
       "packages/email-resend/vitest.config.ts",
       "packages/trial/vitest.config.ts",
       "packages/fingerprint/vitest.config.ts",
+      "packages/slack/vitest.config.ts",
       "e2e/smoke/vitest.config.ts",
       "e2e/cli/vitest.config.ts",
     ],
