@@ -1,4 +1,4 @@
 {
   "title": "Notification Providers",
-  "pages": ["afromessage", "sms-gate", "resend"]
+  "pages": ["afromessage", "sms-gate", "resend", "slack"]
 }

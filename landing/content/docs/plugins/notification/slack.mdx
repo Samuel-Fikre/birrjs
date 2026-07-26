@@ -1,0 +1,104 @@
+---
+title: Slack
+description: Post subscription event notifications to a Slack channel via Incoming Webhooks.
+---
+
+The `@birrjs/slack` plugin posts structured messages to a Slack channel when subscription events occur — payment received, payment cancelled, or subscription expired. Messages use Slack's Block Kit for a clean, readable layout with headers, customer details, plan info, and dates.
+
+## Installation
+
+```bash
+pnpm add @birrjs/slack
+```
+
+## Getting a webhook URL
+
+Incoming Webhooks are the simplest way to post messages to Slack. No OAuth, no scopes, no public endpoint needed — just a URL.
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**
+2. Choose **From scratch**, give it a name (e.g. "BirrJS Notifier"), select your workspace, and click **Create App**
+3. In the left sidebar, select **Incoming Webhooks**
+4. Toggle **Activate Incoming Webhooks** to On
+5. Click **Add New Webhook to Workspace**
+6. Select the channel where notifications should appear (e.g. `#ops`, `#payments`) and click **Allow**
+7. Copy the generated webhook URL. It looks like:
+
+```
+https://hooks.slack.com/services/example/key
+```
+
+## ⚠️ Security warning
+
+**Treat your webhook URL like a password.** Anyone who has it can post messages to your Slack channel.
+
+- Store it in an environment variable — **never** commit it to source control
+- Use separate webhook URLs for development, staging, and production
+- Never log the URL in error messages or console output
+- Slack actively scans for and revokes leaked webhook URLs found in public repositories
+
+## Configuration
+
+```ts
+import { slack } from "@birrjs/slack";
+import { createBirr } from "@birrjs/core";
+
+createBirr({
+  // ... other options
+  plugins: [
+    slack({
+      webhookUrl: process.env.SLACK_WEBHOOK_URL!,
+    }),
+  ],
+});
+```
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SLACK_WEBHOOK_URL` | Yes | Incoming Webhook URL from the Slack API dashboard |
+
+## How it works
+
+The plugin listens to three subscription lifecycle events via the `onEvent` hook system. Each event builds a Block Kit payload and POSTs it to your webhook URL.
+
+| Event | Header | Blocks |
+|-------|--------|--------|
+| `subscription.activated` | Payment received | Customer name, plan, started/expires dates, email |
+| `subscription.cancelled` | Payment failed | Customer name, plan, email |
+| `subscription.expired` | Subscription expired | Customer name, plan, email, expiry date |
+
+
+## Custom messages
+
+Override the plain text fallback that appears in Slack notifications:
+
+```ts
+slack({
+  webhookUrl: process.env.SLACK_WEBHOOK_URL!,
+  messages: {
+    paymentReceived: "{name} subscribed to {planName}",
+    paymentFailed: "{name} — {planName} payment failed",
+    subscriptionExpired: "{name}'s {planName} has expired",
+  },
+})
+```
+
+Template variables are enclosed in `{curly braces}`:
+
+| Variable | Available in |
+|----------|-------------|
+| `{name}` | All events |
+| `{planName}` | All events |
+
+The custom text appears at the top of the Slack message, above the Block Kit blocks. If you don't provide custom messages, sensible defaults are used.
+
+## No additional setup needed
+
+Unlike Slack's Events API, Incoming Webhooks don't require:
+- OAuth scopes or bot tokens
+- Signing secret verification (HMAC)
+- A public HTTPS endpoint
+- Request URL verification challenges
+
+Just the URL — POST to it and the message appears in your channel.
