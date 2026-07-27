@@ -24,7 +24,7 @@ export const verifyReceipt = defineBirrJSMethod(
     },
   },
   async (ctx) => {
-    const { subscriptionId, receiptUrl } = ctx.input;
+    const { subscriptionId, receiptUrl, channelType } = ctx.input;
     const { database, logger, runtime } = ctx.birrjs;
     const { customer: customerCtx } = ctx;
 
@@ -53,7 +53,7 @@ export const verifyReceipt = defineBirrJSMethod(
     }
 
     // verify receipt
-    const verification = await runtime.verifyTransaction(receiptUrl);
+    const verification = await runtime.verifyTransaction(receiptUrl, subscriptionId, channelType);
 
     if (!verification.success) {
       throw BirrJSError.from(

@@ -85,6 +85,7 @@ export type SubscribeResponse = z.infer<typeof SubscribeResponseSchema>;
 export const VerifyReceiptRequestSchema = z.object({
   subscriptionId: z.string().min(1),
   receiptUrl: z.url(),
+  channelType: z.string(),
 });
 
 export const VerifyReceiptResponseSchema = z.object({

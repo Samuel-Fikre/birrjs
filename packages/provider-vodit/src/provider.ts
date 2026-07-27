@@ -185,7 +185,11 @@ export function createVoditProvider(client: VoditClient, channels: VoditChannel[
       };
     },
 
-    async verifyTransaction(receiptUrl: string): Promise<VerificationResponse> {
+    async verifyTransaction(
+      receiptUrl: string,
+      _subscriptionId?: string,
+      _channelType?: string,
+    ): Promise<VerificationResponse> {
       let response: VoditVerifyResponse;
 
       try {
