@@ -10,7 +10,6 @@ import {
   Database,
   Download,
   Gift,
-  Landmark,
   LayoutDashboard,
   Mail,
   MessageSquare,
@@ -60,7 +59,6 @@ const pageIcons = {
   trial: <Gift className="docs-category-icon size-3! shrink-0" />,
   reminders: <Bell className="docs-category-icon size-3! shrink-0" />,
   "your first plugin": <Code className="docs-category-icon size-3! shrink-0" />,
-  fayda: <Landmark className="docs-category-icon size-3! shrink-0" />,
   coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
   resend: <Mail className="docs-category-icon size-3! shrink-0" />,
   slack: <Slack className="docs-category-icon size-3! shrink-0" />,
@@ -70,6 +68,7 @@ const pageIcons = {
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
   "payment block": <LayoutDashboard className="docs-category-icon size-3! shrink-0" />,
+  currensee: <Repeat className="docs-category-icon size-3! shrink-0" />,
 } as const;
 
 function normalizeName(name: string): string {

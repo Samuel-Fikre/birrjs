@@ -1,0 +1,82 @@
+---
+title: Currensee
+description: Currency conversion for ETB-priced plans with rate snapshots for revenue reporting.
+---
+
+The `currensee` plugin converts your ETB prices into whatever your customers read, and snapshots the rate behind every subscription event so revenue reporting has a fixed number to work from.
+
+This is a third-party plugin — not maintained by BirrJS. [GitHub](https://github.com/MohammedIbrahim8887/currensee) · [Full docs](https://currensee.mohammedibrahim.dev/docs)
+
+## Installation
+
+```bash
+pnpm add currensee @birrjs/core
+```
+
+## Configuration
+
+```ts
+import { createBirr } from "@birrjs/core";
+import { currensee } from "currensee/birrjs";
+import { Currency } from "currensee";
+
+import { plans } from "./plans";
+
+const currency = currensee({
+  plans,
+  display: [Currency.USD, Currency.EUR],
+  onRate: async (snapshot) => {
+    // snapshot.converted -> { usd: 0.2059, eur: 0.1885 }
+    await db.insert(revenue).values({
+      subscriptionId: snapshot.subscriptionId,
+      etb: snapshot.amount,
+      usd: snapshot.converted.usd,
+      rate: snapshot.rates.usd,
+    });
+  },
+});
+
+const birr = createBirr({ plans, plugins: [currency] /* ... */ });
+```
+
+## API methods
+
+The plugin object doubles as a small API:
+
+```ts
+await currency.planPrices(pro);       // { usd: 0.2059, eur: 0.1885 }
+await currency.formatPlanPrices(pro); // { usd: "$0.21",  eur: "€0.19" }
+await currency.toDisplay(2900);       // same, from minor units
+currency.invalidate();                // drop the cached rate table
+```
+
+## Rate caching
+
+Rates are cached in-process for an hour (`ttlMs`) and fetched single-flight, so a burst of subscription events costs one request, not one per event.
+
+## Major vs. minor units
+
+Watch the units: plan definitions hold **major** units (`price: { amount: 29 }`), while the database column and `listPlans` hand back **minor** units (`2900`). `planPrices` takes the former, `toDisplay` the latter.
+
+## RateSnapshot shape
+
+`onRate` receives a `RateSnapshot`:
+
+```ts
+type RateSnapshot = {
+  event: string;
+  planId: string;
+  subscriptionId: string;
+  customerId: string;
+  base: CurrencyCode;
+  amount: number;
+  converted: ConvertedAmounts;
+  rates: ConvertedAmounts;
+};
+```
+
+A rate lookup failing is not a reason to fail an activation — the wildcard event handler swallows lookup failures and logs a warning instead of throwing.
+
+<Callout type="info">
+  **Questions about this plugin?** Check the [full docs](https://currensee.mohammedibrahim.dev/docs) or contact the currensee team — this is a third-party integration not maintained by BirrJS.
+</Callout>

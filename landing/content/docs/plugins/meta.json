@@ -1,3 +1,14 @@
 {
-  "pages": ["trial", "notification", "coming-soon"]
+  "pages": [
+    "trial",
+    "---Notification---",
+    "afromessage",
+    "sms-gate",
+    "resend",
+    "slack",
+    "---Third Party---",
+    "currensee",
+    "---Coming Soon---",
+    "coupon"
+  ]
 }
