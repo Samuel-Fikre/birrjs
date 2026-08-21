@@ -1,0 +1,117 @@
+---
+title: Verify.et
+description: Integrate verify.et for automated transaction verification with Ethiopian banks.
+---
+
+The `@birrjs/verifyet` package provides automated transaction verification via [verify.et](https://verify.et) — a universal verification API that detects the bank from any receipt format and checks payments against your configured accounts.
+
+## Installation
+
+```bash
+pnpm add @birrjs/verifyet
+```
+
+## Configuration
+
+```ts
+import { verifyEt } from "@birrjs/verifyet";
+
+createBirr({
+  provider: verifyEt({
+    apiKey: process.env.VERIFY_ET_API_KEY!,
+    channels: [
+      {
+        type: "cbe",
+        value: "1000200030004000",
+        name: "Abebe",
+      },
+      {
+        type: "telebirr",
+        value: "0912345678",
+        name: "Abebe",
+      },
+    ],
+  }),
+});
+```
+
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `apiKey` | `string` | Yes | API key from verify.et |
+| `channels` | `VerifyEtChannel[]` | Yes | Bank accounts to display for payment |
+
+### `VerifyEtChannel`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `VerifyEtChannelType` | The bank or mobile money provider |
+| `value` | `string` | Account number or phone number |
+| `name` | `string` | Account holder name |
+
+### `VerifyEtChannelType`
+
+```
+"telebirr" | "cbe" | "mpesa" | "dashen" | "boa" | "cbebirr" | "awash" | "siinqee" | "kaafiebirr"
+```
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `VERIFY_ET_API_KEY` | API key from [verify.et](https://verify.et) |
+
+## How it works
+
+Instead of redirecting users to a checkout page, users see a list of bank accounts and pay directly from their banking app.
+
+### Subscribe flow
+
+1. Your app calls `subscribe()` → BirrJS calls `provider.initializeTransaction()`
+2. BirrJS returns `paymentInstructions` — an array of bank accounts with amounts (no `checkoutUrl`)
+3. Display the instructions to the user: "Send **29.00 ETB** to any of these accounts"
+4. The user pays via their banking app and gets a receipt (reference)
+5. The user submits their receipt via `client.verifyReceipt({ receiptUrl, planId })`
+
+### Verify receipt flow
+
+1. `verifyReceipt` calls `provider.verifyTransaction(receiptUrl)`
+2. Verify.et auto-detects the bank and verifies the transaction
+3. BirrJS checks: transaction verified? amount ≥ plan price? payment landed in your account?
+4. If all checks pass, the subscription is activated and `subscription.activated` events fire
+
+### Wrong channel selection
+
+If a user picks "Telebirr" but actually pays via CBE (to your CBE account), BirrJS automatically retries with the correct account. The channel picker is a hint, not a hard requirement.
+
+## Supported channels
+
+| Channel | Type value |
+|---------|------------|
+| Telebirr | `telebirr` |
+| CBE | `cbe` |
+| M-Pesa | `mpesa` |
+| Dashen Bank | `dashen` |
+| Bank of Abyssinia | `boa` |
+| CBE Birr | `cbebirr` |
+| Awash Bank | `awash` |
+| Siinqee Bank | `siinqee` |
+| Kaafi Ebirr | `kaafiebirr` |
+
+## Error types
+
+| Error | Cause |
+|-------|-------|
+| `SERVER_ERROR` | Verify.et API returned a 5xx error |
+| `UNAUTHORIZED` | Invalid or missing API key |
+| `INSUFFICIENT_CREDITS` | Account credits exhausted |
+| `RATE_LIMITED` | Too many requests |
+| `TIMEOUT_ERROR` | Request exceeded 30s timeout |
+| `NETWORK_ERROR` | Network connectivity issue |
+| `VERIFICATION_FAILED` | Receipt could not be verified |
+
+<Callout type="info">
+  **Building a checkout page?** BirrJS includes ready-made [UI components](/docs/ui/payment-block) for receipt-based payments — bank account cards, channel selector, and receipt input.
+</Callout>
