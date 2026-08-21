@@ -10,8 +10,59 @@ import type {
 import type { VerifyEtClient } from "./client";
 import { VerifyEtApiError, VerifyEtError, VERIFYET_ERROR_CODES } from "./errors";
 import { normalizeReceiptReference } from "./normalizers";
-import type { VerifyEtChannel } from "./types";
+import type { VerifyEtChannel, VerifyEtSettlementMatch } from "./types";
 import { CHANNEL_LABELS } from "./types";
+
+function settlementMismatchMessage(
+  match: VerifyEtSettlementMatch,
+  channel: VerifyEtChannel | undefined,
+): string {
+  switch (match.reason) {
+    case "missing_receiver_account":
+      return "Could not read the receipt details. Please try again or contact support.";
+    default:
+      return channel
+        ? "Payment doesn't match the expected account. Please check you paid to the correct account."
+        : "We couldn't verify your payment. Please try again or contact support.";
+  }
+}
+
+async function retryWithConfigAccount(
+  client: VerifyEtClient,
+  ref: string,
+  subscriptionId: string | undefined,
+  itemBank: string,
+  channels: VerifyEtChannel[],
+): Promise<VerificationResponse | null> {
+  const detectedChannel = channels.find((ch) => ch.type === itemBank);
+  if (!detectedChannel) return null;
+
+  try {
+    const retryResponse = await client.verify(ref, {
+      waitMs: 15000,
+      subscriptionId,
+      settlementAccount: detectedChannel.value,
+    });
+
+    if (retryResponse.verification.processingStatus !== "completed") return null;
+
+    const retryItem = retryResponse.data[0];
+    if (!retryItem?.settlementAccountMatch?.matched) return null;
+
+    const amount = retryItem.amount;
+    if (amount == null) return null;
+
+    return {
+      success: true,
+      status: "completed",
+      amount: Math.round(amount * 100),
+      currency: retryItem.currency ?? "ETB",
+      providerTxRef: retryResponse.requestId,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export type VerifyEtProvider = PaymentProvider;
 
@@ -48,7 +99,7 @@ export function createVerifyEtProvider(
 
       const channel = channelType ? channels.find((ch) => ch.type === channelType) : undefined;
 
-      const ref = normalizeReceiptReference(receiptUrl, channelType);
+      const ref = normalizeReceiptReference(receiptUrl);
 
       try {
         response = await client.verify(ref, {
@@ -141,26 +192,39 @@ export function createVerifyEtProvider(
         };
       }
 
-      if (item.settlementAccountMatch) {
-        if (!item.settlementAccountMatch.matched) {
-          const reason = channel
-            ? `The receipt doesn't match the account configured for ${CHANNEL_LABELS[channel.type] ?? channel.type}. Make sure you paid to the correct account.`
-            : item.settlementAccountMatch.reason === "no_registered_accounts"
-              ? "No settlement accounts registered. Please register your bank accounts in the Verify.et dashboard."
-              : "The receipt doesn't match a registered settlement account.";
-          return {
-            success: false,
-            status: "failed",
-            error: reason,
-          };
+      if (!item.settlementAccountMatch) {
+        if (!channel) {
+          const retryResult = await retryWithConfigAccount(
+            client,
+            ref,
+            subscriptionId,
+            item.bank,
+            channels,
+          );
+          if (retryResult) return retryResult;
         }
-      } else {
         return {
           success: false,
           status: "failed",
-          error: channel
-            ? "Settlement matching didn't return a result for your account. Try again or contact support."
-            : "Settlement matching unavailable. Please register your settlement accounts in the Verify.et dashboard and try again.",
+          error: "We couldn't verify your payment. Please try again or contact support.",
+        };
+      }
+
+      if (!item.settlementAccountMatch.matched) {
+        if (channel || item.settlementAccountMatch.reason === "no_registered_accounts") {
+          const retryResult = await retryWithConfigAccount(
+            client,
+            ref,
+            subscriptionId,
+            item.bank,
+            channels,
+          );
+          if (retryResult) return retryResult;
+        }
+        return {
+          success: false,
+          status: "failed",
+          error: settlementMismatchMessage(item.settlementAccountMatch, channel),
         };
       }
 

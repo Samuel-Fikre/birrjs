@@ -250,7 +250,7 @@ describe("verifyTransaction", () => {
     expect(result.status).toBe("pending");
   });
 
-  it("rejects when settlement account does not match", async () => {
+  it("rejects when settlement account does not match (with channel)", async () => {
     const client = createMockClient({
       verify: vi.fn().mockResolvedValue(
         successResponse({
@@ -292,13 +292,14 @@ describe("verifyTransaction", () => {
     expect(result.success).toBe(false);
     expect(result.status).toBe("failed");
     expect(result.error).toBe(
-      "The receipt doesn't match the account configured for Telebirr. Make sure you paid to the correct account.",
+      "Payment doesn't match the expected account. Please check you paid to the correct account.",
     );
   });
 
-  it("rejects with dashboard message when settlementMatch absent and no channelType", async () => {
-    const client = createMockClient({
-      verify: vi.fn().mockResolvedValue(
+  it("retries when wrong channel picked but paid to correct account", async () => {
+    const verify = vi
+      .fn()
+      .mockResolvedValueOnce(
         successResponse({
           data: [
             {
@@ -306,22 +307,119 @@ describe("verifyTransaction", () => {
               status: "success",
               verified: true,
               amount: 100,
+              receiverAccount: "2519****9999",
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "telebirr",
+                receiverAccount: "2519****9999",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 1,
+                ambiguous: false,
+                reason: "candidate_account_mismatch",
+              },
             },
           ],
         }),
-      ),
-    });
+      )
+      .mockResolvedValueOnce(successResponse());
+    const client = createMockClient({ verify });
     const provider = createVerifyEtProvider(client, mockChannels);
 
-    const result = await provider.verifyTransaction("https://example.com/receipt");
+    const result = await provider.verifyTransaction(
+      "https://example.com/receipt",
+      undefined,
+      "telebirr",
+    );
 
+    expect(verify).toHaveBeenCalledTimes(2);
+    expect(verify).toHaveBeenNthCalledWith(2, "https://example.com/receipt", {
+      waitMs: 15000,
+      subscriptionId: undefined,
+      settlementAccount: "251912345678",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("retries when wrong channel picked and retry also fails", async () => {
+    const verify = vi
+      .fn()
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [
+            {
+              bank: "cbe",
+              status: "success",
+              verified: true,
+              amount: 100,
+              receiverAccount: "1****9999",
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "cbe",
+                receiverAccount: "1****9999",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 1,
+                ambiguous: false,
+                reason: "candidate_account_mismatch",
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [
+            {
+              bank: "cbe",
+              status: "success",
+              verified: true,
+              amount: 100,
+              receiverAccount: "1****9999",
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "cbe",
+                receiverAccount: "1****9999",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 1,
+                ambiguous: false,
+                reason: "candidate_account_mismatch",
+              },
+            },
+          ],
+        }),
+      );
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    const result = await provider.verifyTransaction(
+      "https://example.com/receipt",
+      undefined,
+      "telebirr",
+    );
+
+    expect(verify).toHaveBeenCalledTimes(2);
     expect(result.success).toBe(false);
+    expect(result.status).toBe("failed");
     expect(result.error).toBe(
-      "Settlement matching unavailable. Please register your settlement accounts in the Verify.et dashboard and try again.",
+      "Payment doesn't match the expected account. Please check you paid to the correct account.",
     );
   });
 
-  it("rejects with channel-specific message when settlementMatch absent and channelType provided", async () => {
+  it("rejects when settlementMatch absent (with channel)", async () => {
     const client = createMockClient({
       verify: vi.fn().mockResolvedValue(
         successResponse({
@@ -346,8 +444,175 @@ describe("verifyTransaction", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(
-      "Settlement matching didn't return a result for your account. Try again or contact support.",
+      "We couldn't verify your payment. Please try again or contact support.",
     );
+  });
+
+  it("succeeds without channelType using saved-account fallback", async () => {
+    const verify = vi.fn().mockResolvedValue(successResponse());
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    const result = await provider.verifyTransaction("DET8FJGUJ4");
+
+    expect(verify).toHaveBeenCalledWith("DET8FJGUJ4", {
+      waitMs: 15000,
+      subscriptionId: undefined,
+      settlementAccount: undefined,
+    });
+    expect(result.success).toBe(true);
+    expect(result.amount).toBe(10000);
+    expect(result.providerTxRef).toBe("550e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("normalizes telebirr receipt URL without channelType", async () => {
+    const verify = vi.fn().mockResolvedValue(successResponse());
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    await provider.verifyTransaction("https://transactioninfo.ethiotelecom.et/receipt/ABCD1234");
+
+    expect(verify).toHaveBeenCalledWith("ABCD1234", {
+      waitMs: 15000,
+      subscriptionId: undefined,
+      settlementAccount: undefined,
+    });
+  });
+
+  it("retries with config account on no_registered_accounts and succeeds", async () => {
+    const verify = vi
+      .fn()
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [
+            {
+              bank: "telebirr",
+              status: "success",
+              verified: true,
+              amount: 100,
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "telebirr",
+                receiverAccount: "2519****5678",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 0,
+                ambiguous: false,
+                reason: "no_registered_accounts",
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(successResponse());
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    const result = await provider.verifyTransaction("DET8FJGUJ4");
+
+    expect(verify).toHaveBeenCalledTimes(2);
+    expect(verify).toHaveBeenNthCalledWith(2, "DET8FJGUJ4", {
+      waitMs: 15000,
+      subscriptionId: undefined,
+      settlementAccount: "251912345678",
+    });
+    expect(result.success).toBe(true);
+    expect(result.amount).toBe(10000);
+  });
+
+  it("falls back to error when retry also fails", async () => {
+    const verify = vi
+      .fn()
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [
+            {
+              bank: "telebirr",
+              status: "success",
+              verified: true,
+              amount: 100,
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "telebirr",
+                receiverAccount: "2519****5678",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 0,
+                ambiguous: false,
+                reason: "no_registered_accounts",
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [
+            {
+              bank: "telebirr",
+              status: "success",
+              verified: true,
+              amount: 100,
+              settlementAccountMatch: {
+                matched: false,
+                matchType: "unmatched",
+                matchConfidence: "none",
+                source: "account_registry",
+                bank: "telebirr",
+                receiverAccount: "2519****9999",
+                matchedSettlementAccount: null,
+                matchedUserBankAccountId: null,
+                matchedBusinessBankAccountId: null,
+                candidateCount: 1,
+                ambiguous: false,
+                reason: "candidate_account_mismatch",
+              },
+            },
+          ],
+        }),
+      );
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    const result = await provider.verifyTransaction("DET8FJGUJ4");
+
+    expect(verify).toHaveBeenCalledTimes(2);
+    expect(result.success).toBe(false);
+    expect(result.status).toBe("failed");
+    expect(result.error).toBe(
+      "We couldn't verify your payment. Please try again or contact support.",
+    );
+  });
+
+  it("retries when settlementMatch absent and succeeds", async () => {
+    const verify = vi
+      .fn()
+      .mockResolvedValueOnce(
+        successResponse({
+          data: [{ bank: "telebirr", status: "success", verified: true, amount: 100 }],
+        }),
+      )
+      .mockResolvedValueOnce(successResponse());
+    const client = createMockClient({ verify });
+    const provider = createVerifyEtProvider(client, mockChannels);
+
+    const result = await provider.verifyTransaction("DET8FJGUJ4");
+
+    expect(verify).toHaveBeenCalledTimes(2);
+    expect(verify).toHaveBeenNthCalledWith(2, "DET8FJGUJ4", {
+      waitMs: 15000,
+      subscriptionId: undefined,
+      settlementAccount: "251912345678",
+    });
+    expect(result.success).toBe(true);
   });
 
   it("throws VerifyEtError on auth failure", async () => {
