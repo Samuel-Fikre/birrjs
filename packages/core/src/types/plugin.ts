@@ -1,3 +1,5 @@
+import type { Endpoint } from "better-call";
+
 import type { NormalizedPlan } from "../plans/schema";
 import type { PaymentInstructions } from "../provider";
 import type { BirrJSPluginEventHandlers } from "./events";
@@ -35,7 +37,7 @@ export interface PaymentReadyHookCtx {
 
 export interface BirrJSPlugin {
   id: string;
-  endpoints?: Record<string, unknown>;
+  endpoints?: Record<string, Endpoint>;
   onBeforeSubscribe?: (hookCtx: BeforeSubscribeHookCtx) => Promise<void | BeforeSubscribeResult>;
   onCheckoutReady?: (hookCtx: CheckoutReadyHookCtx) => Promise<void>;
   onPaymentReady?: (hookCtx: PaymentReadyHookCtx) => Promise<void>;

@@ -107,11 +107,26 @@ export function createBirrJSRouter(ctx: BirrJSContext, options: BirrJSOptions) {
     methods as unknown as Record<string, { endpoint?: Endpoint }>,
   );
 
-  return createRouter(routeEndpoints, {
-    basePath: options.basePath ?? "/api/birrjs",
-    routerContext: ctx,
-    onError(error) {
-      ctx.logger.error({ err: error }, "API error");
+  const pluginEndpoints: Record<string, Endpoint> = Object.assign(
+    {},
+    ...(options.plugins ?? []).map((plugin) => plugin.endpoints ?? {}),
+  );
+
+  const pluginKeys = Object.keys(pluginEndpoints);
+  const coreKeys = Object.keys(routeEndpoints);
+  const conflicts = pluginKeys.filter((key) => coreKeys.includes(key));
+  if (conflicts.length > 0) {
+    ctx.logger.warn({ conflicts }, "Plugin endpoints override core endpoints");
+  }
+
+  return createRouter(
+    { ...routeEndpoints, ...pluginEndpoints },
+    {
+      basePath: options.basePath ?? "/api/birrjs",
+      routerContext: ctx,
+      onError(error) {
+        ctx.logger.error({ err: error }, "API error");
+      },
     },
-  });
+  );
 }
