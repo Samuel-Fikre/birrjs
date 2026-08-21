@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/fingerprint",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Device fingerprinting for BirrJS trial abuse prevention",
   "license": "MIT",
   "type": "module",

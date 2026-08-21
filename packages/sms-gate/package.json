@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/sms-gate",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "SMS-Gate plugin for BirrJS — send subscription notifications via sms-gate.app",
   "license": "MIT",
   "type": "module",

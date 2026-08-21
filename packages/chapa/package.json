@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/chapa",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Chapa provider adapter for BirrJS",
   "license": "MIT",
   "type": "module",
