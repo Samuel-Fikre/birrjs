@@ -156,6 +156,7 @@ export const subscribe = defineBirrJSMethod(
             ctx.birrjs.options.plugins,
             {
               customerId: customer.id,
+              plan: normalizedPlan,
               planId: planRecord.id,
               subscriptionId: existingSubscription.id,
               paymentInstructions: transaction.paymentInstructions!,
@@ -170,6 +171,7 @@ export const subscribe = defineBirrJSMethod(
             ctx.birrjs.options.plugins,
             {
               customerId: customer.id,
+              plan: normalizedPlan,
               planId: planRecord.id,
               subscriptionId: existingSubscription.id,
               checkoutUrl: transaction.checkoutUrl!,
@@ -426,6 +428,7 @@ export const subscribe = defineBirrJSMethod(
           ctx.birrjs.options.plugins,
           {
             customerId: customer.id,
+            plan: normalizedPlan,
             planId: planRecord.id,
             subscriptionId,
             paymentInstructions: transaction.paymentInstructions!,
@@ -440,6 +443,7 @@ export const subscribe = defineBirrJSMethod(
           ctx.birrjs.options.plugins,
           {
             customerId: customer.id,
+            plan: normalizedPlan,
             planId: planRecord.id,
             subscriptionId,
             checkoutUrl: transaction.checkoutUrl!,

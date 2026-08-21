@@ -21,6 +21,7 @@ export interface BeforeSubscribeHookCtx {
 
 export interface CheckoutReadyHookCtx {
   readonly customerId: string;
+  readonly plan: NormalizedPlan;
   readonly planId: string;
   readonly subscriptionId: string;
   readonly checkoutUrl: string;
@@ -29,6 +30,7 @@ export interface CheckoutReadyHookCtx {
 
 export interface PaymentReadyHookCtx {
   readonly customerId: string;
+  readonly plan: NormalizedPlan;
   readonly planId: string;
   readonly subscriptionId: string;
   readonly paymentInstructions: PaymentInstructions;

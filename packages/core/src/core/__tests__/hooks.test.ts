@@ -38,6 +38,19 @@ const defaultBeforeCtx = {
 
 const defaultAfterCtx = {
   customerId: "cust_123",
+  plan: {
+    id: "pro-monthly",
+    name: "Pro Monthly",
+    group: null,
+    includes: [],
+    isDefault: false,
+    trialDays: 0,
+    resetOnTrialConversion: false,
+    priceAmount: 2900,
+    priceInterval: "monthly" as const,
+    currency: "ETB",
+    hash: "",
+  },
   planId: "pro-monthly",
   subscriptionId: "sub_456",
   checkoutUrl: "https://checkout.chapa.co/checkout/payment/abc123",
