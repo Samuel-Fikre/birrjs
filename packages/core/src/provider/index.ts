@@ -64,7 +64,16 @@ export interface TransactionRequest {
   };
 }
 
-export type PaymentChannelType = "telebirr" | "cbe" | "awash";
+export type PaymentChannelType =
+  | "telebirr"
+  | "cbe"
+  | "awash"
+  | "mpesa"
+  | "dashen"
+  | "boa"
+  | "cbebirr"
+  | "siinqee"
+  | "kaafiebirr";
 
 export interface PaymentChannel {
   type: PaymentChannelType;
@@ -119,7 +128,11 @@ export interface WebhookEvent {
  */
 export interface PaymentProvider {
   initializeTransaction(request: TransactionRequest): Promise<TransactionResponse>;
-  verifyTransaction(txRef: string): Promise<VerificationResponse>;
+  verifyTransaction(
+    txRef: string,
+    subscriptionId?: string,
+    channelType?: string,
+  ): Promise<VerificationResponse>;
   handleWebhook(
     payload: unknown,
     rawBody: string | Buffer,

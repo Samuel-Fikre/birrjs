@@ -128,7 +128,11 @@ export function createChapaProvider(
       }
     },
 
-    async verifyTransaction(txRef: string): Promise<VerificationResponse> {
+    async verifyTransaction(
+      txRef: string,
+      _subscriptionId?: string,
+      _channelType?: string,
+    ): Promise<VerificationResponse> {
       try {
         const response: ChapaVerifyResponse = await client.verifyTransaction(txRef);
 

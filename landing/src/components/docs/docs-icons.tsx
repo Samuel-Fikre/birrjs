@@ -28,6 +28,9 @@ import {
 } from "lucide-react";
 import type { ReactElement } from "react";
 
+import { ChapaLogo } from "@/components/icons/chapa-logo";
+import { VerifyEtLogo } from "@/components/icons/verifyet-logo";
+
 const categoryIcons = {
   "get started": <Compass className="docs-category-icon size-3.5! shrink-0" />,
   concepts: <BookMarked className="docs-category-icon size-3.5! shrink-0" />,
@@ -61,6 +64,9 @@ const pageIcons = {
   coupon: <Ticket className="docs-category-icon size-3! shrink-0" />,
   resend: <Mail className="docs-category-icon size-3! shrink-0" />,
   slack: <Slack className="docs-category-icon size-3! shrink-0" />,
+  chapa: <ChapaLogo className="docs-category-icon size-3! shrink-0" />,
+  vodit: <CreditCard className="docs-category-icon size-3! shrink-0" />,
+  "verify et": <VerifyEtLogo className="docs-category-icon size-3! shrink-0" />,
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
   "payment block": <LayoutDashboard className="docs-category-icon size-3! shrink-0" />,

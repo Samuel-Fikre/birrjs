@@ -40,6 +40,27 @@ export const PROVIDERS = [
     })`;
     },
   },
+  {
+    id: "verifyet",
+    name: "Verify.et (transaction verification)",
+    package: "@birrjs/verifyet",
+    importName: "verifyEt",
+    envVars: [
+      { key: "DATABASE_URL", line: "DATABASE_URL=" },
+      { key: "VERIFY_ET_API_KEY", line: "VERIFY_ET_API_KEY=" },
+    ],
+    generateConfig(): string {
+      return `verifyEt({
+      apiKey: process.env.VERIFY_ET_API_KEY!,
+      channels: [
+        { type: "cbe", value: "1000200030004000", name: "My Account" },
+        { type: "telebirr", value: "0912345678", name: "My Account" },
+        // TODO: configure your payment channels
+        // type: "telebirr" | "cbe" | "mpesa" | "dashen" | "boa" | "cbebirr" | "awash" | "siinqee" | "kaafiebirr"
+      ],
+    })`;
+    },
+  },
 ] as const satisfies {
   id: string;
   name: string;

@@ -13,12 +13,12 @@
     "add": "cd ../../ && cross-env BIRRJS_DEV=1 tsx packages/core/src/cli/index.ts add --cwd apps/demo"
   },
   "dependencies": {
-    "@birrjs/chapa": "workspace:*",
     "@birrjs/core": "workspace:*",
     "@birrjs/email-resend": "workspace:*",
     "@birrjs/fingerprint": "workspace:*",
     "@birrjs/sms-afromessage": "workspace:*",
     "@birrjs/trial": "workspace:*",
+    "@birrjs/verify-et": "workspace:*",
     "@birrjs/vodit": "workspace:*",
     "@demo/api": "workspace:*",
     "@demo/auth": "workspace:*",

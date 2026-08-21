@@ -46,6 +46,7 @@ export default function CheckoutPage() {
       const res = await client.verifyReceipt({
         subscriptionId: subResult.subscriptionId,
         receiptUrl,
+        ...(selectedChannel && { channelType: selectedChannel }),
       });
       if (res.alreadyActive) {
         toast.info("Subscription already active");
