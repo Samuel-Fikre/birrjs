@@ -7,6 +7,7 @@ import type { ReactElement, ReactNode } from "react";
 
 import { getDocsCategoryIcon, getDocsPageIcon } from "@/components/docs/docs-icons";
 import { SidebarCollapseButton } from "@/components/docs/sidebar-collapse-button";
+import { DocsSidebarSeparator } from "@/components/docs/sidebar-separator";
 import { BirrjsLogo } from "@/components/icons/birrjs-logo";
 import { URLs } from "@/lib/consts";
 import { source } from "@/lib/source";
@@ -54,6 +55,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           children: <SidebarCollapseButton />,
         }}
         sidebar={{
+          components: {
+            Separator: DocsSidebarSeparator,
+          },
           footer: (
             <div key="sidebar-footer" className="flex w-full items-center justify-between gap-2">
               <a
