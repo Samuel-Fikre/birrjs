@@ -1,9 +1,9 @@
 ---
-title: Vodit
-description: Integrate v.odit.et for receipt-based payment verification with Ethiopian banks.
+title: links.et
+description: Integrate links.et (formerly v.odit.et) for receipt-based payment verification with Ethiopian banks.
 ---
 
-The `@birrjs/vodit` package provides receipt-based payment verification via [v.odit.et](https://v.odit.et) — a drop-in alternative to chapa for solo devs without a merchant license.
+The `@birrjs/vodit` package provides receipt-based payment verification via [links.et](https://links.et) (formerly v.odit.et) — a drop-in alternative to chapa for solo devs without a merchant license.
 
 ## Installation
 
@@ -36,14 +36,14 @@ createBirr({
 ```
 
 <Callout type="warning">
-  **The `name` field is required** and must match how your name appears on your bank or mobile money account. Vodit compares it against the receipt's recipient name — if they don't match, the verification fails.your registered first name is sufficient.
+  **The `name` field is required** and must match how your name appears on your bank or mobile money account. BirrJS compares it against the receipt's recipient name — if they don't match, the verification fails. Your registered first name is sufficient.
 </Callout>
 
 ### Options
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `apiKey` | `string` | Yes | API key from v.odit.et |
+| `apiKey` | `string` | Yes | API key from [links.et](https://links.et/dashboard/keys) |
 | `channels` | `VoditChannel[]` | Yes | Bank accounts to display for payment |
 
 ### `VoditChannel`
@@ -58,7 +58,7 @@ createBirr({
 
 | Variable | Description |
 |----------|-------------|
-| `VODIT_API_KEY` | API key from [v.odit.et](https://v.odit.et) |
+| `VODIT_API_KEY` | API key from [links.et](https://links.et/dashboard/keys) |
 
 ## How it works
 
@@ -75,7 +75,7 @@ Instead of redirecting users to a checkout page, users see a list of bank accoun
 ### Verify receipt flow
 
 1. `verifyReceipt` calls `provider.verifyTransaction(receiptUrl)`
-2. Vodit fetches the receipt from the bank's website and parses the payment details
+2. links.et fetches the receipt from the bank's website and parses the payment details
 3. BirrJS checks: transaction completed? amount ≥ plan price? recipient account matches?
 4. If all checks pass, the subscription is activated and `subscription.activated` events fire
 
@@ -93,7 +93,7 @@ Duplicate receipts are detected and rejected automatically — each receipt URL 
 
 ### Recipient verification
 
-Vodit validates the receipt against your configured channels:
+BirrJS validates the receipt against your configured channels:
 - **Last 4 digits** — extracts the credited account's last 4 digits and compares against your channel values
 - **Recipient name** — checks the recipient name starts with the configured account holder name
 
@@ -101,13 +101,13 @@ If neither check matches, verification fails — preventing activation from paym
 
 ### Amount check
 
-Users type the amount manually at the bank, so the exact amount can vary. Vodit checks that the paid amount is **≥ the plan price** (in minor units). Overpayment is allowed.
+Users type the amount manually at the bank, so the exact amount can vary. BirrJS checks that the paid amount is **≥ the plan price** (in minor units). Overpayment is allowed.
 
 ## Error types
 
 | Error | Cause |
 |-------|-------|
-| `SERVER_ERROR` | Vodit API returned a 5xx error |
+| `SERVER_ERROR` | links.et API returned a 5xx error |
 | `UNAUTHORIZED` | Invalid or missing API key |
 | `RATE_LIMITED` | Too many requests |
 | `TIMEOUT_ERROR` | Request exceeded 30s timeout |
