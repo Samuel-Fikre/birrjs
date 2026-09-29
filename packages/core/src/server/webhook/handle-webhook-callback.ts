@@ -8,6 +8,26 @@ import { customer, plan, reminderSent, subscription } from "../../database/schem
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
 
+const SUCCESS_TRADE_STATUSES = new Set(["PAY_SUCCESS", "Completed"]);
+
+export function parseCallbackQuery(url: URL): {
+  trx_ref: string | null;
+  ref_id: string | null;
+  status: string | null;
+} {
+  // Chapa sends trx_ref/status; Telebirr echoes merch_order_id/trade_status
+  const trx_ref = url.searchParams.get("trx_ref") ?? url.searchParams.get("merch_order_id");
+  const ref_id = url.searchParams.get("ref_id");
+  const tradeStatus = url.searchParams.get("trade_status");
+  let status = url.searchParams.get("status");
+
+  if (tradeStatus !== null) {
+    status = SUCCESS_TRADE_STATUSES.has(tradeStatus) ? "success" : tradeStatus;
+  }
+
+  return { trx_ref, ref_id, status };
+}
+
 export const handleWebhookCallback = defineBirrJSMethod(
   {
     input: z.object({}),
@@ -18,13 +38,12 @@ export const handleWebhookCallback = defineBirrJSMethod(
         if (!ctx.request) {
           throw new APIError("BAD_REQUEST", { message: "No request" });
         }
-        const url = new URL(ctx.request.url);
-        const trx_ref = url.searchParams.get("trx_ref");
-        const ref_id = url.searchParams.get("ref_id");
-        const status = url.searchParams.get("status");
+        const { trx_ref, ref_id, status } = parseCallbackQuery(new URL(ctx.request.url));
 
         if (!trx_ref) {
-          throw new APIError("BAD_REQUEST", { message: "Missing trx_ref" });
+          throw new APIError("BAD_REQUEST", {
+            message: "Missing trx_ref or merch_order_id",
+          });
         }
 
         return { trx_ref, ref_id, status };
