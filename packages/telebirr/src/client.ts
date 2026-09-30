@@ -51,9 +51,9 @@ function normalizeAmount(amount: string): string {
 }
 
 function normalizeMerchantOrderId(merchantOrderId: string): string {
-  if (!/^[A-Za-z0-9_-]+$/.test(merchantOrderId)) {
+  if (!/^[A-Za-z0-9]+$/.test(merchantOrderId)) {
     throw new TypeError(
-      "merchantOrderId must contain only ASCII letters, digits, underscores, or hyphens",
+      "merchantOrderId must contain only ASCII letters and digits (Telebirr rejects underscores and hyphens)",
     );
   }
   return merchantOrderId;

@@ -214,17 +214,17 @@ describe("createTelebirrClient - 401 clears dead token", () => {
   });
 });
 
-describe("createTelebirrClient - createPayment order id (tx_ regression)", () => {
+describe("createTelebirrClient - createPayment order id (server ^[A-Za-z0-9]+$ contract)", () => {
   const preOrderBody = { result: "SUCCESS", biz_content: { prepay_id: "prep_1" } };
 
-  it("accepts BirrJS core txRef format (tx_<uuid>) as merchantOrderId", async () => {
+  it("accepts BirrJS core txRef format (tx + alnum) as merchantOrderId", async () => {
     const { fetchSpy, client } = setupClient();
 
     fetchSpy
       .mockResolvedValueOnce(jsonResponse(tokenBody))
       .mockResolvedValueOnce(jsonResponse(preOrderBody));
 
-    const txRef = "tx_a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+    const txRef = "txA1b2C3d4E5f6G7h8I9j0K1l2";
     const result = await client.createPayment({
       amount: "100",
       title: "Subscription",
@@ -239,6 +239,19 @@ describe("createTelebirrClient - createPayment order id (tx_ regression)", () =>
       biz_content: { merch_order_id: string };
     };
     expect(body.biz_content.merch_order_id).toBe(txRef);
+  });
+
+  it.each([
+    ["tx_abc123", "underscore"],
+    ["tx-abc123", "hyphen"],
+  ])("rejects %s (%s) — live Telebirr returns 400 for it", async (merchantOrderId) => {
+    const { fetchSpy, client } = setupClient();
+
+    await expect(
+      client.createPayment({ amount: "100", title: "Subscription", merchantOrderId }),
+    ).rejects.toThrow(TypeError);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("generates a safe order id when none is provided", async () => {

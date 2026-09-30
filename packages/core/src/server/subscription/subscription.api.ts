@@ -17,7 +17,7 @@ import {
   runEventHandlers,
   runPluginEventHandlers,
 } from "../../core/hooks";
-import { generateId, normalizeEmail, normalizePhone } from "../../core/utils";
+import { generateId, generateTxRef, normalizeEmail, normalizePhone } from "../../core/utils";
 import {
   plan,
   subscription,
@@ -128,7 +128,7 @@ export const subscribe = defineBirrJSMethod(
       }
 
       // "Pay now" button — store txRef and return payment channels/checkoutUrl
-      const txRef = existingSubscription.providerTxRef ?? generateId("tx");
+      const txRef = existingSubscription.providerTxRef ?? generateTxRef();
 
       if (!existingSubscription.providerTxRef) {
         await database
@@ -306,7 +306,7 @@ export const subscribe = defineBirrJSMethod(
     }
 
     // pay path
-    const txRef = `tx_${crypto.randomUUID()}`;
+    const txRef = generateTxRef();
 
     if (existingSubscription) {
       // Renewal: update existing subscription's providerTxRef
