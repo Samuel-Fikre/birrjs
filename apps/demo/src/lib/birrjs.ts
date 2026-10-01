@@ -1,28 +1,24 @@
 import { createBirr } from "@birrjs/core";
 import { resend } from "@birrjs/email-resend";
 import { afromessage } from "@birrjs/sms-afromessage";
+import { telebirr } from "@birrjs/telebirr";
 import { trial } from "@birrjs/trial";
-import { verifyEt } from "@birrjs/verify-et";
 import { auth } from "@demo/auth";
 
 import { free, pro } from "@/server/plans";
 
 export const birrjs = createBirr({
   database: process.env.DATABASE_URL!,
-  provider: verifyEt({
-    apiKey: process.env.VERIFY_ET_API_KEY!,
-    channels: [
-      {
-        type: "cbe",
-        value: process.env.CBE_ACCOUNT!,
-        name: process.env.CBE_ACCOUNT_NAME!,
-      },
-      {
-        type: "telebirr",
-        value: process.env.TELEBIRR_ACCOUNT!,
-        name: process.env.TELEBIRR_ACCOUNT_NAME!,
-      },
-    ],
+  provider: telebirr({
+    gatewayUrl: process.env.TELEBIRR_GATEWAY_URL!,
+    checkoutUrl: process.env.TELEBIRR_CHECKOUT_URL!,
+    fabricAppId: process.env.TELEBIRR_FABRIC_APP_ID!,
+    appSecret: process.env.TELEBIRR_APP_SECRET!,
+    merchantAppId: process.env.TELEBIRR_MERCHANT_APP_ID!,
+    merchantCode: process.env.TELEBIRR_MERCHANT_CODE!,
+    privateKeyPem: process.env.TELEBIRR_PRIVATE_KEY!,
+    notifyUrl: process.env.CALLBACK_URL!,
+    redirectUrl: process.env.RETURN_URL!,
   }),
   plans: [free, pro],
   plugins: [

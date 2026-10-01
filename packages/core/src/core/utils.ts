@@ -10,6 +10,10 @@ export function generateId(prefix: string): string {
   return `${prefix}_${randomId()}`;
 }
 
+export function generateTxRef(): string {
+  return `tx${randomId()}`;
+}
+
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("0")) return `251${digits.slice(1)}`;

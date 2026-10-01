@@ -61,6 +61,39 @@ export const PROVIDERS = [
     })`;
     },
   },
+  {
+    id: "telebirr",
+    name: "Telebirr",
+    package: "@birrjs/telebirr",
+    importName: "telebirr",
+    envVars: [
+      { key: "DATABASE_URL", line: "DATABASE_URL=" },
+      { key: "TELEBIRR_GATEWAY_URL", line: "TELEBIRR_GATEWAY_URL=" },
+      { key: "TELEBIRR_CHECKOUT_URL", line: "TELEBIRR_CHECKOUT_URL=" },
+      { key: "TELEBIRR_FABRIC_APP_ID", line: "TELEBIRR_FABRIC_APP_ID=" },
+      { key: "TELEBIRR_APP_SECRET", line: "TELEBIRR_APP_SECRET=" },
+      { key: "TELEBIRR_MERCHANT_APP_ID", line: "TELEBIRR_MERCHANT_APP_ID=" },
+      { key: "TELEBIRR_MERCHANT_CODE", line: "TELEBIRR_MERCHANT_CODE=" },
+      { key: "TELEBIRR_PRIVATE_KEY", line: "TELEBIRR_PRIVATE_KEY=" },
+      { key: "TELEBIRR_NOTIFY_URL", line: "TELEBIRR_NOTIFY_URL=" },
+      { key: "TELEBIRR_REDIRECT_URL", line: "TELEBIRR_REDIRECT_URL=" },
+      { key: "TELEBIRR_PUBLIC_KEY", line: "TELEBIRR_PUBLIC_KEY=" },
+    ],
+    generateConfig(): string {
+      return `telebirr({
+      gatewayUrl: process.env.TELEBIRR_GATEWAY_URL!,
+      checkoutUrl: process.env.TELEBIRR_CHECKOUT_URL!,
+      fabricAppId: process.env.TELEBIRR_FABRIC_APP_ID!,
+      appSecret: process.env.TELEBIRR_APP_SECRET!,
+      merchantAppId: process.env.TELEBIRR_MERCHANT_APP_ID!,
+      merchantCode: process.env.TELEBIRR_MERCHANT_CODE!,
+      privateKeyPem: process.env.TELEBIRR_PRIVATE_KEY!,
+      notifyUrl: process.env.TELEBIRR_NOTIFY_URL!,
+      redirectUrl: process.env.TELEBIRR_REDIRECT_URL!,
+      telebirrPublicKeyPem: process.env.TELEBIRR_PUBLIC_KEY || undefined,
+    })`;
+    },
+  },
 ] as const satisfies {
   id: string;
   name: string;

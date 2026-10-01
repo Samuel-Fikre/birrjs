@@ -17,6 +17,7 @@
     "@birrjs/email-resend": "workspace:*",
     "@birrjs/fingerprint": "workspace:*",
     "@birrjs/sms-afromessage": "workspace:*",
+    "@birrjs/telebirr": "workspace:^",
     "@birrjs/trial": "workspace:*",
     "@birrjs/verify-et": "workspace:*",
     "@birrjs/vodit": "workspace:*",
