@@ -68,13 +68,29 @@ import { chapa } from "@birrjs/chapa";
 
 Redirect users to a Chapa checkout page for payment. Supports webhooks, callback URLs, and automatic subscription activation. See the [Chapa provider page](/docs/providers/chapa) for configuration, events, and known gaps.
 
+### [Telebirr](/docs/providers/telebirr) — web checkout with QR or OTP
+
+```ts
+import { telebirr } from "@birrjs/telebirr";
+```
+
+Redirect users to Telebirr's web checkout, where they pay by scanning a QR code with the Telebirr app (or phone + OTP). Signed `preOrder` requests, server-to-server notify plus a browser redirect — both verified by re-querying the order before activation. See the [Telebirr provider page](/docs/providers/telebirr) for configuration, the sandbox testing walkthrough, and troubleshooting.
+
 ### [Vodit](/docs/providers/vodit) — receipt-based manual payment
 
 ```ts
 import { vodit } from "@birrjs/vodit";
 ```
 
-Display bank account instructions for users to send money directly, then verify via receipt URL. Supports Telebirr, CBE, Zemen, BoA, and Awash. See the [Vodit provider page](/docs/providers/vodit) for setup, per-bank parsing details, and recipient verification.
+Display bank account instructions for users to send money directly, then verify via receipt URL. Supports Telebirr, CBE, and Awash. See the [Vodit provider page](/docs/providers/vodit) for setup, per-bank parsing details, and recipient verification.
+
+### [Verify.et](/docs/providers/verify-et) — automated receipt verification
+
+```ts
+import { verifyEt } from "@birrjs/verifyet";
+```
+
+Universal receipt verification via [verify.et](https://verify.et) — detects the bank from any receipt format and checks payments against your configured accounts. See the [Verify.et provider page](/docs/providers/verify-et) for setup and bank-specific details.
 
 ## Switching Providers
 
@@ -111,7 +127,7 @@ Create a new package (e.g. `@birrjs/arifpay`) with:
 3. A Zod schema for webhook payload validation
 
 <Callout type="info">
-  Chapa and Vodit are available now. The provider system is designed to make adding new ones straightforward — planned providers include ArifPay, Santim Pay and more.
+  Chapa, Telebirr, Vodit and Verify.et are available now. The provider system is designed to make adding new ones straightforward — planned providers include ArifPay, Santim Pay and more.
 </Callout>
 
 

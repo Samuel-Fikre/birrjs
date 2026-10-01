@@ -1,0 +1,315 @@
+---
+title: Telebirr
+description: Integrate the Telebirr web checkout payment gateway.
+---
+
+<Callout type="warn">
+  **Unofficial integration.** This provider is community-written and maintained. It is **not**
+  affiliated with, endorsed by, or supported by Ethio Telecom or Telebirr.
+  Everything here comes from public integration docs and our own sandbox testing — for the
+  authoritative reference see the [official Telebirr developer docs](https://developer.ethiotelecom.et/docs/)
+  and confirm anything business-critical directly with Telebirr.
+</Callout>
+
+## Installation
+
+```bash
+pnpm add @birrjs/telebirr
+```
+
+## Configuration
+
+```ts
+import { createBirr } from "@birrjs/core";
+import { telebirr } from "@birrjs/telebirr";
+
+const birr = createBirr({
+  provider: telebirr({
+    gatewayUrl: process.env.TELEBIRR_GATEWAY_URL!,
+    checkoutUrl: process.env.TELEBIRR_CHECKOUT_URL!,
+    fabricAppId: process.env.TELEBIRR_FABRIC_APP_ID!,
+    appSecret: process.env.TELEBIRR_APP_SECRET!,
+    merchantAppId: process.env.TELEBIRR_MERCHANT_APP_ID!,
+    merchantCode: process.env.TELEBIRR_MERCHANT_CODE!,
+    privateKeyPem: process.env.TELEBIRR_PRIVATE_KEY!,
+    notifyUrl: process.env.TELEBIRR_NOTIFY_URL!,
+    redirectUrl: process.env.TELEBIRR_REDIRECT_URL!,
+    telebirrPublicKeyPem: process.env.TELEBIRR_PUBLIC_KEY || undefined,
+  }),
+  // ...
+});
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `gatewayUrl` | `string` | Yes | API base URL — sandbox value below |
+| `checkoutUrl` | `string` | Yes | Web checkout page base — sandbox value below |
+| `fabricAppId` | `string` | Yes | UUID sent as the `X-APP-Key` header |
+| `appSecret` | `string` | Yes | Fabric app secret — used to obtain the access token |
+| `merchantAppId` | `string` | Yes | Numeric merchant id — goes into `biz_content.appid` |
+| `merchantCode` | `string` | Yes | Merchant code — sent as `merch_code` and `payee_identifier` |
+| `privateKeyPem` | `string` | Yes | PEM or base64-DER string — see [Private key](#private-key) |
+| `notifyUrl` | `string` | Yes | Public URL where Telebirr POSTs payment notifications |
+| `redirectUrl` | `string` | Yes | URL the payer's browser lands on after payment|
+| `telebirrPublicKeyPem` | `string` | No | Telebirr's public key. When set, notify payload signatures are verified **fail-closed** |
+| `timeoutMs` | `number` | No | Request timeout in milliseconds |
+
+**Sandbox & production values** (same for every merchant):
+
+- `gatewayUrl`
+  - Sandbox: `https://developerportal.ethiotelebirr.et:38443/apiaccess/payment/gateway`
+  - Production: `https://superapp.ethiomobilemoney.et:38443/apiaccess/payment/gateway`
+- `checkoutUrl`
+  - Sandbox: `https://developerportal.ethiotelebirr.et:38443/payment/web/paygate`
+  - Production: `https://superapp.ethiomobilemoney.et:38443/payment/web/paygate`
+
+### Environment variables
+
+`birrjs init` writes these for you:
+
+| Variable | Description |
+|----------|-------------|
+| `TELEBIRR_GATEWAY_URL` | API base URL (sandbox value in [Options](#options)) |
+| `TELEBIRR_CHECKOUT_URL` | Web checkout page base (sandbox value in [Options](#options)) |
+| `TELEBIRR_FABRIC_APP_ID` | Fabric app UUID from the developer portal |
+| `TELEBIRR_APP_SECRET` | Fabric app secret |
+| `TELEBIRR_MERCHANT_APP_ID` | Numeric merchant id |
+| `TELEBIRR_MERCHANT_CODE` | Merchant code |
+| `TELEBIRR_PRIVATE_KEY` | RSA private key — base64-DER one-liner or PEM string (see [Private key](#private-key)) |
+| `TELEBIRR_NOTIFY_URL` | Public callback URL for POST notifications |
+| `TELEBIRR_REDIRECT_URL` | URL for the post-payment browser redirect|
+| `TELEBIRR_PUBLIC_KEY` | *(optional)* Telebirr public key for notify signature verification |
+
+Prefer a PEM file on disk instead of a single-line env value? Keep
+`TELEBIRR_PRIVATE_KEY_PATH` in your `.env` and load it yourself —
+`privateKeyPem: readFileSync(process.env.TELEBIRR_PRIVATE_KEY_PATH!, "utf8")`.
+`normalizePrivateKey()` accepts either form.
+
+### Where these values come from
+
+Sign in to the [Telebirr developer portal](https://developer.ethiotelecom.et/user/dashboard) — your credentials are listed on the home screen:
+
+| Dashboard field | BirrJS option |
+|-----------------|---------------|
+| `Merchant AppId` (numeric) | `merchantAppId` |
+| `Fabric App ID` (UUID) — also sent as the `X-APP-Key` header | `fabricAppId` |
+| `ShortCode` | `merchantCode` |
+| `App Secret` | `appSecret` |
+| `PrivateKey` | `privateKeyPem` |
+
+`gatewayUrl` and `checkoutUrl` are **the same for every merchant** — see the sandbox and production values under [Options](#options).
+
+
+## Private key
+
+The factory runs every key through `normalizePrivateKey()`, so all of these work:
+
+- A **base64-DER one-liner** in `TELEBIRR_PRIVATE_KEY` (what Telebirr's Postman environment ships) — recommended for `.env` files, since most `.env` loaders parse line-by-line and multi-line PEMs don't survive
+- A multi-line PEM string in your environment (if your loader supports it)
+- A PEM file on disk, loaded with `readFileSync(TELEBIRR_PRIVATE_KEY_PATH)`
+
+An unusable key fails fast at startup with `TELEBIRR_INVALID_PRIVATE_KEY`.
+
+## TLS certificate (sandbox)
+
+**Symptom** — every call to the sandbox gateway fails before it reaches Telebirr:
+
+```
+TelebirrError: fetch failed
+caused by: unable to verify the first certificate
+```
+
+**Cause** — the sandbox gateway only sends its own (leaf) certificate, not the intermediate CA
+that links it to GlobalSign. Browsers fetch the missing piece automatically. Node.js does not,
+so it can't verify who it's talking to. Production serves the full chain — this hits the
+sandbox only.
+
+**Fix** — download the missing intermediate once, then point Node at it:
+
+<Tabs items={["Linux/macOS", "Windows"]}>
+  <Tab value="Linux/macOS">
+
+  ```bash
+  curl -o globalsign-ev-intermediate.pem https://secure.globalsign.com/cacert/gsgccr3evtlsca2025.crt
+  NODE_EXTRA_CA_CERTS=$PWD/globalsign-ev-intermediate.pem pnpm dev
+  ```
+
+  </Tab>
+  <Tab value="Windows">
+
+  ```powershell
+  curl.exe -o globalsign-ev-intermediate.pem https://secure.globalsign.com/cacert/gsgccr3evtlsca2025.crt
+  setx NODE_EXTRA_CA_CERTS "C:\full\path\to\globalsign-ev-intermediate.pem"
+  ```
+
+  Open a **new** terminal, then `pnpm dev`.
+
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  Terminals opened **before** `setx` don't have the variable — and the symptom is the *same*
+  `fetch failed` error, so it looks like the fix didn't work. Either open a fresh terminal, or set
+  it for the current one: `$env:NODE_EXTRA_CA_CERTS = "C:\full\path\to\globalsign-ev-intermediate.pem"`
+</Callout>
+
+Only server-side **gateway** calls need this — the checkout page opens in the payer's browser,
+which handles certificate chains on its own. Production certificates chain correctly.
+
+## How it works
+
+<Steps>
+  <Step>
+  ### 1. Create the order
+
+  `subscribe()` → `initializeTransaction()` sends a signed `preOrder` (RSA `SHA256WithRSA`) with
+  amount, `merch_order_id`, `notify_url`, and `redirect_url`. Telebirr returns a `prepay_id`.
+  </Step>
+  <Step>
+  ### 2. Send the payer to checkout
+
+  BirrJS builds the checkout page URL from `checkoutUrl` + `prepay_id` and returns it as
+  `checkoutUrl` in the subscribe response — redirect the user there.
+  </Step>
+  <Step>
+  ### 3. The payer pays
+
+  On the checkout page the payer either **scans the QR code** with their Telebirr app
+  (recommended — see [Testing in the sandbox](#testing-in-the-sandbox)) or enters phone + OTP.
+  </Step>
+  <Step>
+  ### 4. Two delivery paths fire
+
+  Telebirr POSTs a signed JSON notification to `notify_url` **and** redirects the payer's browser
+  to `redirect_url` with signed query parameters. The POST lands on your `/handle-webhook` route;
+  the redirect goes wherever `redirect_url` points — set it to `/handle-webhook` to activate from
+  the redirect too, or to an app page and rely on the notify alone.
+  </Step>
+  <Step>
+  ### 5. BirrJS verifies — and never trusts the callback
+
+  Regardless of which path arrives, BirrJS re-queries Telebirr's `queryOrder` API and only
+  activates when the order really is `PAY_SUCCESS`. The subscription flips
+  `pending → active` and `subscription.activated` fires (app handlers + plugins).
+  </Step>
+</Steps>
+
+### Delivery paths
+
+| Mechanism | Method | Sender | Payload |
+|-----------|--------|--------|---------|
+| `notify_url` | POST | Telebirr server | Signed JSON (`merch_order_id`, `order_status`, `sign`, …). Signature checked when `telebirrPublicKeyPem` is set |
+| `redirect_url` | GET | Payer's browser | Query params (`merch_order_id`, `trade_status=PAY_SUCCESS`, `sign`, …). Signature not checked — authenticity comes from the `queryOrder` re-query |
+
+Both mechanisms are safe to lose: each one independently verifies against the API and activates
+idempotently.
+
+
+The params are visible to the payer but carry no secrets (identifiers and a signature, not
+credentials) — and they're tamper-proof: BirrJS reads them but never trusts them, re-querying
+`queryOrder` instead, so editing `trade_status` by hand cannot fake a payment. If the long query
+string bothers you in the address bar, strip it after landing with `history.replaceState`.
+
+## Supported events
+
+| Event | Effect |
+|-------|--------|
+| `charge.success` | `pending` → `active`. Fires `subscription.activated`. Renewals extend `expiresAt` |
+| `charge.failed/cancelled` | `pending` → `failed`. Active/trialing subscriptions are **never** touched (renewal-failure protection) |
+| Redirect with non-success `trade_status` | Logged, HTTP 200, no state change |
+
+There is no `charge.reversed` / `charge.refunded` path — Telebirr refunds are handled out-of-band.
+
+## Testing in the sandbox
+
+Everything below comes from getting a real payment to complete end-to-end. it saves the steps that
+otherwise cost hours.
+
+### Credentials
+
+Sandbox credentials come from the [Telebirr developer portal](https://developer.ethiotelecom.et/user/dashboard) (a Postman collection + environment are provided there too). You need the merchant half (gateway, checkout, fabric, merchant ids, private key) — see [Where these values come from](#where-these-values-come-from).
+
+### Install the testbed app
+
+Paying on the web checkout requires the **Telebirr test app** — a real wallet app pointed at the
+sandbox. Your personal Telebirr app/account will not work.
+
+| Platform | Link |
+|----------|------|
+| Android (APK) | `https://developer.ethiotelecom.et/developer_tools/static/download/SuperAppTestBed.apk` |
+| iOS | TestFlight: `https://testflight.apple.com/join/40SY99Dh` |
+
+Log in with the sandbox test phone and PIN exactly like the real Telebirr app.
+
+### Test consumer
+
+| Field | Value |
+|-------|-------|
+| Phone | `900000099` |
+| PIN | `778899` |
+
+<Callout type="info">
+  Personal phone numbers are **not** in the sandbox MM database — you'll see
+  "Failed to query the consumer" on the checkout page. That error means "unknown payer", not
+  "broken integration".
+</Callout>
+
+### Paying: use the QR code
+
+1. Open your app's `checkoutUrl` in a browser
+2. Scan the displayed QR code with the testbed app
+3. Approve in the app
+
+The QR path completes in seconds and avoids the web page's SMS-OTP step, which is unreliable for
+test numbers (the OTP either never arrives anywhere visible or is rejected as expired).
+
+### Callbacks without a public server
+
+Point `notifyUrl` at a tunnel ([ngrok](https://ngrok.com/),
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)):
+
+```bash
+ngrok http 3001
+# notifyUrl = https://<id>.ngrok-free.app/api/birrjs/handle-webhook
+```
+
+The sandbox **accepts notify from tunnel URLs with no IP whitelist** — the whitelist and SSL
+certificate submission process described in Telebirr's guides applies to production. Verify what
+arrived in the tunnel inspector: it shows every
+request, forwarded or failed.
+
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `fetch failed` / `unable to verify the first certificate` | Sandbox gateway serves a leaf-only chain | Set `NODE_EXTRA_CA_CERTS` — see [TLS certificate](#tls-certificate-sandbox) |
+| HTTP 400, error code `49401024995` | `merch_order_id` contains hyphens/underscores | Use `generateTxRef()` or strip separators from your ids |
+| HTTP 401 from the gateway | Wrong `fabricAppId`/`appSecret`, or your egress IP isn't trusted | Check credentials ask Telebirr to whitelist your IP |
+| "Failed to query the consumer" on checkout | Payer's phone not in sandbox wallet DB | Use the sandbox test consumer above |
+| "Network error" on checkout page | Transient sandbox flakiness | Retry the payment |
+| OTP never arrives / always invalid | Test numbers have no real SMS delivery | Pay via QR + testbed app |
+| Webhook returns 500, logs show `ECONNREFUSED` | Your database is down (not a Telebirr problem) | Check `docker ps` / your DB, then replay the redirect URL |
+| Subscription becomes `failed` ~1h after subscribe | Pending-check scheduler | Replay the redirect URL — activation recovers it |
+| Notify never reaches your server | Stale tunnel URL or wrong `notifyUrl` | Check the tunnel inspector remember URLs are fixed per order |
+
+## Production checklist
+
+- Switch `gatewayUrl` / `checkoutUrl` to production endpoints (confirm current values with Telebirr)
+- Complete Telebirr's official **IP whitelist + SSL certificate submission** process — unlike
+  sandbox, production callbacks are enforced
+- Confirm the required RSA padding with Telebirr (sandbox accepts `SHA256WithRSA` some Telebirr
+  SDK documentation requires PSS for production)
+- Set `TELEBIRR_PUBLIC_KEY` so notify signatures are verified fail-closed
+- API response payloads' own `sign` field is currently not verified — traffic is trusted after TLS
+  and, more importantly, never trusted for payment decisions (`queryOrder` is always re-queried)
+
+## Known gaps
+
+- **Pending-notify race** — a notify can arrive while `queryOrder` still reports a transient
+  status (`PAYING`/`WAIT_PAY`) BirrJS then classifies it as `charge.failed/cancelled` and marks a
+  `pending` subscription `failed`. A later success delivery (or redirect replay) recovers it, since
+  activation has no status guard.
+- **No `charge.reversed` / `charge.refunded`** — refunds aren't surfaced as webhook events.

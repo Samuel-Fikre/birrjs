@@ -14,7 +14,7 @@ description: Install BirrJS, configure a provider, and mount the route handler i
 
 BirrJS ships as a monorepo with a core package and separate provider packages.
 
-<Tabs items={["Chapa", "Vodit"]}>
+<Tabs items={["Chapa", "Telebirr", "Vodit"]}>
   <Tab value="Chapa">
   <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
     <Tab value="pnpm">
@@ -35,6 +35,30 @@ BirrJS ships as a monorepo with a core package and separate provider packages.
     <Tab value="bun">
     ```bash
     bun add @birrjs/core @birrjs/chapa
+    ```
+    </Tab>
+  </Tabs>
+  </Tab>
+  <Tab value="Telebirr">
+  <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @birrjs/core @birrjs/telebirr
+    ```
+    </Tab>
+    <Tab value="npm">
+    ```bash
+    npm install @birrjs/core @birrjs/telebirr
+    ```
+    </Tab>
+    <Tab value="yarn">
+    ```bash
+    yarn add @birrjs/core @birrjs/telebirr
+    ```
+    </Tab>
+    <Tab value="bun">
+    ```bash
+    bun add @birrjs/core @birrjs/telebirr
     ```
     </Tab>
   </Tabs>
@@ -85,7 +109,7 @@ export const birrjs = createBirr({
 
 BirrJS uses provider adapters for payment processing. Choose your provider:
 
-<Tabs items={["Chapa", "Vodit"]}>
+<Tabs items={["Chapa", "Telebirr", "Vodit"]}>
   <Tab value="Chapa">
 
   ```ts title="src/lib/birrjs.ts"
@@ -117,6 +141,32 @@ BirrJS uses provider adapters for payment processing. Choose your provider:
 
     Enable **Receive Webhook for failed Payments**. BirrJS handles `charge.failed` events to mark pending subscriptions as failed — without it, only success events arrive and `pending` subscriptions pile up until the scheduled cron sweep clears them.
   </Callout>
+  </Tab>
+  <Tab value="Telebirr">
+
+  ```ts title="src/lib/birrjs.ts"
+  import { createBirr } from "@birrjs/core";
+  import { telebirr } from "@birrjs/telebirr"; // [!code highlight]
+
+  export const birrjs = createBirr({
+    provider: telebirr({ // [!code highlight]
+      gatewayUrl: process.env.TELEBIRR_GATEWAY_URL!, // [!code highlight]
+      checkoutUrl: process.env.TELEBIRR_CHECKOUT_URL!, // [!code highlight]
+      fabricAppId: process.env.TELEBIRR_FABRIC_APP_ID!, // [!code highlight]
+      appSecret: process.env.TELEBIRR_APP_SECRET!, // [!code highlight]
+      merchantAppId: process.env.TELEBIRR_MERCHANT_APP_ID!, // [!code highlight]
+      merchantCode: process.env.TELEBIRR_MERCHANT_CODE!, // [!code highlight]
+      privateKeyPem: process.env.TELEBIRR_PRIVATE_KEY!, // [!code highlight]
+      notifyUrl: process.env.TELEBIRR_NOTIFY_URL!, // [!code highlight]
+      redirectUrl: process.env.TELEBIRR_REDIRECT_URL!, // [!code highlight]
+    }),
+  });
+  ```
+
+  <Callout type="info">
+    **Credentials** come from the [Telebirr developer portal](https://developer.ethiotelecom.et/user/dashboard). The `TELEBIRR_*` variables map to the dashboard's `Merchant AppId`, `Fabric App ID`, `ShortCode`, `App Secret`, and `PrivateKey` fields — full mapping on the [Telebirr provider page](/docs/providers/telebirr).
+  </Callout>
+
   </Tab>
   <Tab value="Vodit">
 

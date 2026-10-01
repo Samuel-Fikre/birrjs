@@ -96,6 +96,15 @@ Configure the same URL as the **Webhook URL** in your Chapa dashboard. Chapa sen
   The webhook endpoint does **not** require customer identity. It uses `requireHeaders: true` and `requireRequest: true` to access the raw body and headers directly.
 </Callout>
 
+### Telebirr delivery
+
+Telebirr uses the same `/handle-webhook` route with a different split:
+
+- **POST** — server-to-server notify with a signed JSON payload (`merch_order_id`, `order_status`, `sign`). BirrJS verifies the signature when `telebirrPublicKeyPem` is configured, then **re-queries Telebirr's `queryOrder` API** before acting — the payload itself is never trusted.
+- **GET** — the payer's **browser** arrives here via `redirect_url` with `?merch_order_id=...&trade_status=PAY_SUCCESS&...`. The query-string signature is not checked; authenticity comes from the same `queryOrder` re-query.
+
+Either path alone activates the subscription, and Telebirr does **not** retry a notify that returns a non-200 — so keep the endpoint fast and your database up. If a delivery is missed entirely, replaying the redirect URL re-runs the verify-and-activate flow safely. Full details on the [Telebirr provider page](/docs/providers/telebirr).
+
 ## Failed Payment Protection
 
 If a renewal payment fails but the current period hasn't expired, the subscription stays **active** — the customer keeps access until their paid period ends. Only `pending` subscriptions (never activated) are marked as `failed`.
