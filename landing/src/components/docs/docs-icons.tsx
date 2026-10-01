@@ -28,8 +28,8 @@ import {
 import type { ReactElement } from "react";
 
 import { ChapaLogo } from "@/components/icons/chapa-logo";
-import { TelebirrLogo } from "@/components/icons/telebirr-logo";
 import { LinksEtLogo } from "@/components/icons/linkset-logo";
+import { TelebirrLogo } from "@/components/icons/telebirr-logo";
 import { VerifyEtLogo } from "@/components/icons/verifyet-logo";
 
 const categoryIcons = {
