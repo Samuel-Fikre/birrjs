@@ -1,6 +1,6 @@
 {
   "name": "@birrjs/verify-checkout",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Verify.et Checkout hosted checkout provider for BirrJS",
   "license": "MIT",
   "type": "module",
