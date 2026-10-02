@@ -204,6 +204,16 @@ export const handleWebhook = defineBirrJSMethod(
 
         return { success: true, message: "Webhook processed successfully" };
       }
+      case "charge.pending":
+        logger.info(
+          { providerReferenceId: providerEvent.providerReferenceId, eventType },
+          "Non-terminal webhook event, subscription unchanged",
+        );
+        await database
+          .update(webhookEvent)
+          .set({ status: "ignored", processedAt: new Date() })
+          .where(eq(webhookEvent.id, webhookEventId));
+        return { success: true, message: "Webhook event pending, no action" };
       case "charge.failed/cancelled":
         // Don't mark active subscriptions as failed (renewal attempt failed,
         // but current access is still valid until current expiry)

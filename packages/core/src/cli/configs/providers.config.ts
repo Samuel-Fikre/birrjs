@@ -62,6 +62,25 @@ export const PROVIDERS = [
     },
   },
   {
+    id: "verify-checkout",
+    name: "Verify Checkout (hosted checkout)",
+    package: "@birrjs/verify-checkout",
+    importName: "verifyCheckout",
+    envVars: [
+      { key: "DATABASE_URL", line: "DATABASE_URL=" },
+      { key: "VERIFY_CHECKOUT_API_KEY", line: "VERIFY_CHECKOUT_API_KEY=" },
+      { key: "VERIFY_CHECKOUT_WEBHOOK_SECRET", line: "VERIFY_CHECKOUT_WEBHOOK_SECRET=" },
+      { key: "RETURN_URL", line: "RETURN_URL=" },
+    ],
+    generateConfig(): string {
+      return `verifyCheckout({
+      apiKey: process.env.VERIFY_CHECKOUT_API_KEY!,
+      webhookSecret: process.env.VERIFY_CHECKOUT_WEBHOOK_SECRET!,
+      returnUrl: process.env.RETURN_URL!,
+    })`;
+    },
+  },
+  {
     id: "telebirr",
     name: "Telebirr",
     package: "@birrjs/telebirr",
