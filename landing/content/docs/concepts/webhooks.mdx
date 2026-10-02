@@ -14,6 +14,7 @@ BirrJS processes webhooks from your payment provider to update subscription stat
 | `charge.cancelled` | Same as `charge.failed` |
 | `charge.reversed` | Marks as cancelled |
 | `charge.refunded` | Marks as cancelled |
+| `charge.pending` | No status change — logged as `ignored` (used for lifecycle events and test deliveries) |
 | Unknown | `ignored` (logged, no status change) |
 
 ## How It Works
@@ -104,6 +105,15 @@ Telebirr uses the same `/handle-webhook` route with a different split:
 - **GET** — the payer's **browser** arrives here via `redirect_url` with `?merch_order_id=...&trade_status=PAY_SUCCESS&...`. The query-string signature is not checked; authenticity comes from the same `queryOrder` re-query.
 
 Either path alone activates the subscription, and Telebirr does **not** retry a notify that returns a non-200 — so keep the endpoint fast and your database up. If a delivery is missed entirely, replaying the redirect URL re-runs the verify-and-activate flow safely. Full details on the [Telebirr provider page](/docs/providers/telebirr).
+
+### Verify Checkout delivery
+
+Verify Checkout's webhook destination is registered **once in their dashboard** (Developers → Webhooks) — there is no per-request callback field:
+
+- **POST** — signed delivery with `VerifyCheckout-Timestamp` and `VerifyCheckout-Signature` (`v1=<hex>`, HMAC-SHA256 over `<timestamp>.<rawBody>`). BirrJS verifies the signature (fail-closed when `webhookSecret` is set, ±300s replay window) and then **re-queries `GET /v1/deposits/{id}`** — the delivery itself is only a change signal.
+- **`return_url`** — the customer's browser lands on your app; poll `check()` / `getSubscription()` to confirm if no webhook is configured.
+
+Lifecycle events and the dashboard's `webhook.test` ping map to `charge.pending` and are stored as `ignored`, returning a `200` so the endpoint stays active. Full details on the [Verify Checkout provider page](/docs/providers/verify-checkout).
 
 ## Failed Payment Protection
 

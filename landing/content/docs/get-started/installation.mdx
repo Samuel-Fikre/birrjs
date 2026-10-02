@@ -14,7 +14,7 @@ description: Install BirrJS, configure a provider, and mount the route handler i
 
 BirrJS ships as a monorepo with a core package and separate provider packages.
 
-<Tabs items={["Chapa", "Telebirr", "Vodit"]}>
+<Tabs items={["Chapa", "Telebirr", "Vodit", "Verify Checkout"]}>
   <Tab value="Chapa">
   <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
     <Tab value="pnpm">
@@ -87,6 +87,30 @@ BirrJS ships as a monorepo with a core package and separate provider packages.
     </Tab>
   </Tabs>
   </Tab>
+  <Tab value="Verify Checkout">
+  <Tabs items={["pnpm", "npm", "yarn", "bun"]}>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @birrjs/core @birrjs/verify-checkout
+    ```
+    </Tab>
+    <Tab value="npm">
+    ```bash
+    npm install @birrjs/core @birrjs/verify-checkout
+    ```
+    </Tab>
+    <Tab value="yarn">
+    ```bash
+    yarn add @birrjs/core @birrjs/verify-checkout
+    ```
+    </Tab>
+    <Tab value="bun">
+    ```bash
+    bun add @birrjs/core @birrjs/verify-checkout
+    ```
+    </Tab>
+  </Tabs>
+  </Tab>
 </Tabs>
 </Step>
 
@@ -109,7 +133,7 @@ export const birrjs = createBirr({
 
 BirrJS uses provider adapters for payment processing. Choose your provider:
 
-<Tabs items={["Chapa", "Telebirr", "Vodit"]}>
+<Tabs items={["Chapa", "Telebirr", "Vodit", "Verify Checkout"]}>
   <Tab value="Chapa">
 
   ```ts title="src/lib/birrjs.ts"
@@ -190,6 +214,32 @@ BirrJS uses provider adapters for payment processing. Choose your provider:
 
   <Callout type="warning">
     **The `name` field is required** — Vodit uses it to verify the receipt's recipient matches your account. Use the name as registered at the bank (first name is fine). See the [Vodit provider page](/docs/providers/vodit) for details.
+  </Callout>
+
+  </Tab>
+  <Tab value="Verify Checkout">
+
+  ```ts title="src/lib/birrjs.ts"
+  import { createBirr } from "@birrjs/core";
+  import { verifyCheckout } from "@birrjs/verify-checkout"; // [!code highlight]
+
+  export const birrjs = createBirr({
+    provider: verifyCheckout({ // [!code highlight]
+      apiKey: process.env.VERIFY_CHECKOUT_API_KEY!, // [!code highlight]
+      webhookSecret: process.env.VERIFY_CHECKOUT_WEBHOOK_SECRET!, // [!code highlight]
+      returnUrl: process.env.RETURN_URL!, // [!code highlight]
+    }),
+  });
+  ```
+
+  <Callout type="info">
+    **`VERIFY_CHECKOUT_API_KEY`** — create a key in the Verify Checkout dashboard → Developers → API Keys. The `vchk_...` secret is shown once.
+
+    **`VERIFY_CHECKOUT_WEBHOOK_SECRET`** — copy the `whsec_...` signing secret when you create a webhook endpoint (Developers → Webhooks), then **send a test delivery** — the endpoint activates on the first `2xx` response.
+
+    **`RETURN_URL`** — where the customer's browser lands after checkout (e.g. `http://localhost:3001/account`). Its origin must be registered **and activated** in Developers → Return URL Domains, or every deposit fails with `return_url_not_allowed`.
+
+    Don't forget the two dashboard prerequisites: at least one **receiving account** (else the checkout shows no payment options) and your webhook URL (webhooks are optional — polling works). Full walkthrough on the [Verify Checkout provider page](/docs/providers/verify-checkout).
   </Callout>
 
   </Tab>
