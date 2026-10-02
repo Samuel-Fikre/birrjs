@@ -101,11 +101,11 @@ import type { birrjs } from "./birrjs";
 export const client = createBirrJSClient<typeof birrjs>();
 ```
 
-Subscribe can be called from the client or the server. Depending on your provider, it returns either a `checkoutUrl` (redirect providers like Chapa or Telebirr) or `paymentInstructions` (Verification providers like Vodit).
+Subscribe can be called from the client or the server. Depending on your provider, it returns either a `checkoutUrl` (redirect providers like Chapa, Telebirr, or Verify Checkout) or `paymentInstructions` (verification providers like Vodit).
 
 <Tabs items={["Client", "Server"]}>
   <Tab value="Client">
-  <Tabs items={["Chapa", "Telebirr", "Vodit"]}>
+  <Tabs items={["Chapa", "Telebirr", "Vodit", "Verify Checkout"]}>
     <Tab value="Chapa">
 
     ```tsx title="subscribe-button.tsx"
@@ -142,10 +142,22 @@ Subscribe can be called from the client or the server. Depending on your provide
     ```
 
     </Tab>
+    <Tab value="Verify Checkout">
+
+    ```tsx title="subscribe-button.tsx"
+    import { client } from "./birrjs-client";
+
+    async function handleSubscribe() {
+      const { checkoutUrl } = await client.subscribe({ planId: "pro" });
+      window.location.href = checkoutUrl;
+    }
+    ```
+
+    </Tab>
   </Tabs>
   </Tab>
   <Tab value="Server">
-  <Tabs items={["Chapa", "Telebirr", "Vodit"]}>
+  <Tabs items={["Chapa", "Telebirr", "Vodit", "Verify Checkout"]}>
     <Tab value="Chapa">
 
     ```ts title="app/api/subscribe/route.ts"
@@ -190,6 +202,22 @@ Subscribe can be called from the client or the server. Depending on your provide
         planId: "pro",
       });
       return Response.json({ paymentInstructions });
+    }
+    ```
+
+    </Tab>
+    <Tab value="Verify Checkout">
+
+    ```ts title="app/api/subscribe/route.ts"
+    import { birrjs } from "../lib/birrjs";
+
+    export async function POST(req: Request) {
+      const { customerId } = await req.json();
+      const { checkoutUrl } = await birrjs.subscribe({
+        customerId,
+        planId: "pro",
+      });
+      return Response.json({ checkoutUrl });
     }
     ```
 

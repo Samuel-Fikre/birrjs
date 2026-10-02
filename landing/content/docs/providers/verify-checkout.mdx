@@ -1,0 +1,105 @@
+---
+title: Verify Checkout
+description: Accept Ethiopian account-to-account payments through Verify Checkout's hosted checkout.
+---
+
+The `@birrjs/verify-checkout` package integrates [Verify Checkout](https://checkout.verify.et) — a hosted checkout that displays your receiving accounts and verifies account-to-account transfers. Customers pick a channel, pay directly from their bank or Telebirr app, and the subscription activates when Verify Checkout confirms the deposit.
+
+## Installation
+
+```bash
+pnpm add @birrjs/verify-checkout
+```
+
+## Configuration
+
+```ts
+import { verifyCheckout } from "@birrjs/verify-checkout";
+
+createBirr({
+  provider: verifyCheckout({
+    apiKey: process.env.VERIFY_CHECKOUT_API_KEY!,
+    webhookSecret: process.env.VERIFY_CHECKOUT_WEBHOOK_SECRET!,
+    returnUrl: process.env.RETURN_URL!,
+  }),
+});
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `apiKey` | `string` | Yes | API key (`vchk_...`) from the Verify Checkout dashboard |
+| `returnUrl` | `string` | Yes | Where the customer's browser lands after checkout. Its origin must be registered in the dashboard |
+| `webhookSecret` | `string` | No | Signing secret (`whsec_...`) for webhook verification. When set, unsigned or forged deliveries are rejected |
+| `callbackUrl` | `string` | No | Stored for BirrJS core compatibility only — Verify Checkout's webhook destination is configured in the dashboard, not sent per-request |
+| `baseUrl` | `string` | No | API base URL. Defaults to `https://checkoutapi.verify.et` |
+| `timeoutMs` | `number` | No | Request timeout in milliseconds. Defaults to `30000` |
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `VERIFY_CHECKOUT_API_KEY` | API key from Developers → API Keys (shown once at creation) |
+| `VERIFY_CHECKOUT_WEBHOOK_SECRET` | Signing secret from Developers → Webhooks (shown once) |
+| `RETURN_URL` | Absolute URL for the post-checkout browser redirect |
+
+## Dashboard setup
+
+Four things live in the [Verify Checkout dashboard](https://checkout.verify.et) — none of them in your code:
+
+1. **Receiving accounts** (Developers → Receiving accounts) — the bank/wallet accounts customers pay. **At least one active account is required**, or the checkout shows no payment options. New accounts are active immediately.
+2. **Return URL domain** (Developers → Return URL Domains) — register the **origin** (scheme + host + port), e.g. `http://localhost:3001` or `https://shop.example.com`, then **activate it**. Every `returnUrl` must match a registered, active origin or `createDeposit` fails with `return_url_not_allowed`.
+3. **API key** (Developers → API Keys) — create a key, copy the `vchk_...` secret immediately (it is shown once).
+4. **Webhook endpoint** (Developers → Webhooks) — optional but recommended. Paste your public `/handle-webhook` URL, keep the default outcome events, copy the `whsec_...` secret, and **send a test delivery** — the endpoint activates on the first `2xx` response.
+
+<Callout type="warning">
+  Webhooks are optional — polling works — but without a webhook **and** without a
+  return-URL verification, a pending subscription is marked failed by the
+  pending-check scheduler after ~60 minutes.
+</Callout>
+
+## How it works
+
+When a customer subscribes:
+
+1. Your app calls `subscribe()` → BirrJS calls `provider.initializeTransaction()`
+2. BirrJS calls `POST /v1/deposits` — your BirrJS `txRef` rides as `merchant_customer_id` and as the `Idempotency-Key` header (retries can never create a duplicate checkout)
+3. Verify Checkout returns a `checkoutUrl` — redirect the customer there
+4. The customer pays a displayed receiving account and submits the transfer reference
+5. Verify Checkout re-verifies the transfer, then sends a signed **POST webhook** to the endpoint you registered in the dashboard
+6. BirrJS **never trusts the delivery** — it re-queries `GET /v1/deposits/{id}` and activates the subscription only when the authoritative status is `succeeded` with an amount match
+
+### Delivery paths
+
+| Mechanism | Method | Sender | Purpose |
+|-----------|--------|--------|---------|
+| Webhook | POST | Verify Checkout server | Signed event (`VerifyCheckout-Signature`). BirrJS re-queries and activates |
+| `return_url` | GET | Customer's browser | Lands on your app after checkout — poll `verifyTransaction()` to confirm |
+
+There is no per-request callback field: webhook destinations are registered once in the dashboard.
+
+## Error types
+
+| Error | Cause |
+|-------|-------|
+| `UNAUTHORIZED` | Invalid or revoked API key (401) |
+| `FORBIDDEN` | API key lacks the required scope (403) |
+| `INSUFFICIENT_CREDITS` | Workspace out of verification credits (402) |
+| `IDEMPOTENCY_CONFLICT` | Same `Idempotency-Key` with a different body (409) |
+| `VALIDATION_FAILED` | Request rejected (400/422) — e.g. `return_url_not_allowed` |
+| `RATE_LIMITED` | Too many requests (429) |
+| `SERVER_ERROR` | Verify Checkout 5xx |
+| `TIMEOUT_ERROR` | Request exceeded the timeout |
+| `NETWORK_ERROR` | Connectivity failure |
+| `MALFORMED_RESPONSE` | Deposit response missing `checkout_url` |
+| `INVALID_WEBHOOK` | Bad payload or failed signature verification |
+
+## Sandbox testing
+
+1. Add a receiving account and activate a return-URL domain in the dashboard
+2. For local webhooks, expose your app with a tunnel — `ngrok http 3001` — and register `https://<id>.ngrok-free.app/api/birrjs/handle-webhook` as the webhook endpoint
+3. Copy the `whsec_...` secret into `VERIFY_CHECKOUT_WEBHOOK_SECRET`
+4. Send a **test delivery** from the dashboard — the endpoint flips to active on the first `2xx`
+5. Subscribe in your app, complete checkout on the hosted page, and watch the subscription flip to `active` when the signed `deposit.succeeded` event arrives
+

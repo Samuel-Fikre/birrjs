@@ -30,6 +30,7 @@ import type { ReactElement } from "react";
 import { ChapaLogo } from "@/components/icons/chapa-logo";
 import { LinksEtLogo } from "@/components/icons/linkset-logo";
 import { TelebirrLogo } from "@/components/icons/telebirr-logo";
+import { VerifyCheckoutLogo } from "@/components/icons/verify-checkout-logo";
 import { VerifyEtLogo } from "@/components/icons/verifyet-logo";
 
 const categoryIcons = {
@@ -68,6 +69,7 @@ const pageIcons = {
   telebirr: <TelebirrLogo className="docs-category-icon size-3! shrink-0" />,
   vodit: <LinksEtLogo className="docs-category-icon size-3! shrink-0" />,
   "verify et": <VerifyEtLogo className="docs-category-icon size-3! shrink-0" />,
+  "verify checkout": <VerifyCheckoutLogo className="docs-category-icon size-3! shrink-0" />,
   client: <Monitor className="docs-category-icon size-3! shrink-0" />,
   cli: <Terminal className="docs-category-icon size-3! shrink-0" />,
   "payment block": <LayoutDashboard className="docs-category-icon size-3! shrink-0" />,

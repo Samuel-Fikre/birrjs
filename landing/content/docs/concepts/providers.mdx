@@ -92,6 +92,14 @@ import { verifyEt } from "@birrjs/verifyet";
 
 Universal receipt verification via [verify.et](https://verify.et) — detects the bank from any receipt format and checks payments against your configured accounts. See the [Verify.et provider page](/docs/providers/verify-et) for setup and bank-specific details.
 
+### [Verify Checkout](/docs/providers/verify-checkout) — hosted checkout
+
+```ts
+import { verifyCheckout } from "@birrjs/verify-checkout";
+```
+
+Redirect users to Verify Checkout's hosted page, where they pay one of your receiving accounts and submit the transfer reference. Signed webhooks (destination configured in the Verify Checkout dashboard), an obligatory API re-query before activation, and a polling fallback when webhooks aren't set up. See the [Verify Checkout provider page](/docs/providers/verify-checkout) for the dashboard setup checklist and sandbox walkthrough.
+
 ## Switching Providers
 
 Your app code never references the provider directly — all calls go through the `PaymentProvider` interface. Swapping from Chapa to Vodit means changing one import:
@@ -127,7 +135,7 @@ Create a new package (e.g. `@birrjs/arifpay`) with:
 3. A Zod schema for webhook payload validation
 
 <Callout type="info">
-  Chapa, Telebirr, Vodit and Verify.et are available now. The provider system is designed to make adding new ones straightforward — planned providers include ArifPay, Santim Pay and more.
+  Chapa, Telebirr, Vodit, Verify.et and Verify Checkout are available now. The provider system is designed to make adding new ones straightforward — planned providers include ArifPay, Santim Pay and more.
 </Callout>
 
 
