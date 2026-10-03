@@ -684,3 +684,48 @@ html:not([data-anchor-scrolling]) {
     animation-iteration-count: 1 !important;
   }
 }
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility animate-caret-blink {
+  animation: caret-blink 1s step-end infinite;
+}
+
+/* Provider name slot cycle (features section) */
+@keyframes provider-cycle {
+  0%,
+  15% {
+    transform: translateY(0);
+  }
+  20%,
+  35% {
+    transform: translateY(-1.25rem);
+  }
+  40%,
+  55% {
+    transform: translateY(-2.5rem);
+  }
+  60%,
+  75% {
+    transform: translateY(-3.75rem);
+  }
+  80%,
+  95% {
+    transform: translateY(-5rem);
+  }
+  100% {
+    transform: translateY(-6.25rem);
+  }
+}
+@utility animate-provider-cycle {
+  animation: provider-cycle 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
