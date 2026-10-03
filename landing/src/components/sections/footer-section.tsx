@@ -6,11 +6,15 @@ import { URLs } from "@/lib/consts";
 const navLinks = [
   { label: "Docs", href: "/docs" },
   { label: "GitHub", href: URLs.githubRepo, external: true },
-  { label: "Telegram", href: "https://t.me/birrjs", external: true },
+  { label: "Telegram", href: "https://t.me/samuel_dumps", external: true },
 ];
 
 const socialLinks = [
-  { label: "Telegram", href: "https://t.me/birrjs", icon: <MessageCircle className="size-4" /> },
+  {
+    label: "Telegram",
+    href: "https://t.me/samuel_dumps",
+    icon: <MessageCircle className="size-4" />,
+  },
   { label: "GitHub", href: URLs.githubRepo, icon: <Github className="size-4" /> },
 ];
 
