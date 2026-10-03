@@ -684,3 +684,18 @@ html:not([data-anchor-scrolling]) {
     animation-iteration-count: 1 !important;
   }
 }
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility animate-caret-blink {
+  animation: caret-blink 1s step-end infinite;
+}

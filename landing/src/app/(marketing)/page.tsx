@@ -1,3 +1,4 @@
+import { CliSection } from "@/components/sections/cli-section";
 import { CTASection } from "@/components/sections/cta-section";
 import { FeaturesSection } from "@/components/sections/features-section";
 import { FooterSection } from "@/components/sections/footer-section";
@@ -9,6 +10,7 @@ export default function HomePage() {
     <div className="relative">
       <HeroSection />
       <ProvidersSection />
+      <CliSection />
       <FeaturesSection />
       <CTASection />
       <FooterSection />
