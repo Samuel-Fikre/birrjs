@@ -1,12 +1,14 @@
 import type { BirrJSContext } from "../context";
 import type { BirrJSEventHandlers, BirrJSEventMap, BirrJSEventName } from "../types/events";
 import type {
-  BirrJSPlugin,
+  BeforePlanChangeHookCtx,
   BeforeSubscribeHookCtx,
   BeforeSubscribeResult,
+  BirrJSPlugin,
   CheckoutReadyHookCtx,
   PaymentReadyHookCtx,
 } from "../types/plugin";
+import { BirrJSError, BIRRJS_ERROR_CODES } from "./error-codes";
 import type { BirrJSInternalLogger } from "./logger";
 
 export async function runBeforeHooks(
@@ -33,6 +35,44 @@ export async function runBeforeHooks(
   });
   const results = await Promise.race([Promise.all(hooks), timeout]);
   return results.find((r): r is BeforeSubscribeResult => r !== undefined);
+}
+
+/**
+ * Fail-closed gate for plan changes: a plugin that throws, or one that outlives
+ * `timeoutMs`, aborts the change before any row is written. Silently continuing
+ * would let a fraud check that timed out bill the customer anyway.
+ */
+export async function runBeforePlanChangeHooks(
+  plugins: BirrJSPlugin[] | undefined,
+  buildCtx: () => Promise<BeforePlanChangeHookCtx>,
+  timeoutMs: number,
+  logger: BirrJSInternalLogger,
+): Promise<void> {
+  const hooks = (plugins ?? []).filter(
+    (
+      p,
+    ): p is BirrJSPlugin & {
+      onBeforePlanChange: NonNullable<BirrJSPlugin["onBeforePlanChange"]>;
+    } => !!p.onBeforePlanChange,
+  );
+  // The context costs two plan reads, so build it only when someone is listening.
+  if (hooks.length === 0) return;
+
+  const ctx = await buildCtx();
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Plugin hook timed out")), timeoutMs);
+  });
+
+  try {
+    await Promise.race([Promise.all(hooks.map((p) => p.onBeforePlanChange(ctx))), timeout]);
+  } catch (error) {
+    logger.warn({ err: error, subscriptionId: ctx.subscriptionId }, "onBeforePlanChange rejected");
+    throw BirrJSError.from(
+      "FORBIDDEN",
+      BIRRJS_ERROR_CODES.PLAN_CHANGE_NOT_ALLOWED,
+      error instanceof Error ? error.message : "Plan change blocked by plugin",
+    );
+  }
 }
 
 export async function runAfterHooks(

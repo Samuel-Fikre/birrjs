@@ -1,0 +1,197 @@
+---
+title: Plan changes
+description: Move a subscription to another plan mid-period, priced against the time actually left, without disturbing the period already paid for.
+---
+
+`subscribe()` starts a subscription; it is not a switch. Sending an upgrade through it would repoint `providerTxRef`, raise the full new price, and — because activation returns early for an already-active row — take the money without moving the limits. Plan changes are a separate primitive with their own row, their own payment reference, and their own state machine.
+
+Plan changes are opt-in:
+
+```ts
+createBirr({
+  planChanges: {
+    enabled: true,
+    minimumChargeAmount: 100, // minor units
+  },
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Gates `previewPlanChange()` and `changeSubscription()`. While off, both fail with `PLAN_CHANGE_NOT_ALLOWED`. |
+| `minimumChargeAmount` | `number` | `0` | Differences below this amount are not pushed to the provider. They are recorded as `deferredAmount` instead of billed for a few cents. |
+
+## Flow
+
+<Steps>
+  <Step>
+  ### Preview
+
+  `previewPlanChange()` prices the move and writes nothing. Show the result to the customer before asking them to confirm.
+
+  <Tabs items={["Client", "Server"]}>
+    <Tab value="Client">
+
+  ```ts
+  const { quote } = await client.previewPlanChange({
+    subscriptionId,
+    toPlanId: "pro",
+  });
+  // quote.amountDue   what the card is charged now (minor units)
+  // quote.strategy    "keep_anchor" | "rebase"
+  // quote.quoteHash   pass this to changeSubscription()
+  ```
+
+    </Tab>
+    <Tab value="Server">
+
+  ```ts
+  const { quote } = await birrjs.previewPlanChange({
+    customerId: "user_123",
+    subscriptionId,
+    toPlanId: "pro",
+  });
+  ```
+
+    </Tab>
+  </Tabs>
+  </Step>
+
+  <Step>
+  ### Commit
+
+  `changeSubscription()` re-prices the move, stores it as a `pending` row, and raises the payment against **that row**. The subscription is untouched: same plan, same period, same renewal reference.
+
+  ```ts
+  const change = await client.changeSubscription({
+    subscriptionId,
+    toPlanId: "pro",
+    quoteHash: quote.quoteHash, // optional, but rejects a price the customer never saw
+  });
+
+  if (change.status === "pending") {
+    window.location.href = change.checkoutUrl!; // pay, then the webhook applies it
+  }
+  // change.status === "applied" when nothing was due — a free move settles in the same call
+  ```
+  </Step>
+
+  <Step>
+  ### Payment lands
+
+  The provider's `charge.success` for the change's own `tx_ref` applies it: the plan swaps, entitlements reconcile to the new limits, and a `proration` invoice records the amount. A failed or cancelled charge voids the change and leaves the subscription exactly as it was.
+  </Step>
+</Steps>
+
+## How the amount is worked out
+
+Two strategies, chosen by the shape of the change rather than by the caller:
+
+| Strategy | When | What is charged |
+|----------|------|-----------------|
+| `keep_anchor` | Same interval, and a paid period still running | The price difference × the fraction of the period left. The expiry date does not move. |
+| `rebase` | The interval changed, the period already lapsed, or the current plan is free | The full new price now, minus a credit for the unused part of the old period. A new period starts now. |
+
+```text
+starter 99.90 ──► pro 199.90        20 of 30 days left
+keep_anchor:  charge (19990 − 9990) × 20/30 = 6,666 minor units
+              expiresAt unchanged
+
+pro monthly ──► annual yearly       20 of 30 days left
+rebase:       charge 199,900
+              credit  19,990 × 20/30 = 13,327
+              due     186,573, new period starts now
+```
+
+Rounding always favours the person paying the difference: charges are floored, credits are ceiled. The ratio is measured in wall-clock time between `periodStartAt` and `expiresAt`, so it is immune to month length and daylight saving.
+
+### Quote fields
+
+Amounts are minor units, the same convention as `plan.priceAmount`.
+
+| Field | Description |
+|-------|-------------|
+| `direction` | `upgrade`, `downgrade` or `switch`, compared by cost per day rather than by headline price |
+| `strategy` | `keep_anchor` or `rebase` |
+| `debitAmount` / `creditAmount` | Gross charge and gross credit before netting |
+| `amountDue` | What is collected now; `0` when nothing is due or the difference is below `minimumChargeAmount` |
+| `bankedCredit` | Credit left over when the change gives back more than it charges |
+| `deferredAmount` | Difference suppressed by `minimumChargeAmount` |
+| `lines` | Itemised breakdown, also stored on the invoice |
+| `requiresPayment` | Whether a payment is raised at all |
+| `quoteHash` | Signature of the plans and amounts behind this quote |
+| `cycleStartAt` / `cycleEndAt` | The period the change produces |
+
+## When a change is refused
+
+| Code | Cause |
+|------|-------|
+| `PLAN_CHANGE_NOT_ALLOWED` | Feature disabled, the subscription is `pending`/`canceled`, or a plugin rejected it |
+| `PLAN_CHANGE_SAME_PLAN` | Already on the target plan |
+| `PLAN_CURRENCY_MISMATCH` | The two plans are priced in different currencies |
+| `PLAN_CHANGE_QUOTE_STALE` | `quoteHash` no longer matches; re-preview and show the customer the new price |
+| `PLAN_CHANGE_IN_PROGRESS` | Another change is already open on this subscription |
+| `PLAN_CHANGE_NOT_FOUND` | The change row is gone — it had already settled or been withdrawn |
+
+Only one change may be open per subscription, and only one payment per `tx_ref`. Both are enforced by partial unique indexes rather than by a check-then-write in code, so two concurrent upgrades cannot both land. Every write path takes `SELECT … FOR UPDATE` on the subscription row first.
+
+## Usage across the swap
+
+Entitlements follow the new plan's features:
+
+- A feature the new plan does not have is deleted, not zeroed.
+- A feature the customer did not have is created at the full limit.
+- A shared feature keeps the usage already consumed when `carryOverUsage` is true (the default), so upgrading from 5 seats to 20 after using 3 leaves 17.
+- A meter keeps its existing reset time when the interval is unchanged and usage carries over — re-timing mid-cycle would either skip or double-bill what was already used.
+
+```ts
+await client.changeSubscription({
+  subscriptionId,
+  toPlanId: "pro",
+  carryOverUsage: false, // reset every meter to the new limits
+});
+```
+
+## Deferring to the period end
+
+A downgrade can wait instead of being priced now:
+
+```ts
+const change = await client.changeSubscription({
+  subscriptionId,
+  toPlanId: "starter",
+  prorationBehavior: "next_period",
+});
+// status "pending", amountDue 0, no payment raised
+```
+
+The swap lands with the next renewal payment that reactivates the subscription, at no second charge, and the new plan's price is what the following renewal is raised against. Nothing is prorated: the period already bought is honoured in full.
+
+Withdraw either kind with `cancelPlanChange()`. A change waiting on its own payment is voided — the checkout link stops working because no pending row backs it any more — and the guard is released, so the customer can try again immediately. An applied change is history: cancelling it would be a refund, so the call answers `{ cancelled: false }` and leaves the row as it is.
+
+## Events
+
+```ts
+"subscription.plan_change_pending": {
+  customerId, subscriptionId, planChangeId, fromPlanId, toPlanId, toPlanName,
+  direction, customerEmail, amountDue, txRef, cycleStartAt, cycleEndAt
+}
+"subscription.plan_changed": {
+  customerId, subscriptionId, planChangeId, fromPlanId, toPlanId, toPlanName,
+  direction, customerEmail, amountCharged, creditedAmount, cycleStartAt, cycleEndAt, changedAt
+}
+"subscription.plan_change_failed": {
+  customerId, subscriptionId, planChangeId, fromPlanId, toPlanId, customerEmail, reason, failedAt
+}
+```
+
+`amountDue` on the pending event is the exact amount the provider was asked for, which makes it the number to log against the charge.
+
+Plugins can gate the swap with `onBeforePlanChange`, which receives the quote before anything is written. It is fail-closed: a throw, or exceeding `hookTimeout`, aborts the change with `PLAN_CHANGE_NOT_ALLOWED`.
+
+## What is not here yet
+
+- **No refunds.** A downgrade that gives back more than it charges records `bankedCredit` and collects nothing. Providers cannot initiate a payout today, so the credit is not applied to a later invoice either.
+- **`deferredAmount` is recorded, not recovered.** Suppressing a sub-minimum difference avoids the fee; billing it at the next renewal is not wired up.
+- **Invoices cover proration only.** Renewal and first-purchase charges still do not write `recurring` invoice rows.
+- **Cancelling a subscription does not withdraw a scheduled change.** It stays pending until it lands or its payment arrives, at which point a paid change against a cancelled subscription is voided rather than applied.

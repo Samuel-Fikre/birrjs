@@ -55,6 +55,45 @@ export interface BirrJSEventMap {
     trialEndsAt: Date;
     daysUntilTrialEnd: number;
   };
+  "subscription.plan_change_pending": {
+    customerId: string;
+    subscriptionId: string;
+    planChangeId: string;
+    fromPlanId: string;
+    toPlanId: string;
+    toPlanName: string;
+    direction: "upgrade" | "downgrade" | "switch";
+    customerEmail: string | null;
+    amountDue: number;
+    txRef: string | null;
+    cycleStartAt: Date;
+    cycleEndAt: Date | null;
+  };
+  "subscription.plan_changed": {
+    customerId: string;
+    subscriptionId: string;
+    planChangeId: string;
+    fromPlanId: string;
+    toPlanId: string;
+    toPlanName: string;
+    direction: "upgrade" | "downgrade" | "switch";
+    customerEmail: string | null;
+    amountCharged: number;
+    creditedAmount: number;
+    cycleStartAt: Date | null;
+    cycleEndAt: Date | null;
+    changedAt: Date;
+  };
+  "subscription.plan_change_failed": {
+    customerId: string;
+    subscriptionId: string;
+    planChangeId: string;
+    fromPlanId: string;
+    toPlanId: string;
+    customerEmail: string | null;
+    reason: string | null;
+    failedAt: Date;
+  };
 }
 
 export type BirrJSEventName = keyof BirrJSEventMap;

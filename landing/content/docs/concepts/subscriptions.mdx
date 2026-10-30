@@ -177,6 +177,10 @@ const effective = getEffectiveStatus(subscription);
 
 If `checkoutUrl` is set, the subscription stays in `pending` until the provider confirms payment via webhook. If `paymentInstructions` is set, the user pays manually and submits their receipt via `verifyReceipt`. If `trialEndsAt` is set, the subscription is in `trialing` status with free access until that date.
 
+## Plan Changes
+
+Moving an active subscription to another plan mid-period is a separate operation, not another `subscribe()` call: the new price is prorated against the time left, charged under its own payment reference, and applied only when that payment lands. See [Plan changes](/docs/concepts/plan-changes).
+
 ## Reminders
 
 Subscriptions approaching expiry can trigger reminders via the `"subscription.reminder"` event. A daily cron sweep checks for subscriptions expiring on the exact days listed in `reminderLeadDays` and fires the event. A dedup table prevents duplicate sends.

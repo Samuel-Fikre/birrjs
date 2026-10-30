@@ -28,6 +28,7 @@ loadDotEnv();
 
 export interface CreateTestBirrJSOptions {
   provider?: PaymentProviderConfig;
+  planChanges?: { enabled?: boolean; minimumChargeAmount?: number };
 }
 
 export interface TestBirrJS {
@@ -77,6 +78,7 @@ export async function createTestBirrJS(options?: CreateTestBirrJSOptions): Promi
     database: pool,
     provider: providerConfig,
     logging: { level: "silent" },
+    ...(options?.planChanges ? { planChanges: options.planChanges } : {}),
   });
 
   return {

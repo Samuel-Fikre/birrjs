@@ -39,6 +39,9 @@ describe("client: true metadata", () => {
     "check",
     "report",
     "verifyReceipt",
+    "previewPlanChange",
+    "changeSubscription",
+    "cancelPlanChange",
   ];
 
   for (const name of clientMethods) {
@@ -73,6 +76,9 @@ describe("route path metadata", () => {
     getCustomerWithDetails: "/get-customer-with-details",
     deleteCustomer: "/delete-customer",
     verifyReceipt: "/verify-receipt",
+    previewPlanChange: "/preview-plan-change",
+    changeSubscription: "/change-subscription",
+    cancelPlanChange: "/cancel-plan-change",
   };
 
   for (const [name, expectedPath] of Object.entries(cases)) {

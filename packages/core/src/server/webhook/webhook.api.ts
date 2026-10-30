@@ -6,10 +6,10 @@ import { WebhookRequestSchema } from "../../api/schemas";
 import type { WebhookPayload } from "../../api/schemas";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
-import type { BirrJSDatabase } from "../../database";
 import { customer, plan, reminderSent, subscription, webhookEvent } from "../../database/schema";
 import { activateSubscriptionByTxRef } from "../../subscription/subscription-activation";
 import type { BirrJSEventMap } from "../../types/events";
+import { emitPlanChanged, settlePlanChangeWebhook } from "./plan-change-webhook";
 
 function headersToRecord(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
@@ -106,6 +106,20 @@ export const handleWebhook = defineBirrJSMethod(
 
     const webhookEventId = existingEvent.id;
 
+    // A plan change pays under its own txRef, which never lands in
+    // `subscription.provider_tx_ref`, so it has to be resolved before the
+    // subscription lookup below would otherwise report it as unknown.
+    const planChangeMessage = await settlePlanChangeWebhook(
+      ctx.birrjs,
+      providerEvent.providerReferenceId,
+      providerEvent.type,
+      webhookEventId,
+    );
+    if (planChangeMessage) {
+      logger.info({ txRef: providerEvent.providerReferenceId }, planChangeMessage);
+      return { success: true, message: planChangeMessage };
+    }
+
     // Find subscription by providerTxRef (tx_ref from webhook)
     const subscriptions = await database
       .select()
@@ -145,7 +159,7 @@ export const handleWebhook = defineBirrJSMethod(
       case "charge.success": {
         const result = await database.transaction(async (tx) => {
           const activation = await activateSubscriptionByTxRef(
-            tx as unknown as BirrJSDatabase,
+            tx,
             logger,
             providerEvent.providerReferenceId,
           );
@@ -200,6 +214,11 @@ export const handleWebhook = defineBirrJSMethod(
               ctx.birrjs,
             ),
           );
+        }
+
+        // The renewal may have carried a change scheduled for period end.
+        if (result.scheduledChangeId) {
+          await emitPlanChanged(ctx.birrjs, result.scheduledChangeId, new Date());
         }
 
         return { success: true, message: "Webhook processed successfully" };

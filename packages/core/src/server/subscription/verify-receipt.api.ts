@@ -5,7 +5,6 @@ import { VerifyReceiptRequestSchema } from "../../api/schemas";
 import { BirrJSError, BIRRJS_ERROR_CODES } from "../../core/error-codes";
 import { runEventHandlers, runPluginEventHandlers } from "../../core/hooks";
 import { generateId } from "../../core/utils";
-import type { BirrJSDatabase } from "../../database";
 import { customer, plan, reminderSent, subscription, usedReceipt } from "../../database/schema";
 import { resetTrialEntitlements } from "../../entitlement/entitlement.service";
 import { renewSubscription } from "../../subscription";
@@ -129,7 +128,7 @@ export const verifyReceipt = defineBirrJSMethod(
           .where(eq(subscription.id, subscriptionId));
 
         await resetTrialEntitlements(
-          tx as unknown as BirrJSDatabase,
+          tx,
           subscriptionId,
           planRecord?.resetOnTrialConversion ? "reset" : "carryover",
         );
@@ -167,7 +166,7 @@ export const verifyReceipt = defineBirrJSMethod(
           throw BirrJSError.from("CONFLICT", BIRRJS_ERROR_CODES.DUPLICATE_RECEIPT);
         }
 
-        return await activateSubscriptionByTxRef(tx as unknown as BirrJSDatabase, logger, txRef);
+        return await activateSubscriptionByTxRef(tx, logger, txRef);
       });
     }
 

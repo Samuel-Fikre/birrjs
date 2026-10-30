@@ -24,12 +24,26 @@ export interface BirrJSSchedulingOptions {
   trialReminderLeadDays?: number[];
 }
 
+export interface BirrJSPlanChangeOptions {
+  /**
+   * Plan changes write through the activation path, so the first release ships
+   * dark: callers must opt in per deployment.
+   */
+  enabled?: boolean;
+  /**
+   * Differences below this amount (minor units) are not pushed to the provider;
+   * they are recorded as deferred and recovered at the next renewal.
+   */
+  minimumChargeAmount?: number;
+}
+
 export interface BirrJSOptions {
   provider: PaymentProviderConfig;
   database: string | Pool;
   basePath?: string;
   logging?: BirrJSLoggingOptions;
   scheduling?: BirrJSSchedulingOptions;
+  planChanges?: BirrJSPlanChangeOptions;
   adminSecret?: string;
   identify?: (
     request: Request,

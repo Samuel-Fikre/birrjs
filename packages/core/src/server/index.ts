@@ -21,6 +21,11 @@ import {
 import { check, report } from "./entitlement/entitlement.api";
 // Plan methods
 import { listPlans } from "./plan/plan.api";
+import {
+  previewPlanChange,
+  changeSubscription,
+  cancelPlanChange,
+} from "./subscription/plan-change.api";
 // Subscription methods
 import {
   subscribe,
@@ -48,6 +53,9 @@ export const methods = {
   listPlans,
   getSubscription,
   checkSubscription,
+  previewPlanChange,
+  changeSubscription,
+  cancelPlanChange,
   check,
   report,
   handleWebhook,

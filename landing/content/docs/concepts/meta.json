@@ -3,6 +3,7 @@
     "plans",
     "customers",
     "subscriptions",
+    "plan-changes",
     "reminders",
     "cron",
     "entitlements",

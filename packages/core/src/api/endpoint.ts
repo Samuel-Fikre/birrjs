@@ -49,13 +49,17 @@ type InferInput<TInput> = TInput extends StandardSchemaV1
   ? StandardSchemaV1.InferOutput<TInput>
   : TInput;
 
-type InferSchemaInput<TSchema> = TSchema extends StandardSchemaV1
-  ? StandardSchemaV1.InferOutput<TSchema>
+/**
+ * What a caller writes, as opposed to what the handler reads: keys with a
+ * schema default are optional on the way in and always present on the way out.
+ */
+type InferSchemaCall<TSchema> = TSchema extends StandardSchemaV1
+  ? StandardSchemaV1.InferInput<TSchema>
   : never;
 
 type InferMethodInput<TConfig extends BirrJSMethodConfig> =
   TConfig["input"] extends StandardSchemaV1
-    ? InferSchemaInput<TConfig["input"]>
+    ? InferSchemaCall<TConfig["input"]>
     : TConfig["route"] extends { resolveInput: (...args: unknown[]) => infer TResolved }
       ? Awaited<TResolved>
       : void;

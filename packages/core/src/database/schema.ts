@@ -12,6 +12,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { ProrationLine } from "../proration/proration.types";
 import type { ProviderProductMap } from "../provider";
 
 const pgTable = pgTableCreator((name) => `birrjs_${name}`);
@@ -112,6 +113,7 @@ export const subscription = pgTable(
     status: text("status").notNull(),
     interval: text("interval"),
     startedAt: timestamp("started_at", { withTimezone: true }),
+    periodStartAt: timestamp("period_start_at", { withTimezone: true }),
     trialStart: timestamp("trial_start", { withTimezone: true }),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
@@ -119,6 +121,9 @@ export const subscription = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     lastPaymentAt: timestamp("last_payment_at", { withTimezone: true }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    // Plain text, not an FK: subscription_plan_change already points back here,
+    // and a circular reference would make the migration order unsatisfiable.
+    pendingChangeId: text("pending_change_id"),
     providerTxRef: text("provider_tx_ref"),
     ...createTimestampColumns(),
   },
@@ -132,6 +137,67 @@ export const subscription = pgTable(
   ],
 );
 
+/**
+ * One in-flight or settled plan change. Amounts are in minor units, matching
+ * `plan.priceAmount` and `invoice.amount`.
+ */
+export const subscriptionPlanChange = pgTable(
+  "subscription_plan_change",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscription.id, { onDelete: "cascade" }),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customer.id, { onDelete: "cascade" }),
+    fromPlanInternalId: text("from_plan_internal_id")
+      .notNull()
+      .references(() => plan.internalId, { onDelete: "restrict" }),
+    toPlanInternalId: text("to_plan_internal_id")
+      .notNull()
+      .references(() => plan.internalId, { onDelete: "restrict" }),
+    direction: text("direction").notNull(),
+    strategy: text("strategy").notNull(),
+    debitAmount: integer("debit_amount").notNull().default(0),
+    creditAmount: integer("credit_amount").notNull().default(0),
+    dueNowAmount: integer("due_now_amount").notNull().default(0),
+    bankedCreditAmount: integer("banked_credit_amount").notNull().default(0),
+    deferredAmount: integer("deferred_amount").notNull().default(0),
+    currency: text("currency").notNull().default("ETB"),
+    cycleStartAt: timestamp("cycle_start_at", { withTimezone: true }).notNull(),
+    cycleEndAt: timestamp("cycle_end_at", { withTimezone: true }),
+    status: text("status").notNull(),
+    providerTxRef: text("provider_tx_ref"),
+    quoteHash: text("quote_hash"),
+    carryOverUsage: boolean("carry_over_usage").notNull().default(true),
+    reason: text("reason"),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    ...createTimestampColumns(),
+  },
+  (table) => [
+    // Two concurrent upgrades would double-charge; the database, not the code,
+    // enforces that only one is open at a time.
+    uniqueIndex("birrjs_plan_change_pending_unique")
+      .on(table.subscriptionId)
+      .where(sql`${table.status} = 'pending'`),
+    uniqueIndex("birrjs_plan_change_tx_ref_unique")
+      .on(table.providerTxRef)
+      .where(sql`${table.providerTxRef} IS NOT NULL`),
+    index("birrjs_plan_change_subscription_idx").on(table.subscriptionId, table.status),
+    check(
+      "birrjs_plan_change_direction_valid",
+      sql`${table.direction} IN ('upgrade', 'downgrade', 'switch')`,
+    ),
+    check(
+      "birrjs_plan_change_status_valid",
+      sql`${table.status} IN ('pending', 'applied', 'voided', 'failed')`,
+    ),
+    check("birrjs_plan_change_strategy_valid", sql`${table.strategy} IN ('keep_anchor', 'rebase')`),
+    check("birrjs_plan_change_amounts_non_negative", sql`debit_amount >= 0 AND credit_amount >= 0`),
+  ],
+);
+
 export const invoice = pgTable(
   "invoice",
   {
@@ -142,7 +208,13 @@ export const invoice = pgTable(
     subscriptionId: text("subscription_id").references(() => subscription.id, {
       onDelete: "set null",
     }),
+    planChangeId: text("plan_change_id").references(() => subscriptionPlanChange.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind").notNull().default("recurring"),
     amount: integer("amount").notNull(),
+    refundedAmount: integer("refunded_amount").notNull().default(0),
+    lines: jsonb("lines").$type<ProrationLine[] | null>(),
     currency: text("currency").default("ETB"),
     status: text("status").notNull(),
     providerTxRef: text("provider_tx_ref"),
@@ -154,7 +226,13 @@ export const invoice = pgTable(
   (table) => [
     index("birrjs_invoice_customer_idx").on(table.customerId, table.createdAt),
     index("birrjs_invoice_subscription_idx").on(table.subscriptionId),
+    index("birrjs_invoice_plan_change_idx").on(table.planChangeId),
     check("birrjs_invoice_amount_non_negative", sql`amount >= 0`),
+    check("birrjs_invoice_kind_valid", sql`${table.kind} IN ('recurring', 'proration')`),
+    check(
+      "birrjs_invoice_refunded_within_amount",
+      sql`${table.refundedAmount} >= 0 AND ${table.refundedAmount} <= ${table.amount}`,
+    ),
   ],
 );
 
