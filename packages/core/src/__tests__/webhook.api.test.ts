@@ -132,6 +132,7 @@ describe("webhook error scenarios", () => {
   it("retries previously failed webhook", async () => {
     const { db } = createMockDb([
       [{ id: "wh_retry", status: "failed" }],
+      [], // tx_ref is not a plan change
       [
         {
           id: "sub_1",
@@ -195,6 +196,7 @@ describe("webhook error scenarios", () => {
   it("handles subscription not found gracefully", async () => {
     const { db } = createMockDb([
       [{ id: "wh_skip", status: "processing" }], // re-query after insert
+      [], // tx_ref is not a plan change
       [], // no matching subscription
     ]);
     const c = ctx({
@@ -221,6 +223,7 @@ describe("webhook error scenarios", () => {
   it("handles charge.success via shared activation", async () => {
     const { db } = createMockDb([
       [{ id: "wh_fail", status: "processing" }], // re-query after insert
+      [], // tx_ref is not a plan change
       [
         {
           id: "sub_1",

@@ -1,17 +1,36 @@
 import { eq } from "drizzle-orm";
 
 import type { BirrJSInternalLogger } from "../core/logger";
-import type { BirrJSDatabase } from "../database";
 import { plan, subscription } from "../database/schema";
 import { resetTrialEntitlements } from "../entitlement/entitlement.service";
 import type { PlanInterval } from "../types";
-import { renewSubscription } from "./index";
+import { calculateExpiresAt, renewalAnchor } from "./index";
+import { activatePlanChangeByTxRef, applyScheduledChangeAtRenewal } from "./plan-change-activation";
+import type { PlanChangeWriter } from "./plan-change.service";
+
+export interface SubscriptionActivationResult {
+  updated: boolean;
+  subscriptionId?: string;
+  /** Set when the txRef paid for a plan change rather than a new subscription. */
+  planChangeId?: string;
+  /** Set when a change scheduled for period end landed on this renewal. */
+  scheduledChangeId?: string;
+}
 
 export async function activateSubscriptionByTxRef(
-  database: BirrJSDatabase,
+  database: PlanChangeWriter,
   logger: BirrJSInternalLogger,
   txRef: string,
-): Promise<{ updated: boolean; subscriptionId?: string }> {
+): Promise<SubscriptionActivationResult> {
+  const planChange = await activatePlanChangeByTxRef(database, logger, txRef);
+  if (planChange.handled) {
+    return {
+      updated: !!planChange.changeId,
+      subscriptionId: planChange.subscriptionId,
+      planChangeId: planChange.changeId,
+    };
+  }
+
   const subs = await database
     .select()
     .from(subscription)
@@ -42,10 +61,9 @@ export async function activateSubscriptionByTxRef(
   }
 
   if (sub.interval) {
-    updateFields.expiresAt = renewSubscription({
-      currentExpiresAt: sub.expiresAt ?? new Date(),
-      interval: sub.interval as PlanInterval,
-    });
+    const anchor = renewalAnchor(sub.expiresAt ?? new Date());
+    updateFields.periodStartAt = anchor;
+    updateFields.expiresAt = calculateExpiresAt(anchor, sub.interval as PlanInterval);
   }
 
   await database.update(subscription).set(updateFields).where(eq(subscription.id, sub.id));
@@ -65,10 +83,17 @@ export async function activateSubscriptionByTxRef(
     );
   }
 
+  // A renewal is the moment a change scheduled for period end becomes due.
+  const scheduled = await applyScheduledChangeAtRenewal(database, logger, sub.id);
+
   logger.info(
     { subscriptionId: sub.id, oldStatus: sub.status, newStatus: "active" },
     "Subscription activated via txRef",
   );
 
-  return { updated: true, subscriptionId: sub.id };
+  return {
+    updated: true,
+    subscriptionId: sub.id,
+    scheduledChangeId: scheduled?.changeId,
+  };
 }

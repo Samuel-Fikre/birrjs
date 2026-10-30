@@ -80,6 +80,13 @@ export const BIRRJS_ERROR_CODES = defineErrorCodes({
   SUBSCRIPTION_NOT_FOUND: "Subscription not found",
   SUBSCRIPTION_CANCEL_FAILED: "Failed to cancel subscription",
 
+  PLAN_CHANGE_NOT_ALLOWED: "Subscription is not in a state that allows a plan change",
+  PLAN_CHANGE_SAME_PLAN: "Subscription is already on the requested plan",
+  PLAN_CHANGE_IN_PROGRESS: "Another plan change is already in progress",
+  PLAN_CURRENCY_MISMATCH: "Plans use different currencies",
+  PLAN_CHANGE_QUOTE_STALE: "Plan prices or features changed after the quote was built",
+  PLAN_CHANGE_NOT_FOUND: "Plan change not found",
+
   PROVIDER_REQUIRED: "A provider is required",
   PROVIDER_TRANSACTION_FAILED: "Provider transaction failed",
   PROVIDER_VERIFICATION_FAILED: "Provider verification failed",

@@ -69,6 +69,10 @@ const pendingSub: QueryResult = [
   },
 ];
 
+/** Activation first asks whether the txRef belongs to a plan change, then whether the renewal owes one. */
+const noPlanChange: QueryResult = [];
+const noScheduledChange: QueryResult = [];
+
 const joinedSubRow: QueryResult = [
   {
     customerId: "cus_1",
@@ -137,7 +141,7 @@ describe("handleWebhookCallback handler", () => {
   it("activates subscription on Chapa success callback", async () => {
     const { status, body, verifyTransaction, selectMock, updateMock, setMock, deleteMock } =
       await runCallback("trx_ref=tx_1&status=success&ref_id=ref_1", {
-        results: [pendingSub, joinedSubRow],
+        results: [noPlanChange, pendingSub, noScheduledChange, joinedSubRow],
       });
 
     expect(status).toBe(200);
@@ -146,7 +150,7 @@ describe("handleWebhookCallback handler", () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(setMock).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }));
     expect(deleteMock).toHaveBeenCalledTimes(1);
-    expect(selectMock).toHaveBeenCalledTimes(2);
+    expect(selectMock).toHaveBeenCalledTimes(4);
   });
 
   it("skips verification and activation when status is not success", async () => {
@@ -180,7 +184,7 @@ describe("handleWebhookCallback handler", () => {
     const { status, body, updateMock, deleteMock } = await runCallback(
       "trx_ref=tx_1&status=success",
       {
-        results: [activeSub],
+        results: [noPlanChange, activeSub],
       },
     );
 
@@ -193,7 +197,7 @@ describe("handleWebhookCallback handler", () => {
   it("activates subscription on Telebirr success callback (trade_status dialect)", async () => {
     const { status, body, verifyTransaction, updateMock } = await runCallback(
       "merch_order_id=order1&trade_status=PAY_SUCCESS",
-      { results: [pendingSub, joinedSubRow] },
+      { results: [noPlanChange, pendingSub, noScheduledChange, joinedSubRow] },
     );
 
     expect(status).toBe(200);
@@ -213,7 +217,7 @@ describe("handleWebhookCallback handler", () => {
   it("fires plugin subscription.activated event after activation", async () => {
     const onEvent = vi.fn();
     const { status, ctx } = await runCallback("trx_ref=tx_1&status=success", {
-      results: [pendingSub, joinedSubRow],
+      results: [noPlanChange, pendingSub, noScheduledChange, joinedSubRow],
       plugins: [{ id: "test-plugin", onEvent: { "subscription.activated": onEvent } }],
     });
 

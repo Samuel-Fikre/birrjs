@@ -58,21 +58,21 @@ export const SubscribeRequestSchema = z.object({
   useTrial: z.boolean().optional(),
 });
 
+export const PaymentInstructionsSchema = z.object({
+  amount: z.number(),
+  channels: z.array(
+    z.object({
+      type: z.string(),
+      label: z.string(),
+      value: z.string(),
+      accountHolder: z.string().optional(),
+    }),
+  ),
+});
+
 export const SubscribeResponseSchema = z.object({
   checkoutUrl: z.url().optional(),
-  paymentInstructions: z
-    .object({
-      amount: z.number(),
-      channels: z.array(
-        z.object({
-          type: z.string(),
-          label: z.string(),
-          value: z.string(),
-          accountHolder: z.string().optional(),
-        }),
-      ),
-    })
-    .optional(),
+  paymentInstructions: PaymentInstructionsSchema.optional(),
   subscriptionId: z.string(),
   customerId: z.string(),
 });
@@ -122,6 +122,85 @@ export const CancelSubscriptionResponseSchema = z.object({
 
 export type CancelSubscriptionRequest = z.infer<typeof CancelSubscriptionRequestSchema>;
 export type CancelSubscriptionResponse = z.infer<typeof CancelSubscriptionResponseSchema>;
+
+// Plan change. Every amount is in minor units, matching `plan.priceAmount`.
+export const PlanChangeDirectionSchema = z.enum(["upgrade", "downgrade", "switch"]);
+export const ProrationStrategySchema = z.enum(["keep_anchor", "rebase"]);
+export const ProrationBehaviorSchema = z.enum(["invoice_immediately", "next_period"]);
+export const PlanChangeStatusSchema = z.enum(["pending", "applied", "voided", "failed"]);
+
+export const ProrationLineSchema = z.object({
+  kind: z.enum(["plan_difference_prorated", "new_period_charged", "unused_period_credited"]),
+  amountMinor: z.number().int(),
+});
+
+export const PreviewPlanChangeRequestSchema = z.object({
+  subscriptionId: z.string().min(1),
+  toPlanId: z.string().min(1),
+  prorationBehavior: ProrationBehaviorSchema.default("invoice_immediately"),
+});
+
+export const PlanChangeQuoteSchema = z.object({
+  direction: PlanChangeDirectionSchema,
+  strategy: ProrationStrategySchema,
+  cycleStartAt: z.coerce.date(),
+  cycleEndAt: z.coerce.date().nullable(),
+  debitAmount: z.number().int(),
+  creditAmount: z.number().int(),
+  amountDue: z.number().int(),
+  bankedCredit: z.number().int(),
+  deferredAmount: z.number().int(),
+  lines: z.array(ProrationLineSchema),
+  requiresPayment: z.boolean(),
+  quoteHash: z.string(),
+});
+
+export const PreviewPlanChangeResponseSchema = z.object({
+  subscriptionId: z.string(),
+  fromPlanId: z.string(),
+  fromPlanName: z.string(),
+  toPlanId: z.string(),
+  toPlanName: z.string(),
+  quote: PlanChangeQuoteSchema,
+});
+
+export type PreviewPlanChangeRequest = z.infer<typeof PreviewPlanChangeRequestSchema>;
+export type PlanChangeQuoteView = z.infer<typeof PlanChangeQuoteSchema>;
+export type PreviewPlanChangeResponse = z.infer<typeof PreviewPlanChangeResponseSchema>;
+
+export const ChangeSubscriptionRequestSchema = z.object({
+  subscriptionId: z.string().min(1),
+  toPlanId: z.string().min(1),
+  prorationBehavior: ProrationBehaviorSchema.default("invoice_immediately"),
+  /** Reuse usage on shared features instead of resetting every meter. */
+  carryOverUsage: z.boolean().default(true),
+  quoteHash: z.string().min(1).optional(),
+  reason: z.string().max(200).optional(),
+});
+
+export const ChangeSubscriptionResponseSchema = z.object({
+  planChangeId: z.string(),
+  subscriptionId: z.string(),
+  status: PlanChangeStatusSchema,
+  quote: PlanChangeQuoteSchema,
+  checkoutUrl: z.url().optional(),
+  paymentInstructions: PaymentInstructionsSchema.optional(),
+});
+
+export type ChangeSubscriptionRequest = z.infer<typeof ChangeSubscriptionRequestSchema>;
+export type ChangeSubscriptionResponse = z.infer<typeof ChangeSubscriptionResponseSchema>;
+
+export const CancelPlanChangeRequestSchema = z.object({
+  subscriptionId: z.string().min(1),
+});
+
+export const CancelPlanChangeResponseSchema = z.object({
+  cancelled: z.boolean(),
+  planChangeId: z.string().nullable(),
+});
+
+export type CancelPlanChangeRequest = z.infer<typeof CancelPlanChangeRequestSchema>;
+export type CancelPlanChangeResponse = z.infer<typeof CancelPlanChangeResponseSchema>;
 
 // Create customer
 export const CreateCustomerRequestSchema = CustomerInputSchema;

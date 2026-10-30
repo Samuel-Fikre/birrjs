@@ -89,11 +89,18 @@ export interface RenewSubscriptionInput {
   _now?: Date;
 }
 
+/**
+ * The moment a renewed period begins: at the old expiry when the subscription is
+ * still running, at `now` when it has already lapsed. Callers that store
+ * `periodStartAt` need this separately from the new expiry, so it lives here.
+ */
+export function renewalAnchor(currentExpiresAt: Date, now = new Date()): Date {
+  return currentExpiresAt.getTime() > now.getTime() ? currentExpiresAt : now;
+}
+
 export function renewSubscription(input: RenewSubscriptionInput): Date {
-  const now = input._now ?? new Date();
-  const renewalDate =
-    input.currentExpiresAt.getTime() > now.getTime() ? input.currentExpiresAt : now;
-  return calculateExpiresAt(renewalDate, input.interval);
+  const anchor = renewalAnchor(input.currentExpiresAt, input._now ?? new Date());
+  return calculateExpiresAt(anchor, input.interval);
 }
 
 /**
